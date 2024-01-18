@@ -1,39 +1,56 @@
 mod utils;
+mod vector;
+mod nurbs;
 
-use std::collections::HashMap;
-//use js_sys::Set;
+//use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
-//use gloo_utils::format::JsValueSerdeExt;
 use serde::{Serialize, Deserialize};
+use nurbs::*;
+use vector::*;
+// use js_sys::Set;
+// use gloo_utils::format::JsValueSerdeExt;
 
 #[derive(Serialize, Deserialize)]
-pub struct Example {
-    pub field1: HashMap<String, String>,
-    pub field2: Vec<Vec<f32>>,
-    pub field3: [f32; 4],
+pub struct Transport {
+    pub vector: Vector3, // [f32; 3]
 }
 
 #[wasm_bindgen]
-pub fn calc_something(val: JsValue) -> Result<JsValue, JsValue> {
-    let mut example: Example = serde_wasm_bindgen::from_value(val)?;
-    example.field1.insert(String::from("awesome"), String::from("more stuff"));
-    // let mut field1 = HashMap::new();
-    // field1.insert(0, String::from("ex"));
-    // let example = Example {
-    //     field1,
-    //     field2: vec![vec![1., 2.], vec![3., 4.]],
-    //     field3: [1., 2., 3., 4.]
-    // };
-    Ok(serde_wasm_bindgen::to_value(&example)?)
+pub fn get_vectors(val: JsValue) -> Result<JsValue, JsValue> {
+    let mut result: Transport = serde_wasm_bindgen::from_value(val)?;
+    let vector1 = Vector3::default();
+    let vector2 = Vector3::default();
+    let nurbs = Nurbs {
+        order: 2,
+        knots: vec![0.0, 0.0, 0.0, 0.0],
+        weights: vec![0.0, 0.0],
+        vectors: vec![vector1, vector2],
+    };
+    result.vector = nurbs.get_vector_at_u(0.5)?; //[vector.x, vector.y, vector.z];
+    Ok(serde_wasm_bindgen::to_value(&result)?)
 }
+// example.field1.insert(String::from("awesome"), String::from("more stuff"));
 
-// #[wasm_bindgen]
-// pub fn receive_example_from_js(val: JsValue) -> Result<(), JsValue> {
-//     let example: Example = serde_wasm_bindgen::from_value(val)?;
-//     /* …do something with `example`… */
-//     Ok(())
+
+
+// pub struct Example {
+//     pub field1: HashMap<String, String>,
+//     pub field2: Vec<Vec<f32>>,
+//     pub field3: [f32; 4],
 // }
-
+// #[wasm_bindgen]
+// pub fn get_vectors(val: JsValue) -> Result<JsValue, JsValue> {
+//     let mut example: Example = serde_wasm_bindgen::from_value(val)?;
+//     example.field1.insert(String::from("awesome"), String::from("more stuff"));
+//     // let mut field1 = HashMap::new();
+//     // field1.insert(0, String::from("ex"));
+//     // let example = Example {
+//     //     field1,
+//     //     field2: vec![vec![1., 2.], vec![3., 4.]],
+//     //     field3: [1., 2., 3., 4.]
+//     // };
+//     Ok(serde_wasm_bindgen::to_value(&example)?)
+// }
 
 
 

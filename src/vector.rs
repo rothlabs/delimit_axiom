@@ -1,16 +1,10 @@
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-}
-
-impl Default for Vector3 {
-    fn default() -> Vector3 {
-        Vector3 {x:16.7, y:43.8, z:59.1}
-    }
 }
 
 impl From<(f32, f32, f32)> for Vector3 {
@@ -29,7 +23,11 @@ impl IntoIterator for Vector3 {
 }
 
 
-
+// impl Default for Vector3 {
+//     fn default() -> Vector3 {
+//         Vector3 {x:16.7, y:43.8, z:59.1}
+//     }
+// }
 
 
 // another approach:

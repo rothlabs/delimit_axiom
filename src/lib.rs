@@ -6,30 +6,46 @@ mod nurbs;
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
 use nurbs::*;
-use vector::*;
+//use vector::*;
 // use js_sys::Set;
 // use gloo_utils::format::JsValueSerdeExt;
 
 #[derive(Serialize, Deserialize)]
-pub struct Transport {
-    pub vector: Vector3, // [f32; 3]
+struct TestResult {
+    nurbs: Nurbs, // <[f32;3]>
+    vectors: Vec<Vec<f32>>,
 }
 
 #[wasm_bindgen]
-pub fn get_vectors(val: JsValue) -> Result<JsValue, JsValue> {
-    let mut result: Transport = serde_wasm_bindgen::from_value(val)?;
-    let vector1 = Vector3::default();
-    let vector2 = Vector3::default();
-    let nurbs = Nurbs {
-        order: 2,
-        knots: vec![0.0, 0.0, 0.0, 0.0],
-        weights: vec![0.0, 0.0],
-        vectors: vec![vector1, vector2],
+pub fn get_vectors_from_nurbs(val: JsValue) -> Result<JsValue, JsValue> {
+    let nurbs: Nurbs = serde_wasm_bindgen::from_value(val)?; // <[f32;3]>
+    let test_result = TestResult {
+        nurbs: Nurbs {
+            order: nurbs.get_order(),
+            knots: nurbs.get_knots(),
+            ..Default::default()
+        },
+        vectors: nurbs.get_vectors(100),
     };
-    result.vector = nurbs.get_vector_at_u(0.5)?; //[vector.x, vector.y, vector.z];
-    Ok(serde_wasm_bindgen::to_value(&result)?)
+    Ok(serde_wasm_bindgen::to_value(&test_result)?)
 }
+
+
+    //let new_burbs = Nurbs::default();
+    //let result = nurbs.get_knots();//nurbs_query.get_vectors()?; //[vector.x, vector.y, vector.z];
+
+
 // example.field1.insert(String::from("awesome"), String::from("more stuff"));
+
+
+    // let vector1 = Vector3::default();
+    // let vector2 = Vector3::default();
+    // let nurbs = Nurbs {
+    //     order: 2,
+    //     knots: vec![0.0, 0.0, 0.0, 0.0],
+    //     weights: vec![0.0, 0.0],
+    //     vectors: vec![vector1, vector2],
+    // };
 
 
 

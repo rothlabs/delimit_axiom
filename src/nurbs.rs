@@ -7,18 +7,18 @@ use serde::{Serialize, Deserialize};
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default="Nurbs::default")]
 pub struct Nurbs { // pub struct Nurbs<T: Default>  { 
-    pub controls: Vec<Vec<f32>>,
     pub order:    usize,     // order = polynomial_degree + 1  
     pub knots:    Vec<f32>,  // knot_count = order + control_count 
-    pub weights:  Vec<f32>,  // weight_count = control_count            
+    pub weights:  Vec<f32>,  // weight_count = control_count      
+    pub controls: Vec<Vec<f32>>,      
 }
 
 impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     pub fn get_order(&self) -> usize { // TODO: find way to use Option for order because it looks like sentinel value 0
-        if self.order == 0 {3} else {self.order.clamp(2, 6)}
+        if self.order == 0 {3} else {self.order.clamp(2, 10)}
     }
 
-    fn get_weights(&self) -> Vec<f32> {
+    pub fn get_weights(&self) -> Vec<f32> {
         if self.weights.len() == self.controls.len(){
             self.weights.clone()
         }else {
@@ -27,14 +27,14 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     pub fn get_knots(&self) -> Vec<f32> {
-        if self.knots.len() == self.controls.len(){
+        if self.knots.len() == self.controls.len() + self.get_order() {
             self.knots.clone()
-        }else {
+        }else{
             self.get_open_knots()
         }
     }
 
-    fn get_open_knots(&self) -> Vec<f32> {
+    pub fn get_open_knots(&self) -> Vec<f32> {
         let order = self.get_order();
         let repeats = order - 1; // knot multiplicity = order for ends of knot vector
         let max_knot = self.controls.len() + order - (repeats * 2) - 1;
@@ -44,31 +44,59 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         knots
     }
 
-    fn get_basis_of_degree_0_at_u(&self, u: f32) -> Vec<f32> { // degree-0 piecewise 
-        self.get_knots().windows(2).map(|knots| { // TODO: iterate over controls instead?
-            if u >= knots[0] && u < knots[1] {1_f32} else {0_f32}
+    pub fn get_basis_of_degree_0_at_u(&self, u: f32) -> Vec<f32> { // degree-0 piecewise 
+        self.get_knots().windows(2).map(|knots| { 
+            if u >= knots[0] && u < knots[1] {1.} else {0.} 
         }).collect()
     }
 
-    fn get_basis_at_u(&self, u: f32) -> Vec<f32> {
+    pub fn get_basis_at_u(&self, u: f32) -> Vec<f32> {
         let knots = self.get_knots();
-        let weights = self.get_weights();
         let mut basis = self.get_basis_of_degree_0_at_u(u);
         for degree in 1..self.get_order(){ // degree = order - 1
-            for i in 0..self.controls.len()-1 { 
-                let f = (u - knots[i]) - (knots[i+degree] - knots[i]); // f function on wiki on nurbs
-                let g = (knots[i+degree+1] - u) - (knots[i+degree+1] - knots[i+1]); // g function on wiki on nurbs
-                basis[i] = (f * basis[i]) + (g * basis[i+1]);
+            for i0 in 0..self.controls.len() { 
+                let i1 = i0 + 1; // next control index
+                let mut f = 0.;
+                let mut g = 0.;
+                if basis[i0] > 0. {
+                    f = (u - knots[i0]) / (knots[degree+i0] - knots[i0]) // f function on wiki on nurbs
+                }
+                if basis[i1] > 0. {
+                    g = (knots[degree+i1] - u) / (knots[degree+i1] - knots[i1]) // g function on wiki on nurbs
+                }
+                basis[i0] = (f * basis[i0]) + (g * basis[i1]);
             };
         };
-        let sum: f32 = weights.iter().enumerate().map(|(i,w)| basis[i] * w).sum();
-        weights.iter().enumerate().map(|(i, w)| {
-            if sum > 0_f32 {(basis[i] * w) / sum} else {0_f32} 
+        if u == *knots.last().unwrap_or(&0.) {
+            basis[self.controls.len()-1] = 1.; // last point edge case
+        }
+        basis
+        // let sum: f32 = weights.iter().enumerate().map(|(i,w)| basis[i] * w).sum();
+        // weights.iter().enumerate().map(|(i, w)| {
+        //     if sum > 0_f32 {(basis[i] * w) / sum} else {0_f32} 
+        // }).collect()
+    }
+
+    // for examining the "basis functions" as pictured on wikipedia 
+    pub fn get_basis_plot_vectors(&self, control_index: usize, count: usize) -> Vec<Vec<f32>> {
+        let max_u = *self.get_knots().last().unwrap_or(&0.); // .unwrap_throw("") to javascript client
+        (0..count).map(|u| {
+            let x = (max_u / (count-1) as f32) * u as f32;
+            vec![x, self.get_basis_at_u(x)[control_index], 0.]
         }).collect()
     }
 
-    fn get_vector_at_u(&self, u: f32) -> Vec<f32> {
+    pub fn get_rational_basis_at_u(&self, u: f32) -> Vec<f32> {
+        let weights = self.get_weights();
         let basis = self.get_basis_at_u(u);
+        let weighted_sum: f32 = weights.iter().enumerate().map(|(i, w)| basis[i] * w).sum();
+        weights.iter().enumerate().map(|(i, w)| {
+            if weighted_sum > 0. {(basis[i] * w) / weighted_sum} else {0.} 
+        }).collect()
+    }
+
+    pub fn get_vector_at_u(&self, u: f32) -> Vec<f32> {
+        let basis = self.get_rational_basis_at_u(u);
         let mut vector = vec![];
         for component_index in 0..self.controls[0].len() {
             vector.push(
@@ -81,8 +109,10 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     pub fn get_vectors(&self, count: usize) -> Vec<Vec<f32>> {
-        let max_u = *self.get_knots().last().unwrap_or(&1_f32); // .unwrap_throw("")
-        (0..count).map(|u| self.get_vector_at_u((max_u / (count-1) as f32) * u as f32)).collect()
+        let max_u = *self.get_knots().last().unwrap_or(&0.); // .unwrap_throw("")
+        (0..count).map(|u| 
+            self.get_vector_at_u((max_u / (count-1) as f32) * u as f32)
+        ).collect()
     }
 }
 

@@ -10,24 +10,45 @@ use nurbs::*;
 // use js_sys::Set;
 // use gloo_utils::format::JsValueSerdeExt;
 
-#[derive(Serialize, Deserialize)]
-struct TestResult {
-    nurbs: Nurbs, // <[f32;3]>
-    vectors: Vec<Vec<f32>>,
+#[derive(Default, Serialize, Deserialize)]
+#[serde(default="VectorQuery::default")]
+struct VectorQuery {
+    count: usize,
+    nurbs: Nurbs, 
+    control_index: usize,
 }
 
 #[wasm_bindgen]
-pub fn get_vectors_from_nurbs(val: JsValue) -> Result<JsValue, JsValue> {
-    let nurbs: Nurbs = serde_wasm_bindgen::from_value(val)?; // <[f32;3]>
-    let test_result = TestResult {
+pub fn get_vectors(val: JsValue) -> Result<JsValue, JsValue> {
+    let queried: VectorQuery = serde_wasm_bindgen::from_value(val)?; // <[f32;3]>
+    let count = queried.count.clamp(2, 10000);
+    let result = queried.nurbs.get_vectors(count); // get_discrete_vector(100); // of the form [0,0,0,  0,0,0,  0,0,0, ...] // get_sequence_vector
+    Ok(serde_wasm_bindgen::to_value(&result)?)
+}
+
+
+#[derive(Default, Serialize, Deserialize)]
+#[serde(default="TestNurbsResult::default")]
+struct TestNurbsResult {
+    nurbs: Nurbs,
+    vectors: Vec<Vec<f32>>,
+    basis: Vec<Vec<f32>>,
+}
+
+#[wasm_bindgen]
+pub fn test_nurbs(val: JsValue) -> Result<JsValue, JsValue> {
+    let queried: VectorQuery = serde_wasm_bindgen::from_value(val)?; // <[f32;3]>
+    let result = TestNurbsResult {
         nurbs: Nurbs {
-            order: nurbs.get_order(),
-            knots: nurbs.get_knots(),
+            order:   queried.nurbs.get_order(),
+            knots:   queried.nurbs.get_knots(),
+            weights: queried.nurbs.get_weights(),
             ..Default::default()
         },
-        vectors: nurbs.get_vectors(100),
+        vectors: queried.nurbs.get_vectors(queried.count),
+        basis: queried.nurbs.get_basis_plot_vectors(queried.control_index, queried.count),
     };
-    Ok(serde_wasm_bindgen::to_value(&test_result)?)
+    Ok(serde_wasm_bindgen::to_value(&result)?)
 }
 
 

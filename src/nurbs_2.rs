@@ -2,15 +2,13 @@
 
 //use super::vector::*;
 use serde::{Deserialize, Serialize};
-use rayon::prelude::*;
-use super::Model;
 //use wasm_bindgen::UnwrapThrowExt;
 
-// #[derive(Clone, Serialize, Deserialize)] //#[serde(default = "Control::default")]
-// pub enum Control {
-//     Vector(Vec<f32>),
-//     Nurbs(Nurbs),
-// }
+#[derive(Clone, Serialize, Deserialize)] //#[serde(default = "Control::default")]
+pub enum Control {
+    Vector(Vec<f32>),
+    Nurbs(Nurbs),
+}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Nurbs::default")]
@@ -19,25 +17,10 @@ pub struct Nurbs {
     pub order: usize,      // order = polynomial_degree + 1
     pub knots: Vec<f32>,   // knot_count = order + control_count
     pub weights: Vec<f32>, // weight_count = control_count
-    pub controls: Vec<Model>,
+    pub controls: Vec<Control>,
 }
 
 impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
-    pub fn get_valid_control(&self, control: Model) -> Model {
-        match control {
-            Model::Vector(control) => Model::Vector(control),
-            Model::Nurbs(control) => Model::Nurbs(control.get_valid()),
-        }
-    }
-    pub fn get_valid(&self) -> Nurbs {
-        Nurbs {
-            order: self.get_order(),
-            knots: self.get_knots(),
-            weights: self.get_weights(),
-            controls: self.controls.iter().map(|c| self.get_valid_control(c.clone())).collect(),
-        }
-    }
-
     pub fn get_order(&self) -> usize {
         self.order.clamp(2, self.controls.len()) //if self.order == 0 {3} else {self.order.clamp(2, 10)}
     }
@@ -69,7 +52,8 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     pub fn get_basis_of_degree_0_at_t(&self, t: f32) -> Vec<f32> {
-        self.knots.windows(2)
+        self.get_knots()
+            .windows(2)
             .map(|knots| {
                 if t >= knots[0] && t < knots[1] {
                     1.
@@ -80,43 +64,45 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             .collect()
     }
 
-    pub fn get_basis_at_t(&self, normal_t: f32) -> Vec<f32> {
-        let t = *self.knots.last().unwrap_or(&0.) * normal_t; // .unwrap_throw("") to js client
+    pub fn get_basis_at_t(&self, mut t: f32) -> Vec<f32> {
+        let knots = self.get_knots();
+        t = *knots.last().unwrap_or(&0.) * t; // .unwrap_throw("") to js client
         let mut basis = self.get_basis_of_degree_0_at_t(t);
-        for degree in 1..self.order {
+        for degree in 1..self.get_order() {
             for i0 in 0..self.controls.len() {
                 let i1 = i0 + 1; 
                 let mut f = 0.;
                 let mut g = 0.;
                 if basis[i0] > 0. {
-                    f = (t - self.knots[i0]) / (self.knots[degree + i0] - self.knots[i0]) 
+                    f = (t - knots[i0]) / (knots[degree + i0] - knots[i0]) 
                 }
                 if basis[i1] > 0. {
-                    g = (self.knots[degree + i1] - t) / (self.knots[degree + i1] - self.knots[i1])
+                    g = (knots[degree + i1] - t) / (knots[degree + i1] - knots[i1])
                 }
                 basis[i0] = f * basis[i0] + g * basis[i1];
             }
         }
-        if normal_t == 1. {
-            basis[self.controls.len() - 1] = 1.; // last control edge case
+        if t == *knots.last().unwrap_or(&0.) {
+            basis[self.controls.len() - 1] = 1.; // last point edge case
         }
         basis
     }
 
     pub fn get_rational_basis_at_t(&self, t: f32) -> Vec<f32> {
+        let weights = self.get_weights();
         let basis = self.get_basis_at_t(t);
-        let sum: f32 = self.weights.iter().enumerate().map(|(i, w)| basis[i] * w).sum();
+        let sum: f32 = weights.iter().enumerate().map(|(i, w)| basis[i] * w).sum();
         if sum > 0. {
-            self.weights.iter().enumerate().map(|(i, w)| basis[i] * w / sum).collect()
+            weights.iter().enumerate().map(|(i, w)| basis[i] * w / sum).collect()
         } else {
-            vec![0.; self.weights.len()]
+            vec![0.; weights.len()]
         }
     }
 
     pub fn get_control_vector(&self, index: usize, u: f32) -> Vec<f32> {
         match self.controls[index].clone() {
-            Model::Vector(vector) => vector,
-            Model::Nurbs(nurbs) => nurbs.get_vector_at_uv(u, 0.),
+            Control::Vector(control) => control,
+            Control::Nurbs(control) => control.get_vector_at_uv(u, 0.),
         }
     }
 
@@ -126,24 +112,29 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         for component_index in 0..self.get_control_vector(0, 0.).len() { // 0..self.controls[0].len() {
             vector.push(
                 (0..self.controls.len())
-                    .map(|i| self.get_control_vector(i, v)[component_index] * basis[i]).sum()
+                    .map(|i| self.get_control_vector(i, v)[component_index] * basis[i]) // self.controls[i][component_index]
+                    .sum(),
             );
         }
         vector
     }
 
     pub fn get_curve_vectors(&self, count: usize) -> Vec<Vec<f32>> {
-        (0..count).into_par_iter()
+        (0..count)
             .map(|t| self.get_vector_at_uv(t as f32 / (count-1) as f32, 0.)) // (max_t / (count - 1) as f32) * t as f32)
             .collect()
     }
 
     pub fn get_surface_vectors(&self, u_count: usize, v_count: usize) -> Vec<Vec<f32>> {
-        (0..u_count).into_par_iter().map(|u|
-            (0..v_count).into_par_iter()
-                .map(|v| self.get_vector_at_uv(v as f32 / (v_count-1) as f32, u as f32 / (u_count-1) as f32))
-                .collect::<Vec<Vec<f32>>>()
-            ).flatten().collect()
+        let mut vectors = vec![];
+        for u in 0..u_count{
+            vectors.extend::<Vec<_>>(
+                (0..v_count)
+                    .map(|v| self.get_vector_at_uv(v as f32 / (v_count-1) as f32, u as f32 / (u_count-1) as f32))
+                    .collect() 
+            )
+        }
+        vectors
     }
 }
 
@@ -151,7 +142,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
 impl Nurbs {
     // for examining the "basis functions" as pictured on wikipedia
     pub fn get_basis_plot_vectors(&self, control_index: usize, count: usize) -> Vec<Vec<f32>> {
-        let max_t = *self.knots.last().unwrap_or(&0.); // .unwrap_throw("") to javascript client
+        let max_t = *self.get_knots().last().unwrap_or(&0.); // .unwrap_throw("") to javascript client
         (0..count)
             .map(|t| {
                 let x = (max_t / (count - 1) as f32) * t as f32;
@@ -160,7 +151,6 @@ impl Nurbs {
             .collect()
     }
 }
-
 
 
 

@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct Vector3 {
@@ -9,7 +9,11 @@ pub struct Vector3 {
 
 impl From<(f32, f32, f32)> for Vector3 {
     fn from(tuple: (f32, f32, f32)) -> Self {
-        Self {x:tuple.0, y:tuple.1, z:tuple.2}
+        Self {
+            x: tuple.0,
+            y: tuple.1,
+            z: tuple.2,
+        }
     }
 }
 // let my_vector = Vector3::from((4.7, 5.2, 8.9));
@@ -17,18 +21,17 @@ impl From<(f32, f32, f32)> for Vector3 {
 impl IntoIterator for Vector3 {
     type Item = f32;
     type IntoIter = std::array::IntoIter<f32, 3>;
-    fn into_iter(self) -> Self::IntoIter { // 
+    fn into_iter(self) -> Self::IntoIter {
+        //
         IntoIterator::into_iter([self.x, self.y, self.z]) // std::array::IntoIter::new
     }
 }
-
 
 // impl Default for Vector3 {
 //     fn default() -> Vector3 {
 //         Vector3 {x:16.7, y:43.8, z:59.1}
 //     }
 // }
-
 
 // another approach:
 
@@ -50,11 +53,6 @@ impl IntoIterator for Vector3 {
 //         let _vec: Vector<f32, 3> = [4.2, 1.3, 7.8].into();
 //     }
 // }
-
-
-
-
-
 
 // impl IntoIterator for &Vector3 {
 //     type Item = f32;
@@ -81,17 +79,12 @@ impl IntoIterator for Vector3 {
 //             2 => Some(self.vector.y),
 //             3 => Some(self.vector.z),
 //             _ => {
-//                 self.component_index = 0; 
+//                 self.component_index = 0;
 //                 None
 //             },
 //         }
 //     }
 // }
-
-
-
-
-
 
 // struct Vector5 {
 //     x: f32,
@@ -113,7 +106,7 @@ impl IntoIterator for Vector3 {
 //             4 => Some(self.a),
 //             5 => Some(self.b),
 //             _ => {
-//                 self.component_index = 0; 
+//                 self.component_index = 0;
 //                 None
 //             },
 //         }

@@ -15,10 +15,21 @@ use nurbs::*;
 pub enum Model {
     Vector(Vec<f32>),
     Nurbs(Nurbs),
+    SliceAtU(Slice),
+    SliceAtV(Slice),
+    // SliceByPlane(Slice),
+    // Intersection(???),
 }
 
 impl Default for Model {
     fn default() -> Self { Model::Vector(vec![0.;3]) }
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(default = "Slice::default")]
+pub struct Slice {
+    models: Vec<Model>,
+    t: f32,
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -38,10 +49,34 @@ pub fn get_polygon(val: JsValue) -> Result<JsValue, JsValue> {
 
 fn get_vectors(model: Model, count: usize) -> Vec<Vec<f32>> {
     match model {
-        Model::Nurbs(nurbs) => nurbs.get_valid().get_curve_vectors(count),
+        Model::Nurbs(nurbs) => nurbs.get_valid().get_vectors_at_v(0., count),
+        Model::SliceAtU(slice) => slice.get_vectors_at_u(count), //get_slice_at_u_vectors(&slice.models[0], slice.t, count),//.get_valid().get_vectors_at_u(slice.t, count),
+        Model::SliceAtV(slice) => slice.get_vectors_at_v(count), //Model::SliceAtV(slice) => slice.models//.get_valid().get_vectors_at_v(slice.t, count),
         _ => vec![vec![0.; 3]; 2],
     }
 }
+
+impl Slice {
+    fn get_vectors_at_u(&self, count: usize) -> Vec<Vec<f32>> {
+        match &self.models[0] {
+            Model::Nurbs(nurbs) => nurbs.get_valid().get_vectors_at_u(self.t, count),
+            _ => vec![vec![0.; 3]; 2],
+        }
+    }
+    fn get_vectors_at_v(&self, count: usize) -> Vec<Vec<f32>> {
+        match &self.models[0] {
+            Model::Nurbs(nurbs) => nurbs.get_valid().get_vectors_at_v(self.t, count),
+            _ => vec![vec![0.; 3]; 2],
+        }
+    }
+}
+
+// fn get_slice_at_u_vectors(model: &Model, count: usize) -> Vec<Vec<f32>>{
+//     match model {
+//         Model::Nurbs(nurbs) => nurbs.get_valid().get_vectors_at_u(0., count),
+//         _ => vec![vec![0.; 3]; 2],
+//     }
+// }
 
 
 

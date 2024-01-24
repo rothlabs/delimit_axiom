@@ -27,6 +27,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         match control {
             Model::Vector(control) => Model::Vector(control),
             Model::Nurbs(control) => Model::Nurbs(control.get_valid()),
+            _ => Model::Vector(vec![0.; 3]),
         }
     }
     pub fn get_valid(&self) -> Nurbs {
@@ -117,6 +118,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         match self.controls[index].clone() {
             Model::Vector(vector) => vector,
             Model::Nurbs(nurbs) => nurbs.get_vector_at_uv(u, 0.),
+            _ => vec![0.; 3],
         }
     }
 
@@ -132,9 +134,15 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         vector
     }
 
-    pub fn get_curve_vectors(&self, count: usize) -> Vec<Vec<f32>> {
+    pub fn get_vectors_at_u(&self, u: f32, count: usize) -> Vec<Vec<f32>> {
         (0..count).into_par_iter()
-            .map(|t| self.get_vector_at_uv(t as f32 / (count-1) as f32, 0.)) // (max_t / (count - 1) as f32) * t as f32)
+            .map(|t| self.get_vector_at_uv(u, t as f32 / (count-1) as f32)) // (max_t / (count - 1) as f32) * t as f32)
+            .collect()
+    }
+
+    pub fn get_vectors_at_v(&self, v: f32, count: usize) -> Vec<Vec<f32>> {
+        (0..count).into_par_iter()
+            .map(|t| self.get_vector_at_uv(t as f32 / (count-1) as f32, v)) // (max_t / (count - 1) as f32) * t as f32)
             .collect()
     }
 

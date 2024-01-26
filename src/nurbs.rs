@@ -1,28 +1,26 @@
-//use std::iter::zip;
-
-//use super::vector::*;
+use super::Model;
 use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
-use super::Model;
-//use wasm_bindgen::UnwrapThrowExt;
-
-// #[derive(Clone, Serialize, Deserialize)] //#[serde(default = "Control::default")]
-// pub enum Control {
-//     Vector(Vec<f32>),
-//     Nurbs(Nurbs),
-// }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Nurbs::default")]
 pub struct Nurbs {
-    // pub struct Nurbs<T: Default>  {
-    pub order: usize,      // order = polynomial_degree + 1
-    pub knots: Vec<f32>,   // knot_count = order + control_count
-    pub weights: Vec<f32>, // weight_count = control_count
+    pub order: usize,         // order = polynomial_degree + 1
+    pub knots: Vec<f32>,      // knot_count = order + control_count
+    pub weights: Vec<f32>,    // weight_count = control_count
     pub controls: Vec<Model>,
 }
 
 impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
+    pub fn get_valid(&self) -> Nurbs {
+        Nurbs {
+            order: self.get_valid_order(),
+            knots: self.get_valid_knots(),
+            weights: self.get_valid_weights(),
+            controls: self.controls.iter().map(|c| self.get_valid_control(c.clone())).collect(),
+        }
+    }
+    
     pub fn get_valid_control(&self, control: Model) -> Model {
         match control {
             Model::Vector(control) => Model::Vector(control),
@@ -30,20 +28,12 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             _ => Model::Vector(vec![0.; 3]),
         }
     }
-    pub fn get_valid(&self) -> Nurbs {
-        Nurbs {
-            order: self.get_order(),
-            knots: self.get_knots(),
-            weights: self.get_weights(),
-            controls: self.controls.iter().map(|c| self.get_valid_control(c.clone())).collect(),
-        }
-    }
 
-    pub fn get_order(&self) -> usize {
+    pub fn get_valid_order(&self) -> usize {
         self.order.clamp(2, self.controls.len()) //if self.order == 0 {3} else {self.order.clamp(2, 10)}
     }
 
-    pub fn get_weights(&self) -> Vec<f32> {
+    pub fn get_valid_weights(&self) -> Vec<f32> {
         if self.weights.len() == self.controls.len() {
             self.weights.clone()
         } else {
@@ -51,8 +41,8 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         }
     }
 
-    pub fn get_knots(&self) -> Vec<f32> {
-        if self.knots.len() == self.controls.len() + self.get_order() {
+    pub fn get_valid_knots(&self) -> Vec<f32> {
+        if self.knots.len() == self.controls.len() + self.get_valid_order() {
             self.knots.clone()
         } else {
             self.get_open_knots()
@@ -60,7 +50,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     pub fn get_open_knots(&self) -> Vec<f32> {
-        let order = self.get_order();
+        let order = self.get_valid_order();
         let repeats = order - 1; // knot multiplicity = order for ends of knot vector
         let max_knot = self.controls.len() + order - (repeats * 2) - 1;
         let mut knots = vec![0_f32; repeats];
@@ -134,24 +124,24 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         vector
     }
 
-    pub fn get_vectors_at_u(&self, u: f32, count: usize) -> Vec<Vec<f32>> {
+    pub fn get_polyline_at_u(&self, u: f32, count: usize) -> Vec<f32> {
         (0..count).into_par_iter()
             .map(|t| self.get_vector_at_uv(u, t as f32 / (count-1) as f32)) // (max_t / (count - 1) as f32) * t as f32)
-            .collect()
+            .flatten().collect()
     }
 
-    pub fn get_vectors_at_v(&self, v: f32, count: usize) -> Vec<Vec<f32>> {
+    pub fn get_polyline_at_v(&self, v: f32, count: usize) -> Vec<f32> {
         (0..count).into_par_iter()
             .map(|t| self.get_vector_at_uv(t as f32 / (count-1) as f32, v)) // (max_t / (count - 1) as f32) * t as f32)
-            .collect()
+            .flatten().collect()
     }
 
-    pub fn get_surface_vectors(&self, u_count: usize, v_count: usize) -> Vec<Vec<f32>> {
+    pub fn get_mesh_vector(&self, u_count: usize, v_count: usize) -> Vec<f32> {
         (0..u_count).into_par_iter().map(|u|
             (0..v_count).into_par_iter()
                 .map(|v| self.get_vector_at_uv(v as f32 / (v_count-1) as f32, u as f32 / (u_count-1) as f32))
                 .collect::<Vec<Vec<f32>>>()
-            ).flatten().collect()
+            ).flatten().flatten().collect()
     }
 }
 

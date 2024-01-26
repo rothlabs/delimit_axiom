@@ -1,7 +1,6 @@
-use wasm_bindgen::prelude::*;
-use serde::{Deserialize, Serialize};
-// use super::nurbs::*;
 use super::Model;
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default = "MeshQuery::default")]
@@ -13,31 +12,31 @@ struct MeshQuery {
 
 #[derive(Serialize, Deserialize)]
 struct Mesh {
-    vectors: Vec<Vec<f32>>, //Vec<[f32; 3]>,
-    indices: Vec<usize>,
+    vector: Vec<f32>, 
+    triangles: Vec<usize>,
 }
 
 #[wasm_bindgen]
 pub fn get_mesh(val: JsValue) -> Result<JsValue, JsValue> {
     let queried: MeshQuery = serde_wasm_bindgen::from_value(val)?;
-    let u_count = queried.u_count.clamp(2, 2000);
-    let v_count = queried.v_count.clamp(2, 2000); // queried.nurbs.get_valid().get_surface_vectors(u_count, v_count);
+    let u_count = queried.u_count.clamp(2, 1000);
+    let v_count = queried.v_count.clamp(2, 1000); 
     let result = Mesh {
-        vectors: get_vectors(queried.model, u_count, v_count),
-        indices: get_indices(u_count, v_count),
+        vector: get_mesh_vector(queried.model, u_count, v_count),
+        triangles: get_triangles(u_count, v_count),
     };
     Ok(serde_wasm_bindgen::to_value(&result)?)
 }
 
-fn get_vectors(model: Model, u_count: usize, v_count: usize) -> Vec<Vec<f32>> {
+fn get_mesh_vector(model: Model, u_count: usize, v_count: usize) -> Vec<f32> {
     match model {
-        Model::Nurbs(nurbs) => nurbs.get_valid().get_surface_vectors(u_count, v_count),
-        _ => vec![vec![0.; 3]; 4],
+        Model::Nurbs(nurbs) => nurbs.get_valid().get_mesh_vector(u_count, v_count),
+        _ => vec![0.; 12],
     }
 }
 
-fn get_indices(u_count: usize, v_count: usize) -> Vec<usize> {
-    let mut indices = vec![];
+fn get_triangles(u_count: usize, v_count: usize) -> Vec<usize> {
+    let mut triangles = vec![];
     for u in 0..u_count-1 {
         for v in 0..v_count-1 {
             let local_u0_v0 = u * v_count + v;
@@ -45,16 +44,16 @@ fn get_indices(u_count: usize, v_count: usize) -> Vec<usize> {
             let local_u1_v0 = (u + 1) * v_count + v;
             let local_u1_v1 = (u + 1) * v_count + v + 1;
             // patch triangle 1
-            indices.push(local_u0_v0);
-            indices.push(local_u0_v1);
-            indices.push(local_u1_v0);
+            triangles.push(local_u0_v0);
+            triangles.push(local_u0_v1);
+            triangles.push(local_u1_v0);
             // patch triangle 2
-            indices.push(local_u0_v1);
-            indices.push(local_u1_v1);
-            indices.push(local_u1_v0);
+            triangles.push(local_u0_v1);
+            triangles.push(local_u1_v1);
+            triangles.push(local_u1_v0);
         }
     }
-    indices
+    triangles
 }
 
 

@@ -3,23 +3,41 @@ mod nurbs;
 mod slice;
 mod polyline;
 mod mesh;
+mod turtled;
 
-use nurbs::Nurbs;
-use slice::Slice;
+use utils::*;
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+use nurbs::*;
+use slice::*;
+use turtled::*;
 
-#[derive(Clone, Serialize, Deserialize)] //#[serde(default = "Control::default")]
+#[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
     Vector(Vec<f32>),
     Nurbs(Nurbs),
-    SliceAtU(Slice),
-    SliceAtV(Slice),
-    // SliceAtPlane(Slice),
-    // Intersection(???),
+    Slice(Slice),
+    Turtled(Turtled),
+    //Polyline(dyn Polyline),
 }
 
 impl Default for Model {
     fn default() -> Self { Model::Vector(vec![0.;3]) }
+}
+
+#[derive(Clone, Serialize, Deserialize)] 
+pub enum Parameter {
+    U(f32),
+    V(f32),
+}
+
+impl Default for Parameter {
+    fn default() -> Self { Parameter::U(0.) }
+}
+
+#[wasm_bindgen]
+pub fn enable_panic_messages() {
+    set_panic_hook();
 }
 
 

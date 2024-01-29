@@ -1,6 +1,4 @@
-//use std::ops::{Add, Mul};
-
-use super::{Model, polyline::*};
+use super::polyline::*;
 use serde::{Deserialize, Serialize};
 use glam::*;
 

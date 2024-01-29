@@ -4,6 +4,9 @@ mod slice;
 mod polyline;
 mod mesh;
 mod turtled;
+mod path;
+mod area;
+mod extrusion;
 
 use utils::*;
 use serde::{Deserialize, Serialize};
@@ -11,6 +14,9 @@ use wasm_bindgen::prelude::*;
 use nurbs::*;
 use slice::*;
 use turtled::*;
+use path::*;
+use area::*;
+use extrusion::*;
 
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
@@ -18,11 +24,14 @@ pub enum Model {
     Nurbs(Nurbs),
     Slice(Slice),
     Turtled(Turtled),
+    Path2D(Path2D),
+    Area(Area),
+    Extrusion(Extrusion),
     //Polyline(dyn Polyline),
 }
 
 impl Default for Model {
-    fn default() -> Self { Model::Vector(vec![0.;3]) }
+    fn default() -> Self { Model::Vector(vec![0.; 3]) }
 }
 
 #[derive(Clone, Serialize, Deserialize)] 

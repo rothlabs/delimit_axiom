@@ -1,15 +1,16 @@
-use super::Model;
+use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-#[derive(Default, Serialize, Deserialize)]
-#[serde(default = "MeshQuery::default")]
-struct MeshQuery {
-    model: Model,
-    u_count: usize,
-    v_count: usize,
-    tolerance: f32,
-}
+// #[derive(Default, Serialize, Deserialize)]
+// #[serde(default = "MeshQuery::default")]
+// pub struct MeshQuery {
+//     model: Model,
+//     pub tolerance: f32,
+//     pub count: usize,
+//     u_count: usize,
+//     v_count: usize,
+// }
 
 #[derive(Serialize, Deserialize)]
 pub struct Mesh {
@@ -19,12 +20,19 @@ pub struct Mesh {
 
 #[wasm_bindgen]
 pub fn get_mesh(val: JsValue) -> Result<JsValue, JsValue> {
-    let queried: MeshQuery = serde_wasm_bindgen::from_value(val)?;
+    let queried: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
     let mut tolerance = 0.1;
     if queried.tolerance > 0. { tolerance = queried.tolerance.clamp(0.01, 10.); }
-    let mesh = match queried.model {
+    let mut count = 80;
+    if queried.count > 0 { count = queried.count.clamp(2, 10000); }
+    let mesh_query = DiscreteQuery {
+        tolerance,
+        count,
+        ..queried
+    };
+    let mesh = match &mesh_query.model {
         Model::Area(area)       =>  area.get_mesh(tolerance),
-        Model::Extrusion(extru) => extru.get_mesh(tolerance),
+        Model::Extrusion(extru) => extru.get_mesh(&mesh_query),
         _ => Mesh {
             vector: vec![0.; 9],
             triangles: vec![0, 1, 2],
@@ -35,7 +43,7 @@ pub fn get_mesh(val: JsValue) -> Result<JsValue, JsValue> {
 
 #[wasm_bindgen]
 pub fn get_mesh_vector(val: JsValue) -> Result<JsValue, JsValue> {
-    let queried: MeshQuery = serde_wasm_bindgen::from_value(val)?;
+    let queried: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
     let [u_count, v_count] = clamp_counts(queried.u_count, queried.v_count);
     let vector = match queried.model {
         Model::Nurbs(nurbs) => nurbs.get_mesh_vector(u_count, v_count),

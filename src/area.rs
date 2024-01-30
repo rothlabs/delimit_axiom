@@ -1,4 +1,4 @@
-use super::Model;
+use super::{Model, DiscreteQuery, log};
 use super::mesh::Mesh;
 use lyon::path::Path;
 // use lyon::path::path::Builder;
@@ -14,21 +14,28 @@ pub struct Area {
 }
 
 impl Area { 
-    pub fn get_polylines(&self, tolerance: f32) -> Vec<Vec<f32>> {
-        let mut polylines:Vec<Vec<f32>> = vec![];
-        for part in &self.parts {
-            match part {
-                Model::Path2D(path_2d) => polylines.push(path_2d.get_polyline(tolerance)),
-                _ => ()
-            }
-        }
-        polylines
+    pub fn get_polylines(&self, query: &DiscreteQuery) -> Vec<Vec<f32>> {
+        // let mut polylines:Vec<Vec<f32>> = vec![];
+        // for part in &self.parts {
+        //     polylines.push(part.get_polyline(query));
+        //     // match part {
+        //     //     Model::Path(m)      => polylines.push(m.get_polyline(tolerance)),
+        //     //     Model::Circle(m)    => polylines.push(m.get_polyline(tolerance)),
+        //     //     Model::Rectangle(m) => polylines.push(m.get_polyline(tolerance)),
+        //     //     _ => ()
+        //     // }
+        // }
+        // polylines
+        self.parts.iter().map(|p| p.get_polyline(query)).collect()
     }
     pub fn get_mesh(&self, tolerance: f32) -> Mesh {
         let mut builder = Path::builder();
         for part in &self.parts {
             match part {
-                Model::Path2D(path_2d) => path_2d.add_parts_to_builder(&mut builder),
+                Model::Path(m)      => m.add_parts_to_builder(&mut builder),
+                Model::Group(m)     => m.add_parts_to_builder(&mut builder),
+                Model::Circle(m)    => m.add_self_to_builder(&mut builder),
+                Model::Rectangle(m) => m.add_self_to_builder(&mut builder),
                 _ => ()
             }
         }

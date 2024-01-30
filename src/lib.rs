@@ -1,4 +1,6 @@
 mod utils;
+
+mod group;
 mod nurbs;
 mod slice;
 mod polyline;
@@ -11,6 +13,7 @@ mod extrusion;
 use utils::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+use group::*;
 use nurbs::*;
 use slice::*;
 use turtled::*;
@@ -21,13 +24,15 @@ use extrusion::*;
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
     Vector(Vec<f32>),
+    Group(Group),
     Nurbs(Nurbs),
     Slice(Slice),
     Turtled(Turtled),
-    Path2D(Path2D),
+    Path(Path),
+    Circle(Circle),
+    Rectangle(Rectangle),
     Area(Area),
     Extrusion(Extrusion),
-    //Polyline(dyn Polyline),
 }
 
 impl Default for Model {
@@ -44,9 +49,27 @@ impl Default for Parameter {
     fn default() -> Self { Parameter::U(0.) }
 }
 
+#[derive(Default, Serialize, Deserialize)]
+#[serde(default = "DiscreteQuery::default")]
+pub struct DiscreteQuery {
+    pub model:     Model,
+    pub tolerance: f32,   // allowed distance from real model
+    pub count:     usize, // quantity of points from the model (when tolerance is not implemented)
+    pub u_count:   usize, // for surfaces
+    pub v_count:   usize, // for surfaces
+}
+
 #[wasm_bindgen]
 pub fn enable_panic_messages() {
     set_panic_hook();
+}
+
+#[wasm_bindgen]
+extern "C" {
+    pub fn alert(s: &str);
+    
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
 }
 
 
@@ -118,10 +141,7 @@ pub fn enable_panic_messages() {
 
 
 
-// #[wasm_bindgen]
-// extern "C" {
-//     fn alert(s: &str);
-// }
+
 
 // #[wasm_bindgen]
 // pub fn greet() {

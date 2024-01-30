@@ -1,5 +1,5 @@
 
-use super::Model;
+use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 //use lyon::path:FromPolyline;
@@ -8,27 +8,42 @@ pub trait Polyline {
     fn get_polyline(&self, count: usize) -> Vec<f32>;
 }
 
-#[derive(Default, Serialize, Deserialize)]
-#[serde(default = "PolylineQuery::default")]
-struct PolylineQuery { 
-    model: Model,
-    count: usize,
-    tolerance: f32,
-}
+// #[derive(Default, Serialize, Deserialize)]
+// #[serde(default = "PolylineQuery::default")]
+// pub struct PolylineQuery { 
+//     model: Model,
+//     count: usize,
+//     tolerance: f32,
+// }
 
 #[wasm_bindgen]
 pub fn get_polyline(val: JsValue) -> Result<JsValue, JsValue> {
-    let queried: PolylineQuery = serde_wasm_bindgen::from_value(val)?; 
-    let count = queried.count.clamp(2, 10000);
-    let tolerance = queried.tolerance.clamp(0.1, 1.);
-    let polyline = match queried.model {
-        Model::Nurbs(nurbs)      =>    nurbs.get_polyline(count),
-        Model::Slice(slice)      =>    slice.get_polyline(count),
-        Model::Turtled(turtled)  =>  turtled.get_polyline(count),
-        Model::Path2D(path_2d)   =>  path_2d.get_polyline(tolerance),
-        _ => vec![0.; 6],
+    let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?; 
+    let mut count = 80;
+    if query.count > 0 { count = query.count.clamp(2, 10000); }
+    let tolerance = query.tolerance.clamp(0.01, 10.);
+    let query = DiscreteQuery {
+        tolerance,
+        count,
+        ..query
     };
+    let polyline = query.model.get_polyline(&query);
     Ok(serde_wasm_bindgen::to_value(&polyline)?)
+}
+
+impl Model {
+    pub fn get_polyline(&self, query: &DiscreteQuery) -> Vec<f32> {
+        let DiscreteQuery {count, tolerance, ..} = query;
+        match self {
+            Model::Nurbs(m)     => m.get_polyline(*count),
+            Model::Slice(m)     => m.get_polyline(*count),
+            Model::Turtled(m)   => m.get_polyline(*count),
+            Model::Path(m)      => m.get_polyline(*tolerance),
+            Model::Circle(m)    => m.get_polyline(*tolerance),
+            Model::Rectangle(m) => m.get_polyline(*tolerance),
+            _ => vec![],
+        }
+    }
 }
 
 

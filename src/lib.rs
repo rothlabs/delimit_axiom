@@ -13,6 +13,7 @@ mod extrusion;
 use utils::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+use glam::*;
 use group::*;
 use nurbs::*;
 use slice::*;
@@ -43,6 +44,22 @@ impl Default for Model {
     fn default() -> Self { Model::Vector(vec![0.; 3]) }
 }
 
+impl Model {
+    pub fn get_vec3_or(&self, alt: Vec3) -> Vec3 {
+        match self {
+            Model::Vector(m) => {
+                let vec3 = Vec3::from_slice(m);
+                if vec3.length() > 0. {
+                    vec3
+                } else {
+                    alt
+                }
+            },
+            _ => alt,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Parameter {
     U(f32),
@@ -61,6 +78,26 @@ pub struct DiscreteQuery {
     pub count:     usize, // quantity of points from the model (when tolerance is not implemented)
     pub u_count:   usize, // for surfaces
     pub v_count:   usize, // for surfaces
+}
+
+impl DiscreteQuery {
+    fn get_valid(self) -> DiscreteQuery {
+        let mut tolerance = 0.1;
+        if self.tolerance > 0. { tolerance = self.tolerance.clamp(0.01, 10.); }
+        let mut count = 80;
+        if self.count > 0 { count = self.count.clamp(2, 1000); }
+        let mut u_count = 25;
+        if self.u_count > 0 { u_count = self.u_count.clamp(2, 1000); }
+        let mut v_count = 25;
+        if self.v_count > 0 { v_count = self.v_count.clamp(2, 1000); }
+        DiscreteQuery {
+            model: self.model,
+            tolerance,
+            count,
+            u_count,
+            v_count,
+        }
+    }
 }
 
 #[wasm_bindgen]

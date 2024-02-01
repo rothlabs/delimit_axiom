@@ -6,21 +6,7 @@ use serde::{Deserialize, Serialize};
 use glam::*;
 //use lyon::path::path::Builder;
 
-impl Model {
-    fn get_vec3_or(&self, alt: Vec3) -> Vec3 {
-        match self {
-            Model::Vector(m) => {
-                let vec3 = Vec3::from_slice(m);
-                if vec3.length() > 0. {
-                    vec3
-                } else {
-                    alt
-                }
-            },
-            _ => alt,
-        }
-    }
-}
+
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Group::default")]
@@ -74,7 +60,7 @@ impl Group {
     }
 }
 
-fn get_transformed_vector(vector: &Vec<f32>, matrix: Mat4) -> Vec<f32> {
+pub fn get_transformed_vector(vector: &Vec<f32>, matrix: Mat4) -> Vec<f32> {
     let mut result = vec![];
     for v in vector.chunks(3) {
         let vec4 = Vec4::new(v[0], v[1], v[2], 1.); //Vec4::from_slice(v);

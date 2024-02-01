@@ -1,4 +1,4 @@
-use super::{Model, DiscreteQuery, log};
+use super::{Model, DiscreteQuery};
 use super::mesh::Mesh;
 use lyon::math::{Box2D, Angle, Vector, vector, Point, point};
 use lyon::path::polygon::PathEvents;
@@ -27,7 +27,7 @@ impl Area {
         }
         polylines
     }
-    pub fn get_mesh(&self, tolerance: f32) -> Mesh {
+    pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh {
         let mut builder = Path::builder();
         for part in &self.parts {
             for path in part.get_paths(){
@@ -36,7 +36,7 @@ impl Area {
         }
         let raw_path = builder.build();
         let path = fuse_path(raw_path);        
-        let options = FillOptions::tolerance(tolerance);
+        let options = FillOptions::tolerance(query.tolerance);
             //.with_fill_rule(FillRule::EvenOdd)
             //.with_intersections(true)
             //.with_sweep_orientation(Orientation::Horizontal);

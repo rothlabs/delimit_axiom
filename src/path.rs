@@ -48,14 +48,6 @@ impl Path {
             for path in part.get_paths(){
                 builder.extend_from_paths(&[path.as_slice()]);
             }
-            // match part {
-            //     Model::Group(m)  => {
-            //         for path in m.get_paths(){
-            //             builder.extend_from_paths(&[path.as_slice()]);
-            //         }
-            //     },
-            //     _ => builder.extend_from_paths(&[part.get_path().as_slice()]),
-            // };
         }
         let mut svg_builder = builder.with_svg();//let mut svg_builder = lyon::path::Path::svg_builder();
         for part in &self.parts {
@@ -68,8 +60,6 @@ impl Path {
                 },
                 Model::Close(_)  => svg_builder.close(),
                 _ => (),
-                //Part::Circle(p)    =>  builder.extend_from_paths(&[p.get_path().as_slice()]),//p.add_self_to_builder(builder),//builder.add_circle(point(c.center[0], c.center[1]), c.radius, Winding::Positive),
-                //Part::Rectangle(p) =>  builder.extend_from_paths(&[p.get_path().as_slice()]),// self.add_rounded_rectangle(builder, rect),
             };
         }
         if self.reverse { 
@@ -204,6 +194,18 @@ fn get_polyline(path: lyon::path::Path, tolerance: f32) -> Vec<f32> {
 
 
 
+                //Part::Circle(p)    =>  builder.extend_from_paths(&[p.get_path().as_slice()]),//p.add_self_to_builder(builder),//builder.add_circle(point(c.center[0], c.center[1]), c.radius, Winding::Positive),
+                //Part::Rectangle(p) =>  builder.extend_from_paths(&[p.get_path().as_slice()]),// self.add_rounded_rectangle(builder, rect),
+
+
+            // match part {
+            //     Model::Group(m)  => {
+            //         for path in m.get_paths(){
+            //             builder.extend_from_paths(&[path.as_slice()]);
+            //         }
+            //     },
+            //     _ => builder.extend_from_paths(&[part.get_path().as_slice()]),
+            // };
 
 
 

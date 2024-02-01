@@ -19,14 +19,7 @@ pub trait Polyline {
 #[wasm_bindgen]
 pub fn get_polyline(val: JsValue) -> Result<JsValue, JsValue> {
     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?; 
-    let mut count = 80;
-    if query.count > 0 { count = query.count.clamp(2, 10000); }
-    let tolerance = query.tolerance.clamp(0.01, 10.);
-    let query = DiscreteQuery {
-        tolerance,
-        count,
-        ..query
-    };
+    let query = query.get_valid();
     let polyline = query.model.get_polyline(&query);
     Ok(serde_wasm_bindgen::to_value(&polyline)?)
 }
@@ -45,6 +38,16 @@ impl Model {
         }
     }
 }
+
+
+// let mut count = 80;
+// if query.count > 0 { count = query.count.clamp(2, 10000); }
+// let tolerance = query.tolerance.clamp(0.01, 10.);
+// let query = DiscreteQuery {
+//     tolerance,
+//     count,
+//     ..query
+// };
 
 
 // pub struct PolylineIterator {

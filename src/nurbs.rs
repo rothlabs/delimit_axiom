@@ -1,4 +1,4 @@
-use super::{Model, Parameter, polyline::*};
+use super::{Model, Parameter, DiscreteQuery, polyline::*};
 use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
 
@@ -32,7 +32,8 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         }
     }
 
-    pub fn get_mesh_vector(&self, u_count: usize, v_count: usize) -> Vec<f32> {
+    pub fn get_mesh_vector(&self, query: &DiscreteQuery) -> Vec<f32> {
+        let &DiscreteQuery {u_count, v_count, ..} = query;
         let nurbs = self.get_valid();
         (0..u_count).into_par_iter().map(|u|
             (0..v_count).into_par_iter()
@@ -66,7 +67,6 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     fn get_valid(&self) -> Nurbs {
-
         Nurbs {
             order: self.get_valid_order(),
             knots: self.get_valid_knots(),

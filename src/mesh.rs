@@ -1,16 +1,8 @@
+use std::borrow::Borrow;
+
 use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
-
-// #[derive(Default, Serialize, Deserialize)]
-// #[serde(default = "MeshQuery::default")]
-// pub struct MeshQuery {
-//     model: Model,
-//     pub tolerance: f32,
-//     pub count: usize,
-//     u_count: usize,
-//     v_count: usize,
-// }
 
 #[derive(Serialize, Deserialize)]
 pub struct Mesh {
@@ -20,19 +12,11 @@ pub struct Mesh {
 
 #[wasm_bindgen]
 pub fn get_mesh(val: JsValue) -> Result<JsValue, JsValue> {
-    let queried: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
-    let mut tolerance = 0.1;
-    if queried.tolerance > 0. { tolerance = queried.tolerance.clamp(0.01, 10.); }
-    let mut count = 80;
-    if queried.count > 0 { count = queried.count.clamp(2, 10000); }
-    let mesh_query = DiscreteQuery {
-        tolerance,
-        count,
-        ..queried
-    };
-    let mesh = match &mesh_query.model {
-        Model::Area(area)       =>  area.get_mesh(tolerance),
-        Model::Extrusion(extru) => extru.get_mesh(&mesh_query),
+    let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
+    let query = query.get_valid();
+    let mesh = match &query.model {
+        Model::Area(area)       =>  area.get_mesh(&query),
+        Model::Extrusion(extru) => extru.get_mesh(&query),
         _ => Mesh {
             vector: vec![0.; 9],
             triangles: vec![0, 1, 2],
@@ -43,27 +27,21 @@ pub fn get_mesh(val: JsValue) -> Result<JsValue, JsValue> {
 
 #[wasm_bindgen]
 pub fn get_mesh_vector(val: JsValue) -> Result<JsValue, JsValue> {
-    let queried: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
-    let [u_count, v_count] = clamp_counts(queried.u_count, queried.v_count);
-    let vector = match queried.model {
-        Model::Nurbs(nurbs) => nurbs.get_mesh_vector(u_count, v_count),
+    let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
+    let query = query.get_valid(); //let [u_count, v_count] = clamp_counts(queried.u_count, queried.v_count);
+    let vector = match &query.model {
+        Model::Nurbs(nurbs) => nurbs.get_mesh_vector(&query),
         _ => vec![0.; 12],
     };
     Ok(serde_wasm_bindgen::to_value(&vector)?)
 }
 
-#[derive(Default, Serialize, Deserialize)]
-#[serde(default = "TriangleQuery::default")]
-struct TriangleQuery {
-    u_count: usize,
-    v_count: usize,
-}
-
 #[wasm_bindgen]
 pub fn get_triangles(val: JsValue) -> Result<JsValue, JsValue> {
-    let queried: TriangleQuery = serde_wasm_bindgen::from_value(val)?;
-    let [u_count, v_count] = clamp_counts(queried.u_count, queried.v_count); 
-    let vector = get_trivec(u_count, v_count);
+    let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
+    let query = query.get_valid();
+    //let [u_count, v_count] = clamp_counts(queried.u_count, queried.v_count); 
+    let vector = get_trivec(query.u_count, query.v_count);
     Ok(serde_wasm_bindgen::to_value(&vector)?)
 }
 
@@ -92,9 +70,21 @@ pub fn get_trivec_with_offset(u_count: usize, v_count: usize, offset: usize) -> 
     vector
 }
 
-fn clamp_counts(u_count: usize, v_count: usize) -> [usize; 2] {
-    [u_count.clamp(2, 1000), v_count.clamp(2, 1000)]
-}
+
+
+// fn clamp_counts(u_count: usize, v_count: usize) -> [usize; 2] {
+//     [u_count.clamp(2, 1000), v_count.clamp(2, 1000)]
+// }
+
+// #[derive(Default, Serialize, Deserialize)]
+// #[serde(default = "MeshQuery::default")]
+// pub struct MeshQuery {
+//     model: Model,
+//     pub tolerance: f32,
+//     pub count: usize,
+//     u_count: usize,
+//     v_count: usize,
+// }
 
 
     // let path = builder.build();

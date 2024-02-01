@@ -28,11 +28,15 @@ pub enum Model {
     Nurbs(Nurbs),
     Slice(Slice),
     Turtled(Turtled),
-    Path(Path),
     Circle(Circle),
     Rectangle(Rectangle),
     Area(Area),
     Extrusion(Extrusion),
+    Path(Path),
+    MoveTo(Box<Model>),
+    LineTo(Box<Model>),
+    ArcTo(ArcTo),
+    Close(bool), // TODO: find way to remove bool
 }
 
 impl Default for Model {

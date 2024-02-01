@@ -1,6 +1,6 @@
 
 use super::{Model, DiscreteQuery};
-use serde::{Deserialize, Serialize};
+//use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 //use lyon::path:FromPolyline;
 

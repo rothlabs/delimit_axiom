@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;

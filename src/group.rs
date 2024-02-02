@@ -52,6 +52,8 @@ impl Group {
     fn get_matrix(&self) -> Mat4 {
         let mut mat4 = Mat4::IDENTITY;
         //let axis = &self.axis.unwrap_or(Box::new(Model::Vector(vec![0.;3]))).get_vec3_or(Vec3::Z);
+        let position = self.position.get_vec3_or(Vec3::ZERO);
+        mat4 *= Mat4::from_translation(position);
         let axis = self.axis.get_vec3_or(Vec3::Z);
         mat4 *= Mat4::from_axis_angle(axis, self.angle);
         let scale = self.scale.get_vec3_or(Vec3::ONE);

@@ -1,11 +1,7 @@
 use super::{Model, DiscreteQuery};
 use super::mesh::Mesh;
-use lyon::math::{Box2D, Angle, Vector, vector, Point, point};
-use lyon::path::polygon::PathEvents;
-use lyon::path::traits::{Build, PathBuilder};
-use lyon::path::{Path, PathEvent, Position};
-// use lyon::path::path::Builder;
-// use lyon::path::traits::PathIterator;
+use lyon::math::point;
+use lyon::path::{Path, PathEvent};
 use lyon::tessellation::*;
 use serde::{Deserialize, Serialize};
 
@@ -37,9 +33,6 @@ impl Area {
         let raw_path = builder.build();
         let path = fuse_path(raw_path);        
         let options = FillOptions::tolerance(query.tolerance);
-            //.with_fill_rule(FillRule::EvenOdd)
-            //.with_intersections(true)
-            //.with_sweep_orientation(Orientation::Horizontal);
         let mut geometry: VertexBuffers<[f32; 3], u16> = VertexBuffers::new();
         let mut buffer_builder = BuffersBuilder::new(&mut geometry, |vertex: FillVertex| {
             let p = vertex.position().to_array();
@@ -55,9 +48,8 @@ impl Area {
 }
 
 fn fuse_path(path: lyon::path::Path) -> lyon::path::Path{
-    let mut builder = lyon::path::Path::builder();//Path::builder();
+    let mut builder = lyon::path::Path::builder();
     let mut endpoint = point(0., 0.); // path.first_endpoint().unwrap_or((point(0., 0.), Attributes::default())).position();
-    //let mut end_occurred = false;
     let mut close_end: bool = false;
     let mut open = false;
     for event in path.iter() {
@@ -73,16 +65,16 @@ fn fuse_path(path: lyon::path::Path) -> lyon::path::Path{
                     open = true;
                 }
             }
-            PathEvent::Line{from, to} => {
+            PathEvent::Line{from:_, to} => {
                 builder.line_to(to);
             }
-            PathEvent::Quadratic { from, ctrl, to } => {
+            PathEvent::Quadratic { from:_, ctrl, to } => {
                 builder.quadratic_bezier_to(ctrl, to);
             }
-            PathEvent::Cubic { from, ctrl1, ctrl2, to }=> {
+            PathEvent::Cubic { from:_, ctrl1, ctrl2, to }=> {
                 builder.cubic_bezier_to(ctrl1, ctrl2, to );
             }
-            PathEvent::End { last, first, close } => {
+            PathEvent::End { last, first:_, close } => {
                 endpoint.clone_from(&last);
                 close_end = close;
             }
@@ -91,20 +83,3 @@ fn fuse_path(path: lyon::path::Path) -> lyon::path::Path{
     builder.end(close_end);
     builder.build()
 }
-
-
-
-            // match part {
-            //     Model::Group(m) => { 
-            //         for path in m.get_paths(){
-            //             builder.extend_from_paths(&[path.as_slice()]);
-            //         }
-            //     },
-            //     _ => builder.extend_from_paths(&[part.get_path().as_slice()]),
-            // };
-
-// builder.extend_from_paths(&m.get_paths().iter().map(|p| p.as_slice()).collect::<Vec<PathSlice>>().as_slice()),
-                    //let path_slices: Vec<lyon::path::PathSlice> = m.get_paths().iter().map(|p| p.as_slice()).collect();
-                    //builder.extend_from_paths(&path_slices);
-                    //let wow = m.get_paths().as_slice();
-                    //builder.extend_from_paths(wow);

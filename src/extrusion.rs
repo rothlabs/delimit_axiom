@@ -1,4 +1,4 @@
-use super::{Model, DiscreteQuery, group::get_transformed_vector};
+use super::{Model, DiscreteQuery, vector::*};
 use super::mesh::{Mesh, get_trivec_with_offset};
 use serde::{Deserialize, Serialize};
 use glam::*;
@@ -20,7 +20,6 @@ impl Extrusion {
         for part in &self.parts {
             let mut polylines = vec![];
             match part {
-                Model::Group(m) => polylines.extend(m.get_polylines(query)),
                 Model::Area(area) => {
                     let mesh = area.get_mesh(query);
 
@@ -37,7 +36,7 @@ impl Extrusion {
                     
                     polylines.extend(area.get_polylines(query));
                 },
-                _ => polylines.push(part.get_polyline(&query)),
+                _ => polylines.extend(part.get_polylines(query)), // polylines.push(part.get_polyline(&query)),
             };
             for polyline in polylines {
                 if polyline.len() < 6 { continue }
@@ -55,22 +54,3 @@ impl Extrusion {
     }
 }
 
-// fn get_translated_vector(vector: &Vec<f32>, dir: [f32; 3], dist: f32) -> Vec<f32> {
-//     vector.chunks(3).map(|v| [
-//         v[0] + dir[0] * dist, 
-//         v[1] + dir[1] * dist, 
-//         v[2] + dir[2] * dist,
-//     ]).flatten().collect()
-// }
-
-
-                // Model::Nurbs(m)     => vec![m.get_polyline(*count)],
-                // Model::Path(m)      => vec![m.get_polyline(*tolerance)],
-                // Model::Circle(m)    => vec![m.get_polyline(*tolerance)],
-                // Model::Rectangle(m) => vec![m.get_polyline(*tolerance)],
-
-                // let moved_polyline: Vec<f32> = polyline.chunks(3).map(|v| [
-                //     v[0] + self.direction[0] * self.length, 
-                //     v[1] + self.direction[1] * self.length, 
-                //     v[2] + self.direction[2] * self.length,
-                // ]).flatten().collect();

@@ -1,3 +1,5 @@
+use crate::get_path_from_parts;
+
 use super::{Model, DiscreteQuery};
 use super::mesh::Mesh;
 use lyon::math::point;
@@ -16,22 +18,17 @@ impl Area {
     pub fn get_polylines(&self, query: &DiscreteQuery) -> Vec<Vec<f32>> {
         let mut polylines = vec![];
         for part in &self.parts {
-            match &part {
-                Model::Group(m) => polylines.extend(m.get_polylines(query)),
-                _ => polylines.push(part.get_polyline(query)),
-            }
+            polylines.extend(part.get_polylines(query));
         }
         polylines
     }
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh {
-        let mut builder = Path::builder();
-        for part in &self.parts {
-            for path in part.get_paths(){
-                builder.extend_from_paths(&[path.as_slice()]);
-            }
-        }
-        let raw_path = builder.build();
-        let path = fuse_path(raw_path);        
+        // let mut builder = Path::builder();
+        // for part in &self.parts {
+        //     part.add_paths_to_builder(&mut builder);
+        // }
+        // let raw_path = builder.build();
+        let path = fuse_path(get_path_from_parts(&self.parts));        
         let options = FillOptions::tolerance(query.tolerance);
         let mut geometry: VertexBuffers<[f32; 3], u16> = VertexBuffers::new();
         let mut buffer_builder = BuffersBuilder::new(&mut geometry, |vertex: FillVertex| {
@@ -83,3 +80,14 @@ fn fuse_path(path: lyon::path::Path) -> lyon::path::Path{
     builder.end(close_end);
     builder.build()
 }
+
+
+
+// for path in part.get_paths(){
+            //     builder.extend_from_paths(&[path.as_slice()]);
+            // }
+
+                        // match &part {
+            //     Model::Group(m) => polylines.extend(m.get_polylines(query)),
+            //     _ => polylines.push(part.get_polyline(query)),
+            // }

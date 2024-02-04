@@ -1,20 +1,6 @@
 
 use super::{Model, DiscreteQuery};
-//use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
-//use lyon::path:FromPolyline;
-
-pub trait Polyline {
-    fn get_polyline(&self, count: usize) -> Vec<f32>;
-}
-
-// #[derive(Default, Serialize, Deserialize)]
-// #[serde(default = "PolylineQuery::default")]
-// pub struct PolylineQuery { 
-//     model: Model,
-//     count: usize,
-//     tolerance: f32,
-// }
 
 #[wasm_bindgen]
 pub fn get_polyline(val: JsValue) -> Result<JsValue, JsValue> {
@@ -37,8 +23,27 @@ impl Model {
             _ => vec![],
         }
     }
+    pub fn get_polylines(&self, query: &DiscreteQuery) -> Vec<Vec<f32>> {
+        match &self {
+            Model::Group(m) => m.get_polylines(query),
+            _ => vec![self.get_polyline(query)],
+        }
+    }
 }
 
+
+// pub trait Polyline {
+//     fn get_polyline(&self, count: usize) -> Vec<f32>;
+// }
+
+
+// #[derive(Default, Serialize, Deserialize)]
+// #[serde(default = "PolylineQuery::default")]
+// pub struct PolylineQuery { 
+//     model: Model,
+//     count: usize,
+//     tolerance: f32,
+// }
 
 // let mut count = 80;
 // if query.count > 0 { count = query.count.clamp(2, 10000); }

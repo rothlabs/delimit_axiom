@@ -1,6 +1,26 @@
-use super::{Model, Parameter, DiscreteQuery, polyline::*};
+use crate::{get_nurbs_from_path, mesh::{get_trivec, Mesh}, vector::get_transformed_vector};
+use super::{Model, Parameter, DiscreteQuery, log};
+use glam::*;
 use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
+
+impl Model {
+    pub fn get_nurbs(&self) -> Nurbs {
+        get_nurbs_from_path(&self.get_path())
+        // match self {
+        //     Model::Path(m)      => get_nurbs_from_path(m.get_path().clone()), 
+        //     Model::Circle(m)    => get_nurbs_from_path(m.get_path().clone()),
+        //     Model::Rectangle(m) => get_nurbs_from_path(m.get_path().clone(),
+        //     _ => Nurbs::default(),
+        // }
+    }
+    pub fn get_nurbs_vec(&self) -> Vec<Nurbs> {
+        match self {
+            Model::Group(m) => m.get_nurbs(), 
+            _ => vec![self.get_nurbs()],
+        }
+    }
+}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Nurbs::default")]
@@ -11,24 +31,41 @@ pub struct Nurbs {
     pub controls: Vec<Model>,
 }
 
-impl Polyline for Nurbs {
-    fn get_polyline(&self, count: usize) -> Vec<f32> {
+impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
+    pub fn get_transformed(&self, mat4: Mat4) -> Nurbs {
+        let mut nurbs = Nurbs {
+            order: self.order,
+            knots: self.knots.clone(),
+            weights: self.knots.clone(),
+            controls: vec![],
+        };
+        for control in &self.controls {
+            match control {
+                Model::Vector(m) => nurbs.controls.push(Model::Vector(get_transformed_vector(m, mat4))),
+                Model::Nurbs(m)  => nurbs.controls.push(Model::Nurbs(m.get_transformed(mat4))),
+                _ => ()
+            }
+        }
+        nurbs
+    }
+
+    pub fn get_polyline(&self, count: usize) -> Vec<f32> {
         let nurbs = self.get_valid();
         nurbs.get_polyline_at_t(&Parameter::V(0.), count)
     }
-}
-
-impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
-    // pub fn get_polyline(&self, count: usize) -> Vec<f32> {
-    //     let nurbs = self.get_valid();
-    //     nurbs.get_polyline_at_t(&Parameter::V(0.), count)
-    // }
 
     pub fn get_polyline_at_t(&self, t: &Parameter, count: usize) -> Vec<f32> {
         let nurbs = self.get_valid();
         match t {
             Parameter::U(u) => nurbs.get_polyline_at_u(*u, count),
             Parameter::V(v) => nurbs.get_polyline_at_v(*v, count),
+        }
+    }
+
+    pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh {
+        Mesh {
+            vector: self.get_mesh_vector(query),
+            triangles: get_trivec(query),
         }
     }
 
@@ -54,7 +91,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             .flatten().collect()
     }
 
-    fn get_vector_at_uv(&self, u: f32, v: f32) -> Vec<f32> {
+    pub fn get_vector_at_uv(&self, u: f32, v: f32) -> Vec<f32> {
         let basis = self.get_rational_basis_at_t(u);
         let mut vector = vec![];
         for component_index in 0..self.get_control_vector(0, 0.).len() { 
@@ -66,12 +103,21 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         vector
     }
 
+    fn get_control_vector(&self, index: usize, t: f32) -> Vec<f32> {
+        //self.controls[index].get_vector_at_t(t)
+        match &self.controls[index] { 
+            Model::Vector(vector) => vector.to_vec(),  
+            Model::Nurbs(nurbs) =>   nurbs.get_vector_at_uv(t, 0.),
+            _ => vec![0.; 3], 
+        }
+    }
+
     fn get_valid(&self) -> Nurbs {
         Nurbs {
             order: self.get_valid_order(),
             knots: self.get_valid_knots(),
             weights: self.get_valid_weights(),
-            controls: self.controls.iter().map(|c| self.get_valid_control(c.clone())).collect(),
+            controls: self.controls.iter().map(|c| self.get_valid_control(c.clone())).collect(), // self.controls.clone(), //
         }
     }
     
@@ -82,6 +128,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             _ => Model::Vector(vec![0.; 3]),
         }
     }
+
 
     fn get_valid_order(&self) -> usize {
         self.order.clamp(2, self.controls.len()) //if self.order == 0 {3} else {self.order.clamp(2, 10)}
@@ -157,15 +204,6 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             vec![0.; self.weights.len()]
         }
     }
-
-    fn get_control_vector(&self, index: usize, u: f32) -> Vec<f32> {
-        match self.controls[index].clone() {
-            Model::Vector(vector) =>   vector,
-            Model::Nurbs(nurbs) =>     nurbs.get_vector_at_uv(u, 0.),
-            //Model::Turtled(turtled) => turtled.get_vector_at_t(u),
-            _ => vec![0.; 3],
-        }
-    }
 }
 
 // visual tests
@@ -182,100 +220,9 @@ impl Nurbs {
     }
 }
 
-
-
-
-
-
-// let mut component = 0_f32;
-// for i in 0..self.controls.len() {
-//     component += basis[i] * self.controls[i][component_index];
-// };
-// vector.push(component);
-
-// self.get_knots().skip_while(|k| ).windows(2).map(|knots| { // TODO: iterate over controls instead
-//     if u >= knots[0] && u < knots[1] {1_f32} else {0_f32}
-// }).collect()
-
-// basis = zip(knots, basis).map(|x|{
-//     let f = u
-// }).collect();
-
-// let knots = (0..self.controls.len()-1).map(|x| x as f32).collect::<Vec<f32>>();
-
-// impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
-//     // fn get_basis_at_t(&self) -> Result<f32, &'static str> {
-
-//     // }
-// }
-
-// fn get_vectors<T: IntoIterator<Item=f32> + Default>(nurbs: &Nurbs<T>) -> Vec<T> {
-
-// }
-
-// fn get_valid_nurbs<T: IntoIterator<Item=f32> + Default>(nurbs: &Nurbs<T>) -> Nurbs<T> {
-//     let order = nurbs.order.clamp(2, 5);
-//     Nurbs {
-//         controls: nurbs.controls,
-//         order,
-//         knots: if nurbs.knots.len() == nurbs.controls.len() + order {nurbs.knots} else {get_open_knots(nurbs)}
-//     }
-// }
-
-// struct Knots {
-//     pub order: u8,
-//     pub knots: ,
-// }
-
-//fn get_open_knots(nurbs: &NurbsQuery) ->
-
-// pub trait Discrete<T> {
-//     fn get_vector_at_t(&self, t: f32) -> Result<T, &'static str>;
-// }
-
-// impl<T: IntoIterator<Item=f32> + Default> Discrete<T> for Nurbs<T> {
-//     fn get_vector_at_t(&self, t: f32) -> Result<T, &'static str> {
-//         let vector = T::default();
-//         Ok(vector)
-//     }
-// }
-
-// #[derive(Serialize, Deserialize)]
-// pub struct DiscreteNurbs<T: IntoIterator<Item=f32>> {
-//     pub nurbs: Nurbs<T>,
-//     pub count: u32,
-// }
-
-// impl<T: IntoIterator<Item=f32>> DiscreteNurbs<T> {
-//     pub fn get_vectors(&self) -> Result<Vec<f32>, &'static str> {
-//         todo!()
-//     }
-// }
-
-// impl<T: IntoIterator<Item=f32> + Default> Nurbs<T> {
-//     fn get_vector(self) -> Result<T, &'static str> {
-//         let vector = T::default();
-//         Ok(vector)
-//     }
-// }
-
-// pub trait Discrete<T, const N: usize> {
-//     fn get_vector(&self) -> Vec<Vector<T, N>>;
-// }
-
-// struct Nurbs<T> where T: IntoIterator<Item=f32> { // Iterator<Item=f32>
-//     order:   u8,        // order = polynomial_degree + 1
-//     knots:   Vec<f32>,  // knot_count = order + vector_count
-//     weights: Vec<f32>,  // weight_count = vector_count
-//     vectors: Vec<T>,    // vectors are control_points
-// }
-
-// pub trait Discrete<T> {
-//     fn get_vector(&self) -> Vec<T>;
-// }
-
-// impl Discrete<T> for Nurbs<T> {
-//     fn get_vector(&self) -> Vec<T> {
-//         //self.vectors[0]
-//     }
-// }
+        // match &self.controls[index] {
+        //     Model::Vector(vector) =>   vector.to_vec(),
+        //     Model::Nurbs(nurbs) =>     nurbs.get_vector_at_uv(u, 0.),
+        //     //Model::Turtled(turtled) => turtled.get_vector_at_t(u),
+        //     _ => self.controls[index].get_vector_at_t(u) // vec![0.; 3],
+        // }

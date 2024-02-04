@@ -13,8 +13,9 @@ pub fn get_mesh(val: JsValue) -> Result<JsValue, JsValue> {
     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
     let query = query.get_valid();
     let mesh = match &query.model {
-        Model::Area(area)       =>  area.get_mesh(&query),
-        Model::Extrusion(extru) => extru.get_mesh(&query),
+        Model::Area(m)      => m.get_mesh(&query),
+        Model::Extrusion(m) => m.get_mesh(&query),
+        Model::Revolve(m)   => m.get_mesh(&query),
         _ => Mesh {
             vector: vec![0.; 9],
             triangles: vec![0, 1, 2],
@@ -26,7 +27,7 @@ pub fn get_mesh(val: JsValue) -> Result<JsValue, JsValue> {
 #[wasm_bindgen]
 pub fn get_mesh_vector(val: JsValue) -> Result<JsValue, JsValue> {
     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
-    let query = query.get_valid(); //let [u_count, v_count] = clamp_counts(queried.u_count, queried.v_count);
+    let query = query.get_valid();
     let vector = match &query.model {
         Model::Nurbs(nurbs) => nurbs.get_mesh_vector(&query),
         _ => vec![0.; 12],
@@ -38,12 +39,12 @@ pub fn get_mesh_vector(val: JsValue) -> Result<JsValue, JsValue> {
 pub fn get_triangles(val: JsValue) -> Result<JsValue, JsValue> {
     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
     let query = query.get_valid();
-    //let [u_count, v_count] = clamp_counts(queried.u_count, queried.v_count); 
-    let vector = get_trivec(query.u_count, query.v_count);
+    let vector = get_trivec(&query); // query.u_count, query.v_count
     Ok(serde_wasm_bindgen::to_value(&vector)?)
 }
 
-pub fn get_trivec(u_count: usize, v_count: usize) -> Vec<usize>{
+pub fn get_trivec(query: &DiscreteQuery) -> Vec<usize>{ // u_count: usize, v_count: usize
+    let &DiscreteQuery {u_count, v_count, ..} = query;
     get_trivec_with_offset(u_count, v_count, 0)
 }
 

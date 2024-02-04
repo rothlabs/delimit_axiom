@@ -1,5 +1,7 @@
-use super::{Model, DiscreteQuery};
-use lyon::geom::euclid::Transform3D;
+use crate::Nurbs;
+
+use super::{Model, DiscreteQuery, vector::*, log};
+use lyon::{geom::euclid::Transform3D, path::traits::PathIterator};
 //use lyon::geom::euclid::Transform3D;
 //use super::mesh::{Mesh, get_trivec_with_offset};
 use serde::{Deserialize, Serialize};
@@ -19,10 +21,25 @@ pub struct Group {
 }
 
 impl Group {
+    pub fn get_nurbs(&self) -> Vec<Nurbs> {
+        self.get_transformed_nurbs(Mat4::IDENTITY)
+    }
+    fn get_transformed_nurbs(&self, root_matrix: Mat4) -> Vec<Nurbs> {
+        let mat4 = root_matrix * self.get_matrix();
+        let mut nurbs = vec![];
+        for part in &self.parts {
+            match &part {
+                Model::Group(m) => nurbs.extend(m.get_transformed_nurbs(mat4)),
+                Model::Nurbs(m) => nurbs.push(m.get_transformed(mat4)),
+                _ => ()
+            }
+        }
+        nurbs
+    }
     pub fn get_paths(&self) -> Vec<lyon::path::Path> { //builder: &mut Builder) 
         self.get_transformed_paths(Mat4::IDENTITY)
     }
-    pub fn get_transformed_paths(&self, root_matrix: Mat4) -> Vec<lyon::path::Path> { //builder: &mut Builder) 
+    fn get_transformed_paths(&self, root_matrix: Mat4) -> Vec<lyon::path::Path> { //builder: &mut Builder) 
         let mat4 = root_matrix * self.get_matrix();
         let mat_array = mat4.to_cols_array();
         let transform = Transform3D::from_array(mat_array).to_2d();
@@ -51,7 +68,6 @@ impl Group {
     }
     fn get_matrix(&self) -> Mat4 {
         let mut mat4 = Mat4::IDENTITY;
-        //let axis = &self.axis.unwrap_or(Box::new(Model::Vector(vec![0.;3]))).get_vec3_or(Vec3::Z);
         let position = self.position.get_vec3_or(Vec3::ZERO);
         mat4 *= Mat4::from_translation(position);
         let axis = self.axis.get_vec3_or(Vec3::Z);
@@ -62,45 +78,22 @@ impl Group {
     }
 }
 
-pub fn get_transformed_vector(vector: &Vec<f32>, matrix: Mat4) -> Vec<f32> {
-    let mut result = vec![];
-    for v in vector.chunks(3) {
-        let vec4 = Vec4::new(v[0], v[1], v[2], 1.); //Vec4::from_slice(v);
-        let array = matrix.mul_vec4(vec4).to_array();
-        result.extend([array[0], array[1], array[2]]);
-    }
-    result
-}
 
+// pub fn get_vector_at_t(&self, t: f32) -> Vec<f32> {
+    //     let mut builder = lyon::path::Path::builder();
+    //     for path in &self.get_paths() {
+    //         builder.extend_from_paths(&[path.as_slice()]);
+    //     }
+    //     let path = builder.build();
+    //     path.into_iter().flattened(0.1).count()
 
-
-
-// for part in &self.parts {
-        //     match part {
-        //         Model::Path(m)      => m.add_parts_to_builder(builder),
-        //         Model::Group(m)     => m.add_parts_to_builder(builder),
-        //         Model::Circle(m)    => builder.extend_from_paths(&[m.get_path().transformed(&transform).as_slice()]),//m.add_self_to_builder(builder), 
-        //         Model::Rectangle(m) => builder.extend_from_paths(&[m.get_path().transformed(&transform).as_slice()]),
-        //         _ => (),
-        //     };
-        // }
-
-// fn get_first_part(&self) -> Model{
-    //     self.parts.first().unwrap_or(&Model::Vector(vec![])).clone()
+    //     //get_vector_at_t(&get_path_from_parts(&self.parts), t) 
+    //     // TODO: get from nurbs curve instead of paths if present
+    //     //log("group get_vector_at_t");
+    //     // for path in &self.get_paths() {
+    //     //     return get_vector_at_t(&path, t);
+    //     //     // let [x, y] = get_vector_at_t(&path, t).to_array();
+    //     //     // return vec![x, y, 0.];
+    //     // }
+    //     // vec![0.; 3]
     // }
-
-
-// vector.chunks(3).map(|v| {
-//     let vec4 = Vec4::new(v[0], v[1], v[2], 1.); //Vec4::from_slice(v);
-//     matrix.mul_vec4(vec4).to_array()
-// }).flatten().collect()
-
-
-
-
-// fn get_mat4_from_model(model: &Model) -> Mat4 {
-//     match model {
-//         Model::Vector(m) => point(m[0], m[1]),
-//         _ => point(0., 0.),
-//     }
-// }

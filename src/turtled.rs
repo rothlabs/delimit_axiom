@@ -1,4 +1,3 @@
-use super::polyline::*;
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -22,8 +21,8 @@ pub struct TurnArc {
     pub radius: f32,
 }
 
-impl Polyline for Turtled {
-    fn get_polyline(&self, count: usize) -> Vec<f32> {
+impl Turtled {
+    pub fn get_polyline(&self, count: usize) -> Vec<f32> {
         let mut turtle = Turtle::new();
         for action in self.actions.clone(){
             match action {

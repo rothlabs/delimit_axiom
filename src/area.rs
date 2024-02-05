@@ -23,7 +23,8 @@ impl Area {
         polylines
     }
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh {
-        // let mut builder = Path::builder();
+        //let mut builder = Path::builder();
+        //builder.add_polygon(polygon)
         // for part in &self.parts {
         //     part.add_paths_to_builder(&mut builder);
         // }

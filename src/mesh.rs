@@ -2,7 +2,27 @@ use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-#[derive(Serialize, Deserialize)]
+pub fn get_mesh_from_parts(parts: Vec<Model>, query: &DiscreteQuery) -> Mesh {
+    let mut vector: Vec<f32> = vec![];
+    let mut trivec: Vec<usize> = vec![];
+    let mut offset = 0; 
+    for part in &parts {
+        let mesh = match &part {
+            Model::Area(m) =>  m.get_mesh(query),
+            Model::Nurbs(m) => m.get_mesh(query),
+            _ => Mesh::default(),
+        };
+        vector.extend(&mesh.vector);
+        trivec.extend::<Vec<usize>>(mesh.triangles.iter().map(|v| v + offset).collect::<Vec<usize>>());
+        offset += mesh.vector.len() / 3;
+    }
+    Mesh {
+        vector,
+        triangles: trivec,
+    }
+}
+
+#[derive(Default, Serialize, Deserialize)]
 pub struct Mesh {
     pub vector:    Vec<f32>, 
     pub triangles: Vec<usize>,

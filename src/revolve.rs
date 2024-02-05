@@ -1,5 +1,5 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{Nurbs, mesh::Mesh};
+use crate::{Nurbs, mesh::{get_mesh_from_parts, Mesh}};
 use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use glam::*;
@@ -66,14 +66,10 @@ impl Revolve {
                 for &mat4 in &transforms {
                     surface.controls.push(Model::Nurbs(control.get_transformed(mat4)));
                 }
-                surfaces.push(surface);
+                surfaces.push(Model::Nurbs(surface));
             }
         }
-        //let mut vector: Vec<f32> = vec![];
-        //let mut trivec: Vec<usize> = vec![];
-
-        // TODO: make function to build one mesh from multiple parts, use it here and for extrusion
-        surfaces[0].get_mesh(query)
+        get_mesh_from_parts(surfaces, query)
     }
 }
 

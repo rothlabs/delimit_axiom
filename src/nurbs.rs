@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
 
 impl Model {
-    pub fn get_nurbs(&self) -> Nurbs {
+    pub fn get_control(&self) -> Nurbs {
         get_nurbs_from_path(&self.get_path())
         // match self {
         //     Model::Path(m)      => get_nurbs_from_path(m.get_path().clone()), 
@@ -14,10 +14,10 @@ impl Model {
         //     _ => Nurbs::default(),
         // }
     }
-    pub fn get_nurbs_vec(&self) -> Vec<Nurbs> {
+    pub fn get_controls(&self) -> Vec<Nurbs> {
         match self {
-            Model::Group(m) => m.get_nurbs(), 
-            _ => vec![self.get_nurbs()],
+            Model::Group(m) => m.get_controls(), 
+            _ => vec![self.get_control()],
         }
     }
 }

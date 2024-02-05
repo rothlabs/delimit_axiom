@@ -21,7 +21,7 @@ pub struct Group {
 }
 
 impl Group {
-    pub fn get_nurbs(&self) -> Vec<Nurbs> {
+    pub fn get_controls(&self) -> Vec<Nurbs> {
         self.get_transformed_nurbs(Mat4::IDENTITY)
     }
     fn get_transformed_nurbs(&self, root_matrix: Mat4) -> Vec<Nurbs> {

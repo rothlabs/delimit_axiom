@@ -1,6 +1,6 @@
-use crate::{get_path_from_parts, Group, Nurbs};
-use super::{Model, DiscreteQuery, vector::*, log};
-use super::mesh::{Mesh, get_trivec_with_offset};
+use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
+use crate::{Nurbs, mesh::Mesh};
+use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -15,30 +15,74 @@ pub struct Revolve {
 impl Revolve {
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh {
         let axis = self.axis.get_vec3_or(Vec3::X).normalize();
-        let weight = (self.angle/2.).cos();
-        let scale = Mat4::from_scale(Vec3::new(
-            (1./weight)*(1.-axis.abs().dot(Vec3::X)) + axis.abs().dot(Vec3::X),
-            (1./weight)*(1.-axis.abs().dot(Vec3::Y)) + axis.abs().dot(Vec3::Y),
-            (1./weight)*(1.-axis.abs().dot(Vec3::Z)) + axis.abs().dot(Vec3::Z),
-        ));
-        let half_rotation = Mat4::from_axis_angle(axis, self.angle / 2.);
-        let rotation = Mat4::from_axis_angle(axis, self.angle);
+        let mut knots = vec![0.; 3];
+        let mut weights = vec![1.];
+        let mut transforms = vec![];
+        let mut base_angle = 0.;
+
+        // quarter turn controls
+        if self.angle > FRAC_PI_2 { 
+            base_angle = FRAC_PI_2; 
+            knots.extend([base_angle, base_angle]);
+            weights.extend([FRAC_1_SQRT_2, 1.]);
+            transforms.push(get_transform(axis, FRAC_PI_4, FRAC_1_SQRT_2));
+            transforms.push(get_transform(axis, base_angle, 1.));
+        } 
+
+        // half turn controls
+        if self.angle > PI { 
+            base_angle = PI;
+            knots.extend([base_angle, base_angle]);
+            weights.extend([FRAC_1_SQRT_2, 1.]);
+            transforms.push(get_transform(axis, FRAC_PI_4*3., FRAC_1_SQRT_2));
+            transforms.push(get_transform(axis, base_angle, 1.));
+        } 
+
+        // three quarter turn controls 
+        if self.angle > FRAC_PI_2*3. { 
+            base_angle = FRAC_PI_2*3.;
+            knots.extend([base_angle, base_angle]);
+            weights.extend([FRAC_1_SQRT_2, 1.]);
+            transforms.push(get_transform(axis, FRAC_PI_4*5., FRAC_1_SQRT_2));
+            transforms.push(get_transform(axis, base_angle, 1.));
+        }
+
+        // add final controls 
+        let advance = (self.angle - base_angle) / 2.;
+        knots.extend([self.angle, self.angle, self.angle]);
+        weights.extend([advance.cos(), 1.]);
+        transforms.push(get_transform(axis, base_angle + advance, advance.cos()));
+        transforms.push(Mat4::from_axis_angle(axis, self.angle));
+
         let mut surfaces = vec![];
         for part in &self.parts {
-            for nurbs in part.get_nurbs_vec() {
-                let mut surface = Nurbs::default();
-                surface.controls.push(Model::Nurbs(nurbs.clone()));
-                surface.controls.push(Model::Nurbs(nurbs.get_transformed(scale).get_transformed(half_rotation)));
-                surface.controls.push(Model::Nurbs(nurbs.get_transformed(rotation)));
-                surface.order = 3;
-                surface.knots = vec![0., 0., 0., self.angle, self.angle, self.angle];
-                surface.weights = vec![1., weight, 1.];
+            for control in part.get_controls() {
+                let mut surface = Nurbs {
+                    order: 3,
+                    knots: knots.clone(),
+                    weights: weights.clone(),
+                    controls: vec![Model::Nurbs(control.clone())],
+                };
+                for &mat4 in &transforms {
+                    surface.controls.push(Model::Nurbs(control.get_transformed(mat4)));
+                }
                 surfaces.push(surface);
             }
         }
         //let mut vector: Vec<f32> = vec![];
         //let mut trivec: Vec<usize> = vec![];
 
+        // TODO: make function to build one mesh from multiple parts, use it here and for extrusion
         surfaces[0].get_mesh(query)
     }
+}
+
+
+// TODO: fix skewing from diagonal axis 
+fn get_transform(axis: Vec3, angle: f32, weight: f32) -> Mat4 {
+    Mat4::from_scale(Vec3::new( 
+        (1./weight)*(1.-axis.abs().dot(Vec3::X)) + axis.abs().dot(Vec3::X),
+        (1./weight)*(1.-axis.abs().dot(Vec3::Y)) + axis.abs().dot(Vec3::Y),
+        (1./weight)*(1.-axis.abs().dot(Vec3::Z)) + axis.abs().dot(Vec3::Z),
+    )) * Mat4::from_axis_angle(axis, angle)
 }

@@ -2,24 +2,12 @@ use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-pub fn get_mesh_from_faces(parts: Vec<Model>, query: &DiscreteQuery) -> Mesh {
-    let mut vector: Vec<f32> = vec![];
-    let mut trivec: Vec<usize> = vec![];
-    let mut offset = 0; 
-    for part in &parts {
-        let mesh = match &part {
-            Model::Area(m) =>  m.get_mesh(query),
-            Model::Nurbs(m) => m.get_mesh(query),
-            _ => Mesh::default(),
-        };
-        vector.extend(&mesh.vector);
-        trivec.extend::<Vec<usize>>(mesh.triangles.iter().map(|v| v + offset).collect::<Vec<usize>>());
-        offset += mesh.vector.len() / 3;
-    }
-    Mesh {
-        vector,
-        triangles: trivec,
-    }
+
+#[derive(Default, Serialize, Deserialize)]
+pub struct DiscreteShapes {
+    pub points:    Vec<f32>,
+    pub polylines: Vec<Vec<f32>>,
+    pub meshes:    Vec<Mesh>, 
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -29,31 +17,71 @@ pub struct Mesh {
 }
 
 #[wasm_bindgen]
-pub fn get_mesh(val: JsValue) -> Result<JsValue, JsValue> {
+pub fn get_poly(val: JsValue) -> Result<JsValue, JsValue> {
     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
     let query = query.get_valid();
-    let mesh = match &query.model {
-        Model::Area(m)      => m.get_mesh(&query),
-        Model::Extrusion(m) => m.get_mesh(&query),
-        Model::Revolve(m)   => m.get_mesh(&query),
-        _ => Mesh {
-            vector: vec![0.; 9],
-            triangles: vec![0, 1, 2],
+    let mut result = DiscreteShapes::default();
+    for part in query.model.get_shapes() {
+        match &part {
+            Model::Point(m) => result.points.extend(m),
+            Model::Curve(m) => result.polylines.push(m.get_polyline(query.count)),
+            Model::Facet(m) => result.meshes.push(m.get_mesh(&query)),
+            _ => ()
         }
-    };
-    Ok(serde_wasm_bindgen::to_value(&mesh)?)
+    }
+    Ok(serde_wasm_bindgen::to_value(&result)?)
 }
 
-#[wasm_bindgen]
-pub fn get_mesh_vector(val: JsValue) -> Result<JsValue, JsValue> {
-    let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
-    let query = query.get_valid();
-    let vector = match &query.model {
-        Model::Nurbs(nurbs) => nurbs.get_mesh_vector(&query),
-        _ => vec![0.; 12],
-    };
-    Ok(serde_wasm_bindgen::to_value(&vector)?)
-}
+
+
+// pub fn get_mesh_from_faces(parts: Vec<Model>, query: &DiscreteQuery) -> Mesh {
+//     let mut vector: Vec<f32> = vec![];
+//     let mut trivec: Vec<usize> = vec![];
+//     let mut offset = 0; 
+//     for part in &parts {
+//         let mesh = match &part {
+//             Model::Area(m) =>  m.get_mesh(query),
+//             Model::Nurbs(m) => m.get_mesh(query),
+//             _ => Mesh::default(),
+//         };
+//         vector.extend(&mesh.vector);
+//         trivec.extend::<Vec<usize>>(mesh.triangles.iter().map(|v| v + offset).collect::<Vec<usize>>());
+//         offset += mesh.vector.len() / 3;
+//     }
+//     Mesh {
+//         vector,
+//         triangles: trivec,
+//     }
+// }
+
+
+
+// #[wasm_bindgen]
+// pub fn get_mesh(val: JsValue) -> Result<JsValue, JsValue> {
+//     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
+//     let query = query.get_valid();
+//     let mesh = match &query.model {
+//         Model::Area(m)      => m.get_mesh(&query),
+//         Model::Extrusion(m) => m.get_mesh(&query),
+//         Model::Revolve(m)   => m.get_mesh(&query),
+//         _ => Mesh {
+//             vector: vec![0.; 9],
+//             triangles: vec![0, 1, 2],
+//         }
+//     };
+//     Ok(serde_wasm_bindgen::to_value(&mesh)?)
+// }
+
+// #[wasm_bindgen]
+// pub fn get_mesh_vector(val: JsValue) -> Result<JsValue, JsValue> {
+//     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
+//     let query = query.get_valid();
+//     let vector = match &query.model {
+//         Model::Nurbs(nurbs) => nurbs.get_mesh_vector(&query),
+//         _ => vec![0.; 12],
+//     };
+//     Ok(serde_wasm_bindgen::to_value(&vector)?)
+// }
 
 #[wasm_bindgen]
 pub fn get_triangles(val: JsValue) -> Result<JsValue, JsValue> {

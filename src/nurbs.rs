@@ -1,4 +1,4 @@
-use crate::{get_nurbs_from_path, mesh::{get_trivec, Mesh}, vector::get_transformed_vector};
+use crate::{mesh::{get_trivec, Mesh}, vector::get_transformed_vector};
 use super::{Model, Parameter, DiscreteQuery, log};
 use glam::*;
 use serde::{Deserialize, Serialize};
@@ -37,18 +37,18 @@ use rayon::prelude::*;
 //     controls
 // }
 
-pub fn get_curves_from_parts(parts: &Vec<Model>) -> Vec<Nurbs> {
-    let mut curves = vec![];
-    for part in parts {
-        match &part {
-            Model::Group(m) => curves.extend(m.get_curves()),
-            Model::Path(m)  => curves.extend(m.get_curves()),
-            Model::Nurbs(m) => curves.push(m.clone()), // TODO: filter to curve only nurbs
-            _ => (),
-        };
-    }
-    curves
-}
+// pub fn get_curves_from_parts(parts: &Vec<Model>) -> Vec<Nurbs> {
+//     let mut curves = vec![];
+//     for part in parts {
+//         match &part {
+//             Model::Group(m) => curves.extend(m.get_curves()),
+//             Model::Path(m)  => curves.extend(m.get_curves()),
+//             Model::Nurbs(m) => curves.push(m.clone()), // TODO: filter to curve only nurbs
+//             _ => (),
+//         };
+//     }
+//     curves
+// }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Nurbs::default")]
@@ -68,11 +68,13 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             controls: vec![],
         };
         for control in &self.controls {
-            match control {
-                Model::Vector(m) => nurbs.controls.push(Model::Vector(get_transformed_vector(m, mat4))),
-                Model::Nurbs(m)  => nurbs.controls.push(Model::Nurbs(m.get_transformed(mat4))),
-                _ => ()
-            }
+            nurbs.controls.push(control.get_transformed(mat4));
+            // match control {
+            //     Model::Point(m) => nurbs.controls.push(Model::Point(m.get_transformed(mat4))), //get_transformed_vector(m, mat4))
+            //     Model::Curve(m) => nurbs.controls.push(Model::Curve(m.get_transformed(mat4))),
+            //     //Model::Surface(m)  => nurbs.controls.push(Model::Surface(m.get_transformed(mat4))),
+            //     _ => ()
+            // }
         }
         nurbs
     }
@@ -134,8 +136,9 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     fn get_control_vector(&self, index: usize, t: f32) -> Vec<f32> {
         //self.controls[index].get_vector_at_t(t)
         match &self.controls[index] { 
-            Model::Vector(vector) => vector.to_vec(),  
-            Model::Nurbs(nurbs) =>   nurbs.get_vector_at_uv(t, 0.),
+            Model::Point(m) => m.to_vec(),  
+            Model::Curve(m) => m.get_vector_at_uv(t, 0.),
+            //Model::Facet(m) => m.get_vector_at_uv(t, 0.),
             _ => vec![0.; 3], 
         }
     }
@@ -151,9 +154,10 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     
     fn get_valid_control(&self, control: Model) -> Model {
         match control {
-            Model::Vector(control) => Model::Vector(control),
-            Model::Nurbs(control) => Model::Nurbs(control.get_valid()),
-            _ => Model::Vector(vec![0.; 3]),
+            Model::Point(m) => Model::Point(m),
+            Model::Curve(m) => Model::Curve(m.get_valid()),
+            //Model::Surface(control) => Model::Surface(control.get_valid()),
+            _ => Model::Point([0.; 3]),
         }
     }
 

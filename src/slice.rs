@@ -11,7 +11,7 @@ pub struct Slice {
 impl Slice {
     pub fn get_polyline(&self, count: usize) -> Vec<f32> {
         match &self.models[0] {
-            Model::Nurbs(nurbs) => nurbs.get_polyline_at_t(&self.t, count),
+            Model::Facet(nurbs) => nurbs.get_polyline_at_t(&self.t, count),
             _ => vec![0.; 6],
         }
     }

@@ -1,11 +1,5 @@
-use crate::{DiscreteQuery, Group, Nurbs};
-
-use super::{Model, log};
-use lyon::geom::euclid::Point2D;
-use lyon::math::{Box2D, Angle, Vector, vector, Point, point};
-use lyon::path::{ArcFlags, Event, PathEvent, Winding}; // PathBuffer
-use lyon::path::builder::BorderRadii;
-use lyon::path::traits::{PathIterator, SvgPathBuilder};
+use crate::Nurbs;
+use super::Model;
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -27,33 +21,35 @@ pub struct ArcTo {
 
 impl Sketch { 
     pub fn get_shapes(&self) -> Vec<Model> {
-        let mut curves = vec![];
-        let mut start_point = Model::Vector(vec![0.; 3]);//vec![0.; 3];
+        let mut shapes = vec![];
+        let mut start_point = Model::Point([0.; 3]);//vec![0.; 3];
         for part in &self.parts {
             match part {
-                Model::MoveTo(m) => start_point = m.get_vector_or(start_point),//get_point2(m),
+                Model::MoveTo(m) => {
+                    start_point = Model::Point([m[0], m[1], 0.]);
+                    shapes.push(start_point.clone());
+                },
                 Model::LineTo(m) => {
+                    let end_point = Model::Point([m[0], m[1], 0.]);
                     let mut nurbs = Nurbs::default();
-                    nurbs.controls = vec![start_point.clone(), m.get_vector()]; // vec![Model::Vector(start_point.clone()), Model::Vector(get_point2(m))];
-                    curves.push(nurbs);
+                    nurbs.controls = vec![start_point.clone(), end_point.clone()]; // vec![Model::Vector(start_point.clone()), Model::Vector(get_point2(m))];
+                    shapes.push(Model::Curve(nurbs));
+                    start_point = end_point.clone();
+                    shapes.push(end_point);
                 },
-                Model::ArcTo(m) => {
-                    let mut nurbs = Nurbs::default();
-                    nurbs.controls = vec![Model::Vector(start_point.clone()), Model::Vector(get_point2(&m.to))];
-                    curves.push(nurbs);
-                },
+                // Model::ArcTo(m) => {
+                //     let mut nurbs = Nurbs::default();
+                //     nurbs.controls = vec![start_point.clone(), m.get_vector_or(start_point)]; 
+                //     curves.push(nurbs);
+                // },
                 _ => (),
             }
         }
-        curves
+        shapes
     }
 }
 
-// macro_rules! console_log {
-//     // Note that this is using the `log` function imported above during
-//     // `bare_bones`
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
+
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Circle::default")]
@@ -104,23 +100,23 @@ pub struct Rectangle {
 //     }
 // }
 
-fn get_point(model: &Model) -> Point {
-    match model {
-        Model::Vector(m) => point(m[0], m[1]),
-        _ => point(0., 0.),
-    }
-}
+// fn get_point(model: &Model) -> Point {
+//     match model {
+//         Model::Vector(m) => point(m[0], m[1]),
+//         _ => point(0., 0.),
+//     }
+// }
 
-fn get_point2(model: &Model) -> Vec<f32> {
-    match model {
-        Model::Vector(m) => vec![m[0], m[1], 0.],
-        _ => vec![0.; 3],
-    }
-}
+// fn get_point2(model: &Model) -> Vec<f32> {
+//     match model {
+//         Model::Vector(m) => vec![m[0], m[1], 0.],
+//         _ => vec![0.; 3],
+//     }
+// }
 
-fn get_vector(model: &Model) -> Vector {
-    match model {
-        Model::Vector(m) => vector(m[0], m[1]),
-        _ => vector(0., 0.),
-    }
-}
+// fn get_vector(model: &Model) -> Vector {
+//     match model {
+//         Model::Vector(m) => vector(m[0], m[1]),
+//         _ => vector(0., 0.),
+//     }
+// }

@@ -4,48 +4,46 @@ mod vector;
 mod group;
 mod nurbs;
 mod slice;
-mod polyline;
+//mod polyline;
 mod mesh;
 mod turtled;
-mod path;
-mod area;
-mod extrusion;
+mod sketch;
+//mod area;
+//mod extrusion;
 mod revolve;
 
 use utils::*;
 use serde::{Deserialize, Serialize};
-use vector::get_transformed_vector;
 use wasm_bindgen::prelude::*;
 use glam::*;
 use group::*;
 use nurbs::*;
 use slice::*;
 use turtled::*;
-use path::*;
-use area::*;
-use extrusion::*;
+use sketch::*;
+//use area::*;
+//use extrusion::*;
 use revolve::*;
 
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
+    Point([f32; 3]),
+    Curve(Nurbs),
+    Facet(Nurbs),
+    MoveTo([f32; 2]),
+    LineTo([f32; 2]),
     Vector(Vec<f32>),
-    
-    //Point(Vec<f32>),
-    Nurbs(Nurbs),
-    //Curve(Nurbs),
-    //Surface(Nurbs),
     Sketch(Sketch),
     Group(Group),
     Slice(Slice),
     Turtled(Turtled),
     Circle(Circle),
     Rectangle(Rectangle),
-    Area(Area),
-    Extrusion(Extrusion),
+    //Area(Area),
+    //Extrusion(Extrusion),
     Revolve(Revolve),
     
-    MoveTo(Box<Model>),
-    LineTo(Box<Model>),
+    
     ArcTo(ArcTo),
     Close(bool), // TODO: find way to remove bool
 }
@@ -53,26 +51,20 @@ pub enum Model {
 impl Model {
     pub fn get_transformed(&self, mat4: Mat4) -> Self {
         match self {
-            Model::Vector(m) => Model::Vector(get_transformed_vector(m, mat4)),
-            Model::Nurbs(m)  => Model::Nurbs(m.get_transformed(mat4)),
+            Model::Point(m) => Model::Point(
+                mat4.mul_vec4(Vec3::from_slice(m).extend(1.)).truncate().to_array()
+            ),
+            Model::Curve(m) => Model::Curve(m.get_transformed(mat4)),
+            Model::Facet(m) => Model::Facet(m.get_transformed(mat4)),
             _ => self.clone()
         }
     }
     pub fn get_shapes(&self) -> Vec<Model> {
         match self {
-            Model::Vector(m)  => vec![Model::Vector(m.clone())],
-            Model::Nurbs(m)   => vec![Model::Nurbs(m.clone())],
-            //Model::Path(m)    => m.get_shapes(),
+            Model::Group(m)   => m.get_shapes(),
+            Model::Sketch(m)  => m.get_shapes(),
             Model::Revolve(m) => m.get_shapes(),
-            //Model::Group(m)  => 
-            //Model::Path(m)   => 
             _ => vec![] 
-        }
-    }
-    pub fn get_vector_or(&self, alt: Model) -> Model {
-        match self {
-            Model::Vector(m) => self.clone(),
-            _ => alt,
         }
     }
     pub fn get_vec3_or(&self, alt: Vec3) -> Vec3 {
@@ -94,16 +86,10 @@ impl Default for Model {
     fn default() -> Self { Model::Vector(vec![0.; 3]) }
 }
 
-pub fn get_points_and_curves(parts: &Vec<Model>) -> Vec<Model> {
+pub fn get_shapes(parts: &Vec<Model>) -> Vec<Model> {
     let mut result = vec![];
     for part in parts {
-        for shape in part.get_shapes(){
-            match shape {
-                Model::Vector(m) => result.push(part.clone()),
-                Model::Nurbs(m)  => result.push(part.clone()),
-                _ => ()
-            }
-        }
+        result.extend(part.get_shapes());
     }
     result
 }

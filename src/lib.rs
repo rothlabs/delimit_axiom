@@ -29,10 +29,12 @@ use revolve::*;
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
     Vector(Vec<f32>),
+    
     //Point(Vec<f32>),
     Nurbs(Nurbs),
     //Curve(Nurbs),
     //Surface(Nurbs),
+    Sketch(Sketch),
     Group(Group),
     Slice(Slice),
     Turtled(Turtled),
@@ -41,7 +43,7 @@ pub enum Model {
     Area(Area),
     Extrusion(Extrusion),
     Revolve(Revolve),
-    Path(Path),
+    
     MoveTo(Box<Model>),
     LineTo(Box<Model>),
     ArcTo(ArcTo),
@@ -65,6 +67,12 @@ impl Model {
             //Model::Group(m)  => 
             //Model::Path(m)   => 
             _ => vec![] 
+        }
+    }
+    pub fn get_vector_or(&self, alt: Model) -> Model {
+        match self {
+            Model::Vector(m) => self.clone(),
+            _ => alt,
         }
     }
     pub fn get_vec3_or(&self, alt: Vec3) -> Vec3 {

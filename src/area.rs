@@ -1,7 +1,7 @@
-use crate::{get_curves_from_parts};
+use crate::{Model, Mesh, DiscreteQuery, get_shapes};
 
-use super::{Model, DiscreteQuery};
-use super::mesh::Mesh;
+//use super::{Model, DiscreteQuery};
+//use super::mesh::Mesh;
 use lyon::math::Point;
 //use lyon::path::{Path, PathEvent};
 use lyon::tessellation::*;
@@ -15,19 +15,12 @@ pub struct Area {
 }
 
 impl Area { 
-    pub fn get_polylines(&self, query: &DiscreteQuery) -> Vec<Vec<f32>> {
-        let mut polylines = vec![];
-        for part in &self.parts {
-            polylines.extend(part.get_polylines(query));
-        }
-        polylines
-    }
-    pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh {
+    pub fn get_shapes(&self, query: &DiscreteQuery) -> Vec<Model> {
         let mut builder = lyon::path::Path::builder();
-        let curves = get_curves_from_parts(&self.parts);
+        //let curves = get_curves_from_parts(&self.parts);
         let mut started = false;
         let mut start_point = Point::default();
-        for curve in &curves {
+        for curve in &get_shapes(&self.parts) {
             for p in curve.get_polyline(query.count).chunks(3) {                
                 let point = Point::new(p[0], p[1]);
                 if started {

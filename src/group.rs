@@ -7,7 +7,7 @@ use glam::*;
 #[serde(default = "Group::default")]
 pub struct Group {
     pub parts:    Vec<Model>,
-    pub position: Box<Model>,
+    pub position: Box<Model>, // TODO: switch to slice?
     pub axis:     Box<Model>,
     pub angle:    f32,
     pub scale:    Box<Model>,

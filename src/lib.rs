@@ -8,7 +8,7 @@ mod slice;
 mod mesh;
 mod turtled;
 mod sketch;
-//mod area;
+mod area;
 //mod extrusion;
 mod revolve;
 
@@ -62,6 +62,7 @@ impl Model {
     pub fn get_shapes(&self) -> Vec<Model> {
         match self {
             Model::Group(m)   => m.get_shapes(),
+            //Model::Area(m)    => m.get_shapes(),
             Model::Sketch(m)  => m.get_shapes(),
             Model::Revolve(m) => m.get_shapes(),
             _ => vec![] 

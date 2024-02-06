@@ -1,4 +1,4 @@
-use crate::{DiscreteQuery, Nurbs};
+use crate::{DiscreteQuery, Group, Nurbs};
 
 use super::{Model, log};
 use lyon::geom::euclid::Point2D;
@@ -30,6 +30,8 @@ impl Model {
             _ => builder.extend_from_paths(&[self.get_path().as_slice()]), //vec![self.get_path()],//lyon::path::PathSlice::default()
         }
     }
+
+    
     // pub fn get_vector_at_t(&self, t: f32) -> Vec<f32> {
     //     //log("model get_vector_at_t");
     //     match self {
@@ -43,13 +45,6 @@ impl Model {
     // }
 }
 
-pub fn get_path_from_parts(parts: &Vec<Model>) -> lyon::path::Path {
-    let mut builder = lyon::path::Path::builder();
-    for part in parts {
-        part.add_paths_to_builder(&mut builder);
-    }
-    builder.build()
-}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Path::default")]
@@ -66,6 +61,43 @@ pub struct ArcTo {
 }
 
 impl Path { 
+    pub fn get_group(&self) -> Group {
+        let mut group = Group::default();
+        for curve in self.get_curves() {
+            group.parts.push(Model::Nurbs(curve));
+        }
+        group
+    }
+    pub fn get_polylines(&self, query: &DiscreteQuery) -> Vec<Vec<f32>> {
+        let mut polylines = vec![];
+        for curve in self.get_curves() {
+            polylines.push(curve.get_polyline(query.count));
+        }
+        polylines
+    }
+    pub fn get_curves(&self) -> Vec<Nurbs> {
+        let mut curves = vec![];
+        let mut start_point = vec![0.; 3];
+        for part in &self.parts {
+            match part {
+                Model::MoveTo(m) => start_point = get_point2(m),
+                Model::LineTo(m) => {
+                    let mut nurbs = Nurbs::default();
+                    nurbs.controls = vec![Model::Vector(start_point.clone()), Model::Vector(get_point2(m))];
+                    curves.push(nurbs);
+                },
+                Model::ArcTo(m) => {
+                    let mut nurbs = Nurbs::default();
+                    nurbs.controls = vec![Model::Vector(start_point.clone()), Model::Vector(get_point2(&m.to))];
+                    curves.push(nurbs);
+                },
+                _ => (),
+            }
+        }
+        curves
+    }
+
+
     // pub fn get_vector_at_t(&self, t: f32) -> Vec<f32> {
     //     let path = self.get_path();
     //     get_vector_at_t(&path, t)
@@ -173,6 +205,13 @@ fn get_point(model: &Model) -> Point {
     match model {
         Model::Vector(m) => point(m[0], m[1]),
         _ => point(0., 0.),
+    }
+}
+
+fn get_point2(model: &Model) -> Vec<f32> {
+    match model {
+        Model::Vector(m) => vec![m[0], m[1], 0.],
+        _ => vec![0.; 3],
     }
 }
 

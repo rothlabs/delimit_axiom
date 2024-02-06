@@ -2,7 +2,7 @@ use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-pub fn get_mesh_from_parts(parts: Vec<Model>, query: &DiscreteQuery) -> Mesh {
+pub fn get_mesh_from_faces(parts: Vec<Model>, query: &DiscreteQuery) -> Mesh {
     let mut vector: Vec<f32> = vec![];
     let mut trivec: Vec<usize> = vec![];
     let mut offset = 0; 

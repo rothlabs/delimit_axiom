@@ -9,6 +9,15 @@ use glam::*;
 //use lyon::path::path::Builder;
 
 
+// impl Model {
+//     pub fn get_transformed(&self, mat4: Mat4) -> Model {
+//         match self {
+//             Model::Nurbs(m) => Model::Nurbs(m.get_transformed(mat4)),
+//             _ => *self,
+//         }
+//     }
+// }
+
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Group::default")]
@@ -21,15 +30,24 @@ pub struct Group {
 }
 
 impl Group {
+
+    // TODO: limit to nurbs that are curves only
+    pub fn get_curves(&self) -> Vec<Nurbs> {
+        self.get_transformed_nurbs(Mat4::IDENTITY)
+    }
+
+    // TODO: limit to Model::Vector and Model::Nurbs
     pub fn get_controls(&self) -> Vec<Nurbs> {
         self.get_transformed_nurbs(Mat4::IDENTITY)
     }
+
     fn get_transformed_nurbs(&self, root_matrix: Mat4) -> Vec<Nurbs> {
         let mat4 = root_matrix * self.get_matrix();
         let mut nurbs = vec![];
         for part in &self.parts {
             match &part {
                 Model::Group(m) => nurbs.extend(m.get_transformed_nurbs(mat4)),
+                Model::Path(m) =>  nurbs.extend(m.get_group().get_transformed_nurbs(mat4)),
                 Model::Nurbs(m) => nurbs.push(m.get_transformed(mat4)),
                 _ => ()
             }

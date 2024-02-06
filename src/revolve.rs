@@ -1,5 +1,5 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{Nurbs, mesh::{get_mesh_from_parts, Mesh}};
+use crate::{get_points_and_curves, mesh::{get_mesh_from_faces, Mesh}, Nurbs};
 use super::{Model, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use glam::*;
@@ -13,8 +13,14 @@ pub struct Revolve {
 }
 
 impl Revolve {
+    // pub fn get_first_nurbs(&self) -> Nurbs {
+
+    // }
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh {
-        let axis = self.axis.get_vec3_or(Vec3::X).normalize();
+        get_mesh_from_faces(self.get_shapes(), query)
+    }
+    pub fn get_shapes(&self) -> Vec<Model> { // , query: &DiscreteQuery
+        let axis = self.axis.get_vec3_or(Vec3::Z).normalize();
         let mut knots = vec![0.; 3];
         let mut weights = vec![1.];
         let mut transforms = vec![];
@@ -54,22 +60,25 @@ impl Revolve {
         transforms.push(get_transform(axis, base_angle + advance, advance.cos()));
         transforms.push(Mat4::from_axis_angle(axis, self.angle));
 
-        let mut surfaces = vec![];
-        for part in &self.parts {
-            for control in part.get_controls() {
-                let mut surface = Nurbs {
-                    order: 3,
-                    knots: knots.clone(),
-                    weights: weights.clone(),
-                    controls: vec![Model::Nurbs(control.clone())],
-                };
-                for &mat4 in &transforms {
-                    surface.controls.push(Model::Nurbs(control.get_transformed(mat4)));
-                }
-                surfaces.push(Model::Nurbs(surface));
+        //let wow = Vec3::default();
+        // wow.mu
+
+        let mut shapes = vec![];
+        //for part in &self.parts {
+        for control in get_points_and_curves(&self.parts) {
+            let mut nurbs = Nurbs {
+                order: 3,
+                knots: knots.clone(),
+                weights: weights.clone(),
+                controls: vec![control.clone()], // Model::Nurbs(control.clone())
+            };
+            for &mat4 in &transforms {
+                nurbs.controls.push(control.get_transformed(mat4)); // Model::Nurbs(control.get_transformed(mat4))
             }
+            shapes.push(Model::Nurbs(nurbs));
         }
-        get_mesh_from_parts(surfaces, query)
+        //}
+        shapes 
     }
 }
 

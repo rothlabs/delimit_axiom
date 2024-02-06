@@ -4,22 +4,50 @@ use glam::*;
 use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
 
-impl Model {
-    pub fn get_control(&self) -> Nurbs {
-        get_nurbs_from_path(&self.get_path())
-        // match self {
-        //     Model::Path(m)      => get_nurbs_from_path(m.get_path().clone()), 
-        //     Model::Circle(m)    => get_nurbs_from_path(m.get_path().clone()),
-        //     Model::Rectangle(m) => get_nurbs_from_path(m.get_path().clone(),
-        //     _ => Nurbs::default(),
-        // }
+// impl Model {
+//     pub fn get_control(&self) -> Nurbs {
+//         get_nurbs_from_path(&self.get_path())
+//         // match self {
+//         //     Model::Path(m)      => get_nurbs_from_path(m.get_path().clone()), 
+//         //     Model::Circle(m)    => get_nurbs_from_path(m.get_path().clone()),
+//         //     Model::Rectangle(m) => get_nurbs_from_path(m.get_path().clone(),
+//         //     _ => Nurbs::default(),
+//         // }
+//     }
+//     pub fn get_controls(&self) -> Vec<Model> {
+//         match self {
+//             Model::Group(m) => m.get_controls(), 
+//             _ => vec![self.get_control()],
+//         }
+//     }
+// }
+
+// pub fn get_controls(parts: &Vec<Model>) -> Vec<Nurbs> {
+//     let mut controls = vec![];
+//     for part in parts {
+//         controls.extend(part.get_shapes().get_points());
+//         // match &part {
+//         //     Model::Vector(m) => controls.push(part),
+//         //     Model::Nurbs(m)  => controls.push(part), // TODO: filter to curve only nurbs
+//         //     Model::Group(m)  => controls.extend(m.get_controls()),
+//         //     Model::Path(m)   => controls.extend(m.get_group().get_controls()),
+//         //     _ => (),
+//         // };
+//     }
+//     controls
+// }
+
+pub fn get_curves_from_parts(parts: &Vec<Model>) -> Vec<Nurbs> {
+    let mut curves = vec![];
+    for part in parts {
+        match &part {
+            Model::Group(m) => curves.extend(m.get_curves()),
+            Model::Path(m)  => curves.extend(m.get_curves()),
+            Model::Nurbs(m) => curves.push(m.clone()), // TODO: filter to curve only nurbs
+            _ => (),
+        };
     }
-    pub fn get_controls(&self) -> Vec<Nurbs> {
-        match self {
-            Model::Group(m) => m.get_controls(), 
-            _ => vec![self.get_control()],
-        }
-    }
+    curves
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]

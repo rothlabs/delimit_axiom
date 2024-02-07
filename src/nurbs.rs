@@ -5,12 +5,25 @@ use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(default = "Facet::default")]
+pub struct Facet {
+    pub surface:    Nurbs,
+    pub boundaries: Vec<Vec<[f32; 2]>>,
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Nurbs::default")]
 pub struct Nurbs {
-    pub order:    usize,         // order = polynomial_degree + 1
-    pub knots:    Vec<f32>,      // knot_count = order + control_count
+    pub order:    usize,       // order = polynomial_degree + 1
+    pub knots:    Vec<f32>,    // knot_count = order + control_count
     pub weights:  Vec<f32>,    // weight_count = control_count
     pub controls: Vec<Model>,
+}
+
+macro_rules! console_log {
+    // Note that this is using the `log` function imported above during
+    // `bare_bones`
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
 impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
@@ -23,12 +36,6 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         };
         for control in &self.controls {
             nurbs.controls.push(control.get_transformed(mat4));
-            // match control {
-            //     Model::Point(m) => nurbs.controls.push(Model::Point(m.get_transformed(mat4))), //get_transformed_vector(m, mat4))
-            //     Model::Curve(m) => nurbs.controls.push(Model::Curve(m.get_transformed(mat4))),
-            //     //Model::Surface(m)  => nurbs.controls.push(Model::Surface(m.get_transformed(mat4))),
-            //     _ => ()
-            // }
         }
         nurbs
     }
@@ -55,27 +62,44 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
 
     pub fn get_mesh_vector(&self, query: &DiscreteQuery) -> Vec<f32> {
         let &DiscreteQuery {u_count, v_count, ..} = query;
+        let mut max_control_count_u = 0;
+        for control in &self.controls {
+            if let Model::Curve(c) = control {
+                if max_control_count_u < c.controls.len() { max_control_count_u = c.controls.len(); } 
+            }
+        }
+        //max_control_count_u = 25;
+        console_log!("v_count: {}", v_count);
         let nurbs = self.get_valid();
-        (0..u_count).into_par_iter().map(|u|
-            (0..v_count).into_par_iter()
-                .map(|v| nurbs.get_vector_at_uv(v as f32 / (v_count-1) as f32, u as f32 / (u_count-1) as f32))
-                .collect::<Vec<Vec<f32>>>()
-            ).flatten().flatten().collect()
+        let mut vector = vec![];
+        for u in 0..(max_control_count_u+1) {
+            for v in 0..(v_count+1) {
+                console_log!("v: {}", v);
+                vector.extend(nurbs.get_vector_at_uv(v as f32 / v_count as f32,   u as f32 / max_control_count_u as f32));
+            }
+        }
+        vector
+        // (0..2).into_iter().map(|u|
+        //     (0..v_count).into_iter()
+        //         .map(|v| nurbs.get_vector_at_uv(v as f32 / (v_count-1) as f32,   u as f32 / (1) as f32))
+        //         .collect::<Vec<Vec<f32>>>()
+        //     ).flatten().flatten().collect()
     }
 
     fn get_polyline_at_u(&self, u: f32, count: usize) -> Vec<f32> {
-        (0..count).into_par_iter()
+        (0..count).into_iter()
             .map(|t| self.get_vector_at_uv(u, t as f32 / (count-1) as f32)) 
             .flatten().collect()
     }
 
     fn get_polyline_at_v(&self, v: f32, count: usize) -> Vec<f32> {
-        (0..count).into_par_iter()
+        (0..count).into_iter()
             .map(|t| self.get_vector_at_uv(t as f32 / (count-1) as f32, v)) 
             .flatten().collect()
     }
 
     pub fn get_vector_at_uv(&self, u: f32, v: f32) -> Vec<f32> {
+        console_log!("get_vector_at_uv: {}, {}", u, v);
         let basis = self.get_rational_basis_at_t(u);
         let mut vector = vec![];
         for component_index in 0..self.get_control_vector(0, 0.).len() { 
@@ -91,9 +115,8 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         //self.controls[index].get_vector_at_t(t)
         match &self.controls[index] { 
             Model::Point(m) => m.to_vec(),  
-            Model::Curve(m) => m.get_vector_at_uv(t, 0.),
-            //Model::Facet(m) => m.get_vector_at_uv(t, 0.),
-            _ => vec![0.; 3], 
+            Model::Curve(m) => m.get_vector_at_uv(t, 123.),
+            _ => vec![12345.; 3], 
         }
     }
 
@@ -110,7 +133,6 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         match control {
             Model::Point(m) => Model::Point(m),
             Model::Curve(m) => Model::Curve(m.get_valid()),
-            //Model::Surface(control) => Model::Surface(control.get_valid()),
             _ => Model::Point([0.; 3]),
         }
     }
@@ -146,41 +168,6 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         knots
     }
 
-    fn get_basis_of_degree_0_at_t(&self, t: f32) -> Vec<f32> {
-        self.knots.windows(2)
-            .map(|knots| {
-                if t >= knots[0] && t < knots[1] {
-                    1.
-                } else {
-                    0.
-                }
-            })
-            .collect()
-    }
-
-    fn get_basis_at_t(&self, normal_t: f32) -> Vec<f32> {
-        let t = *self.knots.last().unwrap_or(&0.) * normal_t; // .unwrap_throw("") to js client
-        let mut basis = self.get_basis_of_degree_0_at_t(t);
-        for degree in 1..self.order {
-            for i0 in 0..self.controls.len() {
-                let i1 = i0 + 1; 
-                let mut f = 0.;
-                let mut g = 0.;
-                if basis[i0] > 0. {
-                    f = (t - self.knots[i0]) / (self.knots[degree + i0] - self.knots[i0]) 
-                }
-                if basis[i1] > 0. {
-                    g = (self.knots[degree + i1] - t) / (self.knots[degree + i1] - self.knots[i1])
-                }
-                basis[i0] = f * basis[i0] + g * basis[i1];
-            }
-        }
-        if normal_t == 1. {
-            basis[self.controls.len() - 1] = 1.; // last control edge case
-        }
-        basis
-    }
-
     fn get_rational_basis_at_t(&self, t: f32) -> Vec<f32> {
         let basis = self.get_basis_at_t(t);
         let sum: f32 = self.weights.iter().enumerate().map(|(i, w)| basis[i] * w).sum();
@@ -190,7 +177,61 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             vec![0.; self.weights.len()]
         }
     }
+
+    fn get_basis_at_t(&self, normal_t: f32) -> Vec<f32> {
+        let t = *self.knots.last().unwrap_or(&0.) * normal_t; // .unwrap_throw("") to js client
+        let mut basis = self.get_basis_of_degree_0_at_t(t);
+        for degree in 1..self.order {
+            for i0 in 0..self.controls.len()-1 {
+                let i1 = i0 + 1; 
+                let mut f = 0.;
+                let mut g = 0.;
+                if (self.knots[degree + i0] - self.knots[i0]) != 0. {
+                    f = (t - self.knots[i0]) / (self.knots[degree + i0] - self.knots[i0]) 
+                }
+                if (self.knots[degree + i1] - self.knots[i1]) != 0. {
+                    g = (self.knots[degree + i1] - t) / (self.knots[degree + i1] - self.knots[i1])
+                }
+                basis[i0] = f * basis[i0] + g * basis[i1];
+            }
+        }
+        // if normal_t > 0.99 { // == 1.
+        //     basis[self.controls.len() - 1] = 1.; // last control edge case
+        // }
+        basis
+    }
+
+    fn get_basis_of_degree_0_at_t(&self, t: f32) -> Vec<f32> {
+        let mut vector = vec![];
+        for i in 0..self.controls.len()-1 { //0..self.knots.len()-1 {
+            if t >= self.knots[self.order-1 + i] && t < self.knots[self.order-1 + i+1] {
+                vector.push(1.);
+            //} else if i == self.knots.len()-2 && t >= self.knots[i+1] {
+            //    vector.push(1.);
+            } else {
+                vector.push(0.);
+            }
+        }
+        if t > 0.99 {
+            vector.push(1.);
+        }else {
+            vector.push(0.);
+        }
+        vector
+    }
 }
+
+// self.knots.windows(2)
+//             .map(|knots| {
+//                 if t >= knots[0] && t < knots[1] {
+//                     1.
+//                 } else if t == knots[1] {
+//                     1. 
+//                 } else {
+//                     0.
+//                 }
+//             })
+//             .collect()
 
 // visual tests
 impl Nurbs {

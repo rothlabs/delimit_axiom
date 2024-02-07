@@ -6,9 +6,9 @@ mod nurbs;
 mod slice;
 //mod polyline;
 mod mesh;
-mod turtled;
+//mod turtled;
 mod sketch;
-mod area;
+//mod area;
 //mod extrusion;
 mod revolve;
 
@@ -19,7 +19,7 @@ use glam::*;
 use group::*;
 use nurbs::*;
 use slice::*;
-use turtled::*;
+//use turtled::*;
 use sketch::*;
 //use area::*;
 //use extrusion::*;
@@ -36,10 +36,9 @@ pub enum Model {
     Sketch(Sketch),
     Group(Group),
     Slice(Slice),
-    Turtled(Turtled),
+    //Turtled(Turtled),
     Circle(Circle),
     Rectangle(Rectangle),
-    //Area(Area),
     //Extrusion(Extrusion),
     Revolve(Revolve),
     

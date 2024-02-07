@@ -12,19 +12,8 @@ pub struct Revolve {
     pub angle:  f32,
 }
 
-macro_rules! console_log {
-    // Note that this is using the `log` function imported above during
-    // `bare_bones`
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
 
 impl Revolve {
-    // pub fn get_first_nurbs(&self) -> Nurbs {
-
-    // }
-    // pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh {
-    //     get_mesh_from_faces(self.get_shapes(), query)
-    // }
     pub fn get_shapes(&self) -> Vec<Model> { // , query: &DiscreteQuery
         let axis = self.axis.get_vec3_or(Vec3::Z).normalize();
         let mut knots = vec![0.; 3];
@@ -66,24 +55,17 @@ impl Revolve {
         transforms.push(get_transform(axis, base_angle + advance, advance.cos()));
         transforms.push(Mat4::from_axis_angle(axis, self.angle));
 
-        //let wow = Vec3::default();
-        // wow.mu
-
         let mut shapes = vec![];
-        //for part in &self.parts {
-
-        
-
         for shape in get_shapes(&self.parts) {
             let get_nurbs = || {
                 let mut nurbs = Nurbs {
                     order: 3,
                     knots: knots.clone(),
                     weights: weights.clone(),
-                    controls: vec![shape.clone()], // Model::Nurbs(control.clone())
+                    controls: vec![shape.clone()], 
                 };
                 for &mat4 in &transforms {
-                    nurbs.controls.push(shape.get_transformed(mat4)); // Model::Nurbs(control.get_transformed(mat4))
+                    nurbs.controls.push(shape.get_transformed(mat4)); 
                 }
                 nurbs
             };
@@ -92,15 +74,10 @@ impl Revolve {
                 Model::Curve(_) => shapes.push(Model::Facet(get_nurbs())),
                 _ => (),
             }
-            //shapes.push(Model::Nurbs(nurbs));
         }
-
-        //console_log!("revolve result count {}", shapes.len());
-        //}
         shapes 
     }
 }
-
 
 // TODO: fix skewing from diagonal axis 
 fn get_transform(axis: Vec3, angle: f32, weight: f32) -> Mat4 {

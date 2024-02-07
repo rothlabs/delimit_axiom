@@ -1,11 +1,7 @@
-use crate::{Model, Mesh, DiscreteQuery, get_shapes};
+use crate::{Model, Nurbs, get_curves};
 
-//use super::{Model, DiscreteQuery};
-//use super::mesh::Mesh;
-use lyon::math::Point;
-//use lyon::path::{Path, PathEvent};
-use lyon::tessellation::*;
 use serde::{Deserialize, Serialize};
+use glam::*;
 
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -15,97 +11,26 @@ pub struct Area {
 }
 
 impl Area { 
-    pub fn get_shapes(&self, query: &DiscreteQuery) -> Vec<Model> {
-        let mut builder = lyon::path::Path::builder();
-        //let curves = get_curves_from_parts(&self.parts);
-        let mut started = false;
-        let mut start_point = Point::default();
-        for curve in &get_shapes(&self.parts) {
-            for p in curve.get_polyline(query.count).chunks(3) {                
-                let point = Point::new(p[0], p[1]);
-                if started {
-                    if start_point.distance_to(point) > 0.01 {
-                        builder.line_to(point);
-                    }else {
-                        builder.end(false);
-                        builder.begin(point);
-                        start_point = point;
-                    }
-                }else{
-                    builder.begin(point);
-                    start_point = point;
-                    started = true;
-                }
+    pub fn get_shapes(&self) -> Vec<Model> {
+        let mut shapes = vec![];
+        let mut facet = Nurbs::default();
+        let mut curve0 = Nurbs::default();
+        let mut curve1 = Nurbs::default();
+        let mut min = Vec2::new(std::f32::INFINITY, std::f32::INFINITY);
+        let mut max = Vec2::new(std::f32::NEG_INFINITY, std::f32::NEG_INFINITY);
+        let boundaries = get_curves(&self.parts);
+        for curve in boundaries {
+            for point in curve.get_controls_as_vec2() {
+                min = min.min(point);
+                max = max.max(point);
             }
         }
-        let path = builder.build();
-        let options = FillOptions::tolerance(query.tolerance);
-        let mut geometry: VertexBuffers<[f32; 3], u16> = VertexBuffers::new();
-        let mut buffer_builder = BuffersBuilder::new(&mut geometry, |vertex: FillVertex| {
-            let p = vertex.position().to_array();
-            [p[0], p[1], 0.]
-        });
-        let mut tessellator = FillTessellator::new();
-        tessellator.tessellate_path(&path, &options, &mut buffer_builder).unwrap(); //.expect("Tessellation failed");
-        Mesh {
-            vector:    geometry.vertices.into_iter().flatten().collect(),
-            triangles: geometry.indices.into_iter().map(|v| v as usize).collect(),
-        }
+        curve0.controls.push(Model::Point([min.x, min.y, 0.]));
+        curve0.controls.push(Model::Point([min.x, max.y, 0.]));
+        curve1.controls.push(Model::Point([max.x, min.y, 0.]));
+        curve1.controls.push(Model::Point([max.x, max.y, 0.]));
+        facet.controls.extend([Model::Curve(curve0), Model::Curve(curve1)]);
+        shapes.push(Model::Facet(facet));
+        shapes
     }
 }
-
-//let mut builder = Path::builder();
-        //builder.add_polygon(polygon)
-        // for part in &self.parts {
-        //     part.add_paths_to_builder(&mut builder);
-        // }
-        // let raw_path = builder.build();
-        //let path = fuse_path(get_path_from_parts(&self.parts));    
-
-// fn fuse_path(path: lyon::path::Path) -> lyon::path::Path{
-//     let mut builder = lyon::path::Path::builder();
-//     let mut endpoint = point(0., 0.); // path.first_endpoint().unwrap_or((point(0., 0.), Attributes::default())).position();
-//     let mut close_end: bool = false;
-//     let mut open = false;
-//     for event in path.iter() {
-//         match event {
-//             PathEvent::Begin { at } => {
-//                 if open {
-//                     if endpoint.distance_to(at) > 0.01 {
-//                         builder.end(close_end);
-//                         builder.begin(at);
-//                     }
-//                 }else{
-//                     builder.begin(at);
-//                     open = true;
-//                 }
-//             }
-//             PathEvent::Line{from:_, to} => {
-//                 builder.line_to(to);
-//             }
-//             PathEvent::Quadratic { from:_, ctrl, to } => {
-//                 builder.quadratic_bezier_to(ctrl, to);
-//             }
-//             PathEvent::Cubic { from:_, ctrl1, ctrl2, to }=> {
-//                 builder.cubic_bezier_to(ctrl1, ctrl2, to );
-//             }
-//             PathEvent::End { last, first:_, close } => {
-//                 endpoint.clone_from(&last);
-//                 close_end = close;
-//             }
-//         }
-//     }
-//     builder.end(close_end);
-//     builder.build()
-// }
-
-
-
-// for path in part.get_paths(){
-            //     builder.extend_from_paths(&[path.as_slice()]);
-            // }
-
-                        // match &part {
-            //     Model::Group(m) => polylines.extend(m.get_polylines(query)),
-            //     _ => polylines.push(part.get_polyline(query)),
-            // }

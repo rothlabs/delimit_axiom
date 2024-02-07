@@ -63,6 +63,7 @@ impl Revolve {
                     knots: knots.clone(),
                     weights: weights.clone(),
                     controls: vec![shape.clone()], 
+                    boundaries: vec![],
                 };
                 for &mat4 in &transforms {
                     nurbs.controls.push(shape.get_transformed(mat4)); 

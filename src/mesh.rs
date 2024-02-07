@@ -87,12 +87,12 @@ pub fn get_poly(val: JsValue) -> Result<JsValue, JsValue> {
 pub fn get_triangles(val: JsValue) -> Result<JsValue, JsValue> {
     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
     let query = query.get_valid();
-    let vector = get_trivec(&query); // query.u_count, query.v_count
+    let vector = get_trivec(query.u_count, query.v_count); 
     Ok(serde_wasm_bindgen::to_value(&vector)?)
 }
 
-pub fn get_trivec(query: &DiscreteQuery) -> Vec<usize>{ // u_count: usize, v_count: usize
-    let &DiscreteQuery {u_count, v_count, ..} = query;
+pub fn get_trivec(u_count: usize, v_count: usize) -> Vec<usize>{ 
+    //let &DiscreteQuery {u_count, v_count, ..} = query;
     get_trivec_with_offset(u_count, v_count, 0)
 }
 

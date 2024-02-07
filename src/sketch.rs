@@ -32,7 +32,7 @@ impl Sketch {
                 Model::LineTo(m) => {
                     let end_point = Model::Point([m[0], m[1], 0.]);
                     let mut nurbs = Nurbs::default();
-                    nurbs.controls = vec![start_point.clone(), end_point.clone()]; // vec![Model::Vector(start_point.clone()), Model::Vector(get_point2(m))];
+                    nurbs.controls = vec![start_point.clone(), end_point.clone()]; 
                     shapes.push(Model::Curve(nurbs));
                     start_point = end_point.clone();
                     shapes.push(end_point);

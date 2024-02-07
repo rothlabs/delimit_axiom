@@ -8,7 +8,7 @@ mod slice;
 mod mesh;
 //mod turtled;
 mod sketch;
-//mod area;
+mod area;
 //mod extrusion;
 mod revolve;
 
@@ -21,7 +21,7 @@ use nurbs::*;
 use slice::*;
 //use turtled::*;
 use sketch::*;
-//use area::*;
+use area::*;
 //use extrusion::*;
 use revolve::*;
 
@@ -32,8 +32,10 @@ pub enum Model {
     Facet(Nurbs),
     MoveTo([f32; 2]),
     LineTo([f32; 2]),
+    ArcTo(ArcTo),
     Vector(Vec<f32>),
     Sketch(Sketch),
+    Area(Area),
     Group(Group),
     Slice(Slice),
     //Turtled(Turtled),
@@ -41,9 +43,6 @@ pub enum Model {
     Rectangle(Rectangle),
     //Extrusion(Extrusion),
     Revolve(Revolve),
-    
-    
-    ArcTo(ArcTo),
     Close(bool), // TODO: find way to remove bool
 }
 
@@ -61,7 +60,7 @@ impl Model {
     pub fn get_shapes(&self) -> Vec<Model> {
         match self {
             Model::Group(m)   => m.get_shapes(),
-            //Model::Area(m)    => m.get_shapes(),
+            Model::Area(m)    => m.get_shapes(),
             Model::Sketch(m)  => m.get_shapes(),
             Model::Revolve(m) => m.get_shapes(),
             _ => vec![] 
@@ -90,6 +89,18 @@ pub fn get_shapes(parts: &Vec<Model>) -> Vec<Model> {
     let mut result = vec![];
     for part in parts {
         result.extend(part.get_shapes());
+    }
+    result
+}
+
+pub fn get_curves(parts: &Vec<Model>) -> Vec<Nurbs> {
+    let mut result = vec![];
+    for part in parts {
+        for shape in part.get_shapes() {
+            if let Model::Curve(curve) = shape {
+                result.push(curve);
+            }
+        }
     }
     result
 }

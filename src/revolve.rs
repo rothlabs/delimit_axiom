@@ -53,7 +53,7 @@ impl Revolve {
         knots.extend([self.angle, self.angle, self.angle]);
         weights.extend([advance.cos(), 1.]);
         transforms.push(get_transform(axis, base_angle + advance, advance.cos()));
-        transforms.push(Mat4::from_axis_angle(axis, self.angle));
+        let end_mat4 = Mat4::from_axis_angle(axis, self.angle);
 
         let mut shapes = vec![];
         for shape in get_shapes(&self.parts) {
@@ -68,13 +68,21 @@ impl Revolve {
                 for &mat4 in &transforms {
                     nurbs.controls.push(shape.get_transformed(mat4)); 
                 }
+                nurbs.controls.push(shape.get_transformed(end_mat4)); 
                 nurbs
             };
             match &shape {
-                Model::Point(_) => shapes.push(Model::Curve(get_nurbs())),
-                Model::Curve(_) => shapes.push(Model::Facet(get_nurbs())),
+                Model::Point(_) => {
+                    shapes.push(Model::Curve(get_nurbs()));
+                    shapes.push(shape.get_transformed(end_mat4));
+                },
+                Model::Curve(_) => {
+                    shapes.push(Model::Facet(get_nurbs()));
+                    shapes.push(shape.get_transformed(end_mat4));
+                },
                 _ => (),
             }
+            shapes.push(shape.clone());
         }
         shapes 
     }
@@ -88,3 +96,30 @@ fn get_transform(axis: Vec3, angle: f32, weight: f32) -> Mat4 {
         (1./weight)*(1.-axis.abs().dot(Vec3::Z)) + axis.abs().dot(Vec3::Z),
     )) * Mat4::from_axis_angle(axis, angle)
 }
+
+
+
+// for shape in get_shapes(&self.parts) {
+//     let get_nurbs = || {
+//         let mut nurbs = Nurbs {
+//             order: 3,
+//             knots: knots.clone(),
+//             weights: weights.clone(),
+//             controls: vec![shape.clone()], 
+//             boundaries: vec![],
+//         };
+//         for &mat4 in &transforms {
+//             nurbs.controls.push(shape.get_transformed(mat4)); 
+//         }
+//         let end_shape = shape.get_transformed(end_mat4);
+//         nurbs.controls.push(end_shape.clone()); 
+//         //shapes.push(end_shape);
+//         nurbs
+//     };
+//     match &shape {
+//         Model::Point(_) => shapes.push(Model::Curve(get_nurbs())),
+//         Model::Curve(_) => shapes.push(Model::Facet(get_nurbs())),
+//         _ => (),
+//     }
+//     shapes.push(shape.clone());
+// }

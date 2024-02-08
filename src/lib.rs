@@ -105,6 +105,18 @@ pub fn get_curves(parts: &Vec<Model>) -> Vec<Nurbs> {
     result
 }
 
+pub fn get_points(parts: &Vec<Model>) -> Vec<[f32; 3]> {
+    let mut result = vec![];
+    for part in parts {
+        for shape in part.get_shapes() {
+            if let Model::Point(point) = shape {
+                result.push(point);
+            }
+        }
+    }
+    result
+}
+
 // #[derive(Clone, Default)] 
 // pub struct Shape {
 //     pub points:   Vec<Vec3>,
@@ -132,31 +144,36 @@ impl Default for Parameter {
 #[serde(default = "DiscreteQuery::default")]
 pub struct DiscreteQuery {
     pub model:     Model,
+    pub count:     usize,
     pub tolerance: f32,   // allowed distance from real model
-    pub count:     usize, // quantity of points from the model (when tolerance is not implemented)
-    pub u_count:   usize, // for surfaces
-    pub v_count:   usize, // for surfaces
+    // pub count:     usize, // quantity of points from the model (when tolerance is not implemented)
+    // pub u_count:   usize, // for surfaces
+    // pub v_count:   usize, // for surfaces
+    // pub extra:     usize,
 }
 
 impl DiscreteQuery {
     fn get_valid(self) -> DiscreteQuery {
+        let mut count = 4;
+        if self.count > 0 { count = self.count.clamp(2, 100); }
         let mut tolerance = 0.1;
         if self.tolerance > 0. { tolerance = self.tolerance.clamp(0.01, 10.); }
-        let mut count = 80;
-        if self.count > 0 { count = self.count.clamp(2, 1000); }
-        let mut u_count = 25;
-        if self.u_count > 0 { u_count = self.u_count.clamp(2, 1000); }
-        let mut v_count = 25;
-        if self.v_count > 0 { v_count = self.v_count.clamp(2, 1000); }
+        // let mut u_count = 25;
+        // if self.u_count > 0 { u_count = self.u_count.clamp(2, 1000); }
+        // let mut v_count = 25;
+        // if self.v_count > 0 { v_count = self.v_count.clamp(2, 1000); }
         DiscreteQuery {
             model: self.model,
-            tolerance,
             count,
-            u_count,
-            v_count,
+            tolerance,
+            // u_count,
+            // v_count,
+            // extra: self.extra
         }
     }
 }
+
+//pub struct Sample
 
 #[wasm_bindgen]
 pub fn enable_panic_messages() {

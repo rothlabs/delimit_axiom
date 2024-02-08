@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct DiscreteShapes {
-    pub points:    Vec<f32>,
+    pub points:    Vec<Vec<f32>>,
     pub polylines: Vec<Vec<f32>>,
     pub meshes:    Vec<Mesh>, 
 }
@@ -23,7 +23,7 @@ pub fn get_poly(val: JsValue) -> Result<JsValue, JsValue> {
     let mut result = DiscreteShapes::default();
     for part in query.model.get_shapes() {
         match &part {
-            Model::Point(m) => result.points.extend(m),
+            Model::Point(m) => result.points.push(m.to_vec()),
             Model::Curve(m) => result.polylines.push(m.get_polyline(query.count)),
             Model::Facet(m) => result.meshes.push(m.get_mesh(&query)),
             _ => ()
@@ -83,13 +83,13 @@ pub fn get_poly(val: JsValue) -> Result<JsValue, JsValue> {
 //     Ok(serde_wasm_bindgen::to_value(&vector)?)
 // }
 
-#[wasm_bindgen]
-pub fn get_triangles(val: JsValue) -> Result<JsValue, JsValue> {
-    let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
-    let query = query.get_valid();
-    let vector = get_trivec(query.u_count, query.v_count); 
-    Ok(serde_wasm_bindgen::to_value(&vector)?)
-}
+// #[wasm_bindgen]
+// pub fn get_triangles(val: JsValue) -> Result<JsValue, JsValue> {
+//     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
+//     let query = query.get_valid();
+//     let vector = get_trivec(query.u_count, query.v_count); 
+//     Ok(serde_wasm_bindgen::to_value(&vector)?)
+// }
 
 pub fn get_trivec(u_count: usize, v_count: usize) -> Vec<usize>{ 
     //let &DiscreteQuery {u_count, v_count, ..} = query;

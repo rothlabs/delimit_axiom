@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
 use rayon::prelude::*;
 
+// ((a % b) + b) % b)  ->  a modulo b
+
 macro_rules! console_log {
     // Note that this is using the `log` function imported above during
     // `bare_bones`
@@ -54,6 +56,9 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             }
         }
         let v_count = nurbs.get_sample_count(query.count);
+        
+        let u_seg = 1./(u_count as f32 - 1.);
+        let v_seg = 1./(v_count as f32 - 1.);
         //let v_count = nurbs.controls.len() + (nurbs.controls.len()-1)*(nurbs.order-2) * query.count;
         // let vector = (0..u_count).into_iter().map(|u|
         //     (0..v_count).into_iter()
@@ -63,7 +68,9 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         ///let max_count = *[u_count, v_count, query.count].iter().max().unwrap();
 
         let mut builder = lyon::path::Path::builder();
-        //let curves = get_curves_from_parts(&self.parts);
+        
+        //builder.add_rectangle(rect, winding)
+
         let mut started = false;
         let mut start_point = lyon::geom::Point::default();
         for curve in &nurbs.boundaries { // TODO: insert grid of tiny triangle boundaries to force extra points for curved surfaces
@@ -86,13 +93,13 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         }
         builder.end(true);
         let path = builder.build();
-        let options = FillOptions::tolerance(query.tolerance/2.).with_intersections(true);
+        let options = FillOptions::tolerance(query.tolerance/2.);
         let mut geometry: VertexBuffers<[f32; 2], u16> = VertexBuffers::new();
         let mut buffer_builder = BuffersBuilder::new(&mut geometry, |vertex: FillVertex| {
             vertex.position().to_array()
         });
         let mut tessellator = FillTessellator::new();
-        tessellator.tessellate_path(&path, &options, &mut buffer_builder).unwrap(); //.expect("Tessellation failed");
+        tessellator.tessellate_path(&path, &options, &mut buffer_builder).expect("Tessellation failed");
 
         let mut vector = vec![];
         for [u, v] in geometry.vertices.into_iter(){
@@ -308,6 +315,23 @@ impl Nurbs {
     }
 }
 
+
+
+        // let vertices = &geometry.vertices;
+        // for vert in geometry.indices.chunks(3).map(|i| [&vertices[i[0] as usize], &vertices[i[1] as usize], &vertices[i[2] as usize]]) {
+        //     let mut min_u = vert[0][0]; if min_u > vert[1][0] {min_u = vert[1][0];} if min_u > vert[2][0] {min_u = vert[2][0];}
+        //     let mut max_u = vert[0][0]; if max_u < vert[1][0] {max_u = vert[1][0];} if max_u < vert[2][0] {max_u = vert[2][0];}
+        //     let mut min_v = vert[0][1]; if min_v > vert[1][1] {min_v = vert[1][1];} if min_v > vert[2][1] {min_v = vert[2][1];}
+        //     let mut max_v = vert[0][1]; if max_v < vert[1][1] {max_v = vert[1][1];} if max_v < vert[2][1] {max_v = vert[2][1];}
+        //     let delta_u_count = (max_u - min_u) / u_seg;
+        //     let first_u = min_u - (min_u % u_seg) + u_seg;
+        //     for u_index in 0..delta_u_count as usize {
+        //         let v_axis = first_u + u_index as f32 * u_seg;
+                
+        //     }
+        //     //let min_u = indices.iter().;
+            
+        // }
 
 
 // let mut curve0 = Nurbs::default();

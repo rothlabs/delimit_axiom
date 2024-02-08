@@ -1,8 +1,10 @@
-use crate::{mesh::{get_trivec, Mesh}, vector::get_transformed_vector};
-use super::{Model, Parameter, DiscreteQuery, log};
+use crate::mesh::Mesh;
+use super::{Model, Parameter, DiscreteQuery};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
+use lyon::geom::{Box2D, Point};
+use lyon::path::Winding;
 use rayon::prelude::*;
 
 // ((a % b) + b) % b)  ->  a modulo b
@@ -50,65 +52,55 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         let mut u_count = 0;
         for control in &nurbs.controls {
             if let Model::Curve(c) = control {
-                //let potential_u_count = c.controls.len() + (c.controls.len()-1)*(c.order-2) * query.count;
                 let sample_count = c.get_sample_count(query.count);
                 if u_count < sample_count { u_count = sample_count; } 
             }
         }
         let v_count = nurbs.get_sample_count(query.count);
-        
-        let u_seg = 1./(u_count as f32 - 1.);
-        let v_seg = 1./(v_count as f32 - 1.);
-        //let v_count = nurbs.controls.len() + (nurbs.controls.len()-1)*(nurbs.order-2) * query.count;
-        // let vector = (0..u_count).into_iter().map(|u|
-        //     (0..v_count).into_iter()
-        //         .map(|v| nurbs.get_vector_at_uv(u as f32 / (u_count-1) as f32,   v as f32 / (v_count-1) as f32))
-        //         .collect::<Vec<Vec<f32>>>()
-        //     ).flatten().flatten().collect();
-        ///let max_count = *[u_count, v_count, query.count].iter().max().unwrap();
-
         let mut builder = lyon::path::Path::builder();
-        
-        //builder.add_rectangle(rect, winding)
-
-        let mut started = false;
+        if nurbs.boundaries.is_empty() {
+            builder.add_rectangle(&Box2D{min:Point::new(0., 0.), max:Point::new(1., 1.)}, Winding::Positive);
+        }
+        for ui in 0..u_count {
+            let u = ui as f32 / (u_count-1) as f32;
+            builder.add_rectangle(&Box2D{min:Point::new(u, 0.), max:Point::new(u, 1.)}, Winding::Positive);
+        }
+        for vi in 0..v_count {
+            let v = vi as f32 / (v_count-1) as f32;
+            builder.add_rectangle(&Box2D{min:Point::new(0., v), max:Point::new(1., v)}, Winding::Positive);
+        }
+        let mut open_loop = false;
         let mut start_point = lyon::geom::Point::default();
-        for curve in &nurbs.boundaries { // TODO: insert grid of tiny triangle boundaries to force extra points for curved surfaces
+        for curve in &nurbs.boundaries { 
             for p in curve.get_polyline(query.count).chunks(3) {  
                 let point = lyon::geom::Point::new(p[0], p[1]);
-                if started {
-                    if start_point.distance_to(point) > f32::EPSILON {
+                if open_loop {
+                    if start_point.distance_to(point) > f32::EPSILON { // f32::EPSILON*1000.
                         builder.line_to(point);
                     }else {
                         builder.end(true);
-                        builder.begin(point);
-                        start_point = point;
+                        open_loop = false;
                     }
                 }else{
                     builder.begin(point);
                     start_point = point;
-                    started = true;
+                    open_loop = true;
                 }
             }
         }
-        builder.end(true);
         let path = builder.build();
-        let options = FillOptions::tolerance(query.tolerance/2.);
-        let mut geometry: VertexBuffers<[f32; 2], u16> = VertexBuffers::new();
-        let mut buffer_builder = BuffersBuilder::new(&mut geometry, |vertex: FillVertex| {
-            vertex.position().to_array()
-        });
+        let options = FillOptions::default(); //tolerance(query.tolerance);
+        let mut geometry: VertexBuffers<[f32; 2], usize> = VertexBuffers::new();
+        let mut buffer_builder = BuffersBuilder::new(&mut geometry, |vertex: FillVertex| vertex.position().to_array());
         let mut tessellator = FillTessellator::new();
         tessellator.tessellate_path(&path, &options, &mut buffer_builder).expect("Tessellation failed");
-
         let mut vector = vec![];
         for [u, v] in geometry.vertices.into_iter(){
             vector.extend(nurbs.get_vector_at_uv(u, v));
         }
-
         Mesh {
             vector, //:    geometry.vertices.into_iter().flatten().collect(),
-            triangles: geometry.indices.into_iter().map(|v| v as usize).collect(),
+            triangles: geometry.indices, //.into_iter().map(|v| v as usize).collect(),
         }
     }
 
@@ -229,44 +221,44 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     fn get_valid(&self) -> Nurbs {
-        let mut controls = vec![];
-        let mut make_bounds = false;
-        for control in &self.controls {
-            controls.push(self.get_valid_control(control));
-            if let Model::Curve(_) = control {
-                make_bounds = true;
-            }
-        }
-        let mut boundaries = vec![];
-        if make_bounds && self.boundaries.len() == 0 {
-            // let mut curve0 = Nurbs::default();
-            // let mut curve1 = Nurbs::default();
-            // let mut curve2 = Nurbs::default();
-            // //let mut curve1 = Nurbs::default();
-            // curve0.controls.extend([Model::Point([0.1, 0.1, 0.]), Model::Point([0.9, 0.1, 0.])]);
-            // curve1.controls.extend([Model::Point([0.9, 0.1, 0.]), Model::Point([0.9, 0.9, 0.])]);
-            // curve2.controls.extend([Model::Point([0.9, 0.9, 0.]), Model::Point([0.1, 0.1, 0.])]);
-            // boundaries.push(curve0.get_valid());
-            // boundaries.push(curve1.get_valid());
-            // boundaries.push(curve2.get_valid());
-            let mut curve0 = Nurbs::default();
-            //let mut curve1 = Nurbs::default();
-            curve0.controls.extend([
-                Model::Point([0., 0., 0.]), Model::Point([1., 0., 0.]),
-                Model::Point([1., 1., 0.]), Model::Point([0., 1., 0.]), 
-                Model::Point([0., 0., 0.]),
-            ]);
-            boundaries.push(curve0.get_valid());
-            //console_log!("made bounds!!!!!")
-        } else {
-            boundaries = self.boundaries.clone();
-        }
+        // let mut controls = vec![];
+        // let mut make_bounds = false;
+        // for control in &self.controls {
+        //     controls.push(self.get_valid_control(control));
+        //     if let Model::Curve(_) = control {
+        //         make_bounds = true;
+        //     }
+        // }
+        // let mut boundaries = vec![];
+        // if make_bounds && self.boundaries.len() == 0 {
+        //     // let mut curve0 = Nurbs::default();
+        //     // let mut curve1 = Nurbs::default();
+        //     // let mut curve2 = Nurbs::default();
+        //     // //let mut curve1 = Nurbs::default();
+        //     // curve0.controls.extend([Model::Point([0.1, 0.1, 0.]), Model::Point([0.9, 0.1, 0.])]);
+        //     // curve1.controls.extend([Model::Point([0.9, 0.1, 0.]), Model::Point([0.9, 0.9, 0.])]);
+        //     // curve2.controls.extend([Model::Point([0.9, 0.9, 0.]), Model::Point([0.1, 0.1, 0.])]);
+        //     // boundaries.push(curve0.get_valid());
+        //     // boundaries.push(curve1.get_valid());
+        //     // boundaries.push(curve2.get_valid());
+        //     let mut curve0 = Nurbs::default();
+        //     //let mut curve1 = Nurbs::default();
+        //     curve0.controls.extend([
+        //         Model::Point([0., 0., 0.]), Model::Point([1., 0., 0.]),
+        //         Model::Point([1., 1., 0.]), Model::Point([0., 1., 0.]), 
+        //         Model::Point([0., 0., 0.]),
+        //     ]);
+        //     boundaries.push(curve0.get_valid());
+        //     //console_log!("made bounds!!!!!")
+        // } else {
+        //     boundaries = self.boundaries.clone();
+        // }
         Nurbs {
             order: self.get_valid_order(),
             knots: self.get_valid_knots(),
             weights: self.get_valid_weights(),
-            controls, // : self.controls.iter().map(|c| self.get_valid_control(c.clone())).collect(), // self.controls.clone(), //
-            boundaries,
+            controls: self.controls.iter().map(|c| self.get_valid_control(c)).collect(), // self.controls.clone(), //
+            boundaries: self.boundaries.clone(),
         }
     }
     
@@ -314,6 +306,18 @@ impl Nurbs {
             .collect()
     }
 }
+
+
+
+// let u_seg = 1./(u_count as f32 - 1.);
+// let v_seg = 1./(v_count as f32 - 1.);
+// //let v_count = nurbs.controls.len() + (nurbs.controls.len()-1)*(nurbs.order-2) * query.count;
+// // let vector = (0..u_count).into_iter().map(|u|
+// //     (0..v_count).into_iter()
+// //         .map(|v| nurbs.get_vector_at_uv(u as f32 / (u_count-1) as f32,   v as f32 / (v_count-1) as f32))
+// //         .collect::<Vec<Vec<f32>>>()
+// //     ).flatten().flatten().collect();
+// ///let max_count = *[u_count, v_count, query.count].iter().max().unwrap();
 
 
 

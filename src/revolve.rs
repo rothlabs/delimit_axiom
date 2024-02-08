@@ -80,7 +80,10 @@ impl Revolve {
                     shapes.push(Model::Facet(get_nurbs()));
                     shapes.push(shape.get_transformed(end_mat4));
                 },
-                _ => (),
+                Model::Facet(_) => {
+                    shapes.push(shape.get_transformed(end_mat4));
+                },
+                _ => ()
             }
             shapes.push(shape.clone());
         }

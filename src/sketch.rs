@@ -1,5 +1,4 @@
-use crate::Nurbs;
-use super::Model;
+use crate::{Model, Shape, Nurbs};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -20,20 +19,20 @@ pub struct ArcTo {
 }
 
 impl Sketch { 
-    pub fn get_shapes(&self) -> Vec<Model> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         let mut shapes = vec![];
-        let mut start_point = Model::Point([0.; 3]);//vec![0.; 3];
+        let mut start_point = Shape::Point([0.; 3]);//vec![0.; 3];
         for part in &self.parts {
             match part {
                 Model::MoveTo(m) => {
-                    start_point = Model::Point([m[0], m[1], 0.]);
+                    start_point = Shape::Point([m[0], m[1], 0.]);
                     shapes.push(start_point.clone());
                 },
                 Model::LineTo(m) => {
-                    let end_point = Model::Point([m[0], m[1], 0.]);
+                    let end_point = Shape::Point([m[0], m[1], 0.]);
                     let mut nurbs = Nurbs::default();
                     nurbs.controls = vec![start_point.clone(), end_point.clone()]; 
-                    shapes.push(Model::Curve(nurbs));
+                    shapes.push(Shape::Curve(nurbs));
                     start_point = end_point.clone();
                     shapes.push(end_point);
                 },

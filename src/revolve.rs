@@ -1,6 +1,5 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{get_shapes, Nurbs};
-use super::{Model, DiscreteQuery, log};
+use crate::{Model, Shape, Nurbs, get_shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -14,7 +13,7 @@ pub struct Revolve {
 
 
 impl Revolve {
-    pub fn get_shapes(&self) -> Vec<Model> { // , query: &DiscreteQuery
+    pub fn get_shapes(&self) -> Vec<Shape> { // , query: &DiscreteQuery
         let axis = self.axis.get_vec3_or(Vec3::Z).normalize();
         let mut knots = vec![0.; 3];
         let mut weights = vec![1.];
@@ -72,18 +71,17 @@ impl Revolve {
                 nurbs
             };
             match &shape {
-                Model::Point(_) => {
-                    shapes.push(Model::Curve(get_nurbs()));
+                Shape::Point(_) => {
+                    shapes.push(Shape::Curve(get_nurbs()));
                     shapes.push(shape.get_transformed(end_mat4));
                 },
-                Model::Curve(_) => {
-                    shapes.push(Model::Facet(get_nurbs()));
+                Shape::Curve(_) => {
+                    shapes.push(Shape::Facet(get_nurbs()));
                     shapes.push(shape.get_transformed(end_mat4));
                 },
-                Model::Facet(_) => {
+                Shape::Facet(_) => {
                     shapes.push(shape.get_transformed(end_mat4));
                 },
-                _ => ()
             }
             shapes.push(shape.clone());
         }

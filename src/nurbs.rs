@@ -1,26 +1,13 @@
 use crate::mesh::Mesh;
-use super::{Model, Parameter, DiscreteQuery};
+use super::{Shape, Model, Parameter, DiscreteQuery};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
 use lyon::geom::{Box2D, Point};
 use lyon::path::Winding;
-use rayon::prelude::*;
+//use rayon::prelude::*;
 
 // ((a % b) + b) % b)  ->  a modulo b
-
-macro_rules! console_log {
-    // Note that this is using the `log` function imported above during
-    // `bare_bones`
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
-
-// #[derive(Clone, Default, Serialize, Deserialize)]
-// #[serde(default = "Facet::default")]
-// pub struct Facet {
-//     pub surface:    Nurbs,
-//     pub boundaries: Vec<Nurbs>,
-// }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Nurbs::default")]
@@ -28,7 +15,7 @@ pub struct Nurbs {
     pub order:      usize,       // order = polynomial_degree + 1
     pub knots:      Vec<f32>,    // knot_count = order + control_count
     pub weights:    Vec<f32>,    // weight_count = control_count
-    pub controls:   Vec<Model>,
+    pub controls:   Vec<Shape>,
     pub boundaries: Vec<Nurbs>,
 }
 
@@ -47,11 +34,11 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         nurbs
     }
 
-    pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { // Vec<f32> {
+    pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { 
         let nurbs = self.get_valid();
         let mut u_count = 0;
         for control in &nurbs.controls {
-            if let Model::Curve(c) = control {
+            if let Shape::Curve(c) = control {
                 let sample_count = c.get_sample_count(query.count);
                 if u_count < sample_count { u_count = sample_count; } 
             }
@@ -72,7 +59,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         let mut open_loop = false;
         let mut start_point = lyon::geom::Point::default();
         for curve in &nurbs.boundaries { 
-            for p in curve.get_polyline(query.count).chunks(3) {  
+            for p in curve.get_polyline(query).chunks(3) {  
                 let point = lyon::geom::Point::new(p[0], p[1]);
                 if open_loop {
                     if start_point.distance_to(point) > f32::EPSILON { // f32::EPSILON*1000.
@@ -100,13 +87,13 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         }
         Mesh {
             vector, //:    geometry.vertices.into_iter().flatten().collect(),
-            triangles: geometry.indices, //.into_iter().map(|v| v as usize).collect(),
+            triangles: geometry.indices, 
         }
     }
 
-    pub fn get_polyline(&self, count: usize) -> Vec<f32> {
+    pub fn get_polyline(&self, query: &DiscreteQuery) -> Vec<f32> {
         let nurbs = self.get_valid();
-        nurbs.get_polyline_at_t(&Parameter::U(0.), count)
+        nurbs.get_polyline_at_t(&Parameter::U(0.), query.count)
     }
 
     pub fn get_polyline_at_t(&self, t: &Parameter, count: usize) -> Vec<f32> {
@@ -119,7 +106,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
 
     pub fn get_controls_as_vec2(&self) -> Vec<Vec2> {
         self.controls.iter().map(|control| {
-            if let Model::Point(p) = control {
+            if let Shape::Point(p) = control {
                 Vec2::new(p[0], p[1])
             }else{
                 Vec2::default()
@@ -133,7 +120,6 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     fn get_polyline_at_u(&self, u: f32, count: usize) -> Vec<f32> {
-        //let v_count = self.controls.len() + (self.controls.len()-1)*(self.order-2)*query.quality + ;
         let v_count = self.get_sample_count(count);
         (0..v_count).into_iter()
             .map(|t| self.get_vector_at_uv(u, t as f32 / (v_count-1) as f32)) 
@@ -160,8 +146,8 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
 
     fn get_control_vector(&self, index: usize, t: f32) -> Vec<f32> {
         match &self.controls[index] { 
-            Model::Point(m) => m.to_vec(),  
-            Model::Curve(m) => m.get_vector_at_uv(0., t),
+            Shape::Point(m) => m.to_vec(),  
+            Shape::Curve(m) => m.get_vector_at_uv(0., t),
             _ => vec![0.; 3], 
         }
     }
@@ -221,38 +207,6 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     fn get_valid(&self) -> Nurbs {
-        // let mut controls = vec![];
-        // let mut make_bounds = false;
-        // for control in &self.controls {
-        //     controls.push(self.get_valid_control(control));
-        //     if let Model::Curve(_) = control {
-        //         make_bounds = true;
-        //     }
-        // }
-        // let mut boundaries = vec![];
-        // if make_bounds && self.boundaries.len() == 0 {
-        //     // let mut curve0 = Nurbs::default();
-        //     // let mut curve1 = Nurbs::default();
-        //     // let mut curve2 = Nurbs::default();
-        //     // //let mut curve1 = Nurbs::default();
-        //     // curve0.controls.extend([Model::Point([0.1, 0.1, 0.]), Model::Point([0.9, 0.1, 0.])]);
-        //     // curve1.controls.extend([Model::Point([0.9, 0.1, 0.]), Model::Point([0.9, 0.9, 0.])]);
-        //     // curve2.controls.extend([Model::Point([0.9, 0.9, 0.]), Model::Point([0.1, 0.1, 0.])]);
-        //     // boundaries.push(curve0.get_valid());
-        //     // boundaries.push(curve1.get_valid());
-        //     // boundaries.push(curve2.get_valid());
-        //     let mut curve0 = Nurbs::default();
-        //     //let mut curve1 = Nurbs::default();
-        //     curve0.controls.extend([
-        //         Model::Point([0., 0., 0.]), Model::Point([1., 0., 0.]),
-        //         Model::Point([1., 1., 0.]), Model::Point([0., 1., 0.]), 
-        //         Model::Point([0., 0., 0.]),
-        //     ]);
-        //     boundaries.push(curve0.get_valid());
-        //     //console_log!("made bounds!!!!!")
-        // } else {
-        //     boundaries = self.boundaries.clone();
-        // }
         Nurbs {
             order: self.get_valid_order(),
             knots: self.get_valid_knots(),
@@ -262,11 +216,11 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         }
     }
     
-    fn get_valid_control(&self, control: &Model) -> Model {
+    fn get_valid_control(&self, control: &Shape) -> Shape {
         match control {
-            Model::Point(m) => Model::Point(*m),
-            Model::Curve(m) => Model::Curve(m.get_valid()),
-            _ => Model::Point([0.; 3]),
+            Shape::Point(m) => Shape::Point(*m),
+            Shape::Curve(m) => Shape::Curve(m.get_valid()),
+            _ => Shape::Point([0.; 3]),
         }
     }
 
@@ -306,126 +260,3 @@ impl Nurbs {
             .collect()
     }
 }
-
-
-
-// let u_seg = 1./(u_count as f32 - 1.);
-// let v_seg = 1./(v_count as f32 - 1.);
-// //let v_count = nurbs.controls.len() + (nurbs.controls.len()-1)*(nurbs.order-2) * query.count;
-// // let vector = (0..u_count).into_iter().map(|u|
-// //     (0..v_count).into_iter()
-// //         .map(|v| nurbs.get_vector_at_uv(u as f32 / (u_count-1) as f32,   v as f32 / (v_count-1) as f32))
-// //         .collect::<Vec<Vec<f32>>>()
-// //     ).flatten().flatten().collect();
-// ///let max_count = *[u_count, v_count, query.count].iter().max().unwrap();
-
-
-
-        // let vertices = &geometry.vertices;
-        // for vert in geometry.indices.chunks(3).map(|i| [&vertices[i[0] as usize], &vertices[i[1] as usize], &vertices[i[2] as usize]]) {
-        //     let mut min_u = vert[0][0]; if min_u > vert[1][0] {min_u = vert[1][0];} if min_u > vert[2][0] {min_u = vert[2][0];}
-        //     let mut max_u = vert[0][0]; if max_u < vert[1][0] {max_u = vert[1][0];} if max_u < vert[2][0] {max_u = vert[2][0];}
-        //     let mut min_v = vert[0][1]; if min_v > vert[1][1] {min_v = vert[1][1];} if min_v > vert[2][1] {min_v = vert[2][1];}
-        //     let mut max_v = vert[0][1]; if max_v < vert[1][1] {max_v = vert[1][1];} if max_v < vert[2][1] {max_v = vert[2][1];}
-        //     let delta_u_count = (max_u - min_u) / u_seg;
-        //     let first_u = min_u - (min_u % u_seg) + u_seg;
-        //     for u_index in 0..delta_u_count as usize {
-        //         let v_axis = first_u + u_index as f32 * u_seg;
-                
-        //     }
-        //     //let min_u = indices.iter().;
-            
-        // }
-
-
-// let mut curve0 = Nurbs::default();
-// //let mut curve1 = Nurbs::default();
-// curve0.controls.extend([
-//     Model::Point([0.1, 0.1, 0.]), Model::Point([0.9, 0.1, 0.]),
-//     Model::Point([0.9, 0.9, 0.]), Model::Point([0.1, 0.9, 0.]), 
-//     Model::Point([0.1, 0.1, 0.]),
-// ]);
-// boundaries.push(curve0.get_valid());
-// console_log!("made bounds!!!!!")
-
-
-// //let &DiscreteQuery {u_count, v_count, ..} = query;
-// let quality_factor = 4;
-// let nurbs = self.get_valid();
-// let mut u_count = 0;
-// for control in &nurbs.controls {
-//     if let Model::Curve(c) = control {
-//         let potential_u_count = c.controls.len() + (c.controls.len()-1)*(c.order-2)*quality_factor;
-//         if u_count < potential_u_count { u_count = potential_u_count; } 
-//     }
-// }
-// let v_count = nurbs.controls.len() + (nurbs.controls.len()-1)*(nurbs.order-2)*quality_factor;
-// // let vector = (0..u_count).into_iter().map(|u|
-// //     (0..v_count).into_iter()
-// //         .map(|v| nurbs.get_vector_at_uv(u as f32 / (u_count-1) as f32,   v as f32 / (v_count-1) as f32))
-// //         .collect::<Vec<Vec<f32>>>()
-// //     ).flatten().flatten().collect();
-
-
-        // match &self.controls[index] {
-        //     Model::Vector(vector) =>   vector.to_vec(),
-        //     Model::Nurbs(nurbs) =>     nurbs.get_vector_at_uv(u, 0.),
-        //     //Model::Turtled(turtled) => turtled.get_vector_at_t(u),
-        //     _ => self.controls[index].get_vector_at_t(u) // vec![0.; 3],
-        // }
-
-
-
-        // fn get_basis_at_t(&self, normal_t: f32) -> Vec<f32> {
-//     let t = *self.knots.last().unwrap_or(&0.) * normal_t; // .unwrap_throw("") to js client
-//     let mut basis = self.get_basis_of_degree_0_at_t(t);
-//     for degree in 1..self.order {
-//         for i0 in 0..self.controls.len() {
-//             let i1 = i0 + 1; 
-//             let mut f = 0.;
-//             let mut g = 0.;
-//             if basis[i0] > 0. {
-//                 f = (t - self.knots[i0]) / (self.knots[degree + i0] - self.knots[i0]) 
-//             }
-//             if basis[i1] > 0. {
-//                 g = (self.knots[degree + i1] - t) / (self.knots[degree + i1] - self.knots[i1])
-//             }
-//             basis[i0] = f * basis[i0] + g * basis[i1];
-//         }
-//     }
-//     if normal_t == 1. {
-//         basis[self.controls.len() - 1] = 1.; // last control edge case
-//     }
-//     basis
-// }
-
-
-
-        // fn get_basis_of_degree_0_at_t(&self, t: f32) -> Vec<f32> {
-        //     let mut vector = vec![];
-        //     for i in 0..self.knots.len()-1 { // 0..self.controls.len()-1 { //
-        //         if t >= self.knots[i] && t < self.knots[i+1] { // self.order-1 + 
-        //             vector.push(1.);
-        //         //} else if i == self.knots.len()-2 && t >= self.knots[i+1] {
-        //         //    vector.push(1.);
-        //         } else {
-        //             vector.push(0.);
-        //         }
-        //     }
-        //     // if t > 0.99 {
-        //     //     vector.extend([1.; 5]);
-        //     // }else {
-        //     //     vector.push(0.);
-        //     // }
-        //     vector
-        // }
-
-
-                // let mut vector = vec![];
-        // for u in 0..max_control_count_u {
-        //     for v in 0..v_count {
-        //         //console_log!("v: {}", v);
-        //         vector.extend(nurbs.get_vector_at_uv(v as f32 / (v_count-1) as f32,   u as f32 / (max_control_count_u-1) as f32));
-        //     }
-        // }
-        // vector

@@ -1,6 +1,6 @@
 mod utils;
 
-mod vector;
+//mod vector;
 mod group;
 mod nurbs;
 mod slice;
@@ -47,17 +47,7 @@ pub enum Model {
 }
 
 impl Model {
-    pub fn get_transformed(&self, mat4: Mat4) -> Self {
-        match self {
-            Model::Point(m) => Model::Point(
-                mat4.mul_vec4(Vec3::from_slice(m).extend(1.)).truncate().to_array()
-            ),
-            Model::Curve(m) => Model::Curve(m.get_transformed(mat4)),
-            Model::Facet(m) => Model::Facet(m.get_transformed(mat4)),
-            _ => self.clone()
-        }
-    }
-    pub fn get_shapes(&self) -> Vec<Model> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         match self {
             Model::Group(m)   => m.get_shapes(),
             Model::Area(m)    => m.get_shapes(),
@@ -85,7 +75,30 @@ impl Default for Model {
     fn default() -> Self { Model::Vector(vec![0.; 3]) }
 }
 
-pub fn get_shapes(parts: &Vec<Model>) -> Vec<Model> {
+#[derive(Clone, Serialize, Deserialize)]
+pub enum Shape {
+    Point([f32; 3]),
+    Curve(Nurbs),
+    Facet(Nurbs),
+}
+
+impl Default for Shape {
+    fn default() -> Self { Shape::Point([0.; 3]) }
+}
+
+impl Shape {
+    pub fn get_transformed(&self, mat4: Mat4) -> Self {
+        match self {
+            Shape::Point(m) => Shape::Point(
+                mat4.mul_vec4(Vec3::from_slice(m).extend(1.)).truncate().to_array()
+            ),
+            Shape::Curve(m) => Shape::Curve(m.get_transformed(mat4)),
+            Shape::Facet(m) => Shape::Facet(m.get_transformed(mat4)),
+        }
+    }
+}
+
+pub fn get_shapes(parts: &Vec<Model>) -> Vec<Shape> {
     let mut result = vec![];
     for part in parts {
         result.extend(part.get_shapes());
@@ -97,7 +110,7 @@ pub fn get_curves(parts: &Vec<Model>) -> Vec<Nurbs> {
     let mut result = vec![];
     for part in parts {
         for shape in part.get_shapes() {
-            if let Model::Curve(curve) = shape {
+            if let Shape::Curve(curve) = shape {
                 result.push(curve);
             }
         }
@@ -109,7 +122,7 @@ pub fn get_points(parts: &Vec<Model>) -> Vec<[f32; 3]> {
     let mut result = vec![];
     for part in parts {
         for shape in part.get_shapes() {
-            if let Model::Point(point) = shape {
+            if let Shape::Point(point) = shape {
                 result.push(point);
             }
         }
@@ -146,10 +159,6 @@ pub struct DiscreteQuery {
     pub model:     Model,
     pub count:     usize,
     pub tolerance: f32,   // allowed distance from real model
-    // pub count:     usize, // quantity of points from the model (when tolerance is not implemented)
-    // pub u_count:   usize, // for surfaces
-    // pub v_count:   usize, // for surfaces
-    // pub extra:     usize,
 }
 
 impl DiscreteQuery {
@@ -158,17 +167,10 @@ impl DiscreteQuery {
         if self.count > 0 { count = self.count.clamp(2, 100); }
         let mut tolerance = 0.1;
         if self.tolerance > 0. { tolerance = self.tolerance.clamp(0.01, 10.); }
-        // let mut u_count = 25;
-        // if self.u_count > 0 { u_count = self.u_count.clamp(2, 1000); }
-        // let mut v_count = 25;
-        // if self.v_count > 0 { v_count = self.v_count.clamp(2, 1000); }
         DiscreteQuery {
             model: self.model,
             count,
             tolerance,
-            // u_count,
-            // v_count,
-            // extra: self.extra
         }
     }
 }
@@ -187,3 +189,9 @@ extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
 }
+
+// macro_rules! console_log {
+//     // Note that this is using the `log` function imported above during
+//     // `bare_bones`
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }

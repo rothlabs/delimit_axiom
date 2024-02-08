@@ -1,4 +1,4 @@
-use crate::{Model, get_shapes};
+use crate::{Model, Shape, get_shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -7,14 +7,14 @@ use glam::*;
 #[serde(default = "Group::default")]
 pub struct Group {
     pub parts:    Vec<Model>,
+    pub scale:    Box<Model>,
     pub position: Box<Model>, // TODO: switch to slice?
     pub axis:     Box<Model>,
     pub angle:    f32,
-    pub scale:    Box<Model>,
 }
 
 impl Group {
-    pub fn get_shapes(&self) -> Vec<Model> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         let mat4 = self.get_matrix();
         let mut shapes = vec![];
         for shape in get_shapes(&self.parts) {

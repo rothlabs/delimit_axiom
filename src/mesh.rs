@@ -1,4 +1,4 @@
-use super::{Model, DiscreteQuery};
+use super::{Shape, DiscreteQuery};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -23,9 +23,9 @@ pub fn get_poly(val: JsValue) -> Result<JsValue, JsValue> {
     let mut result = DiscreteShapes::default();
     for part in query.model.get_shapes() {
         match &part {
-            Model::Point(m) => result.points.push(m.to_vec()),
-            Model::Curve(m) => result.polylines.push(m.get_polyline(query.count)),
-            Model::Facet(m) => result.meshes.push(m.get_mesh(&query)),
+            Shape::Point(m) => result.points.push(m.to_vec()),
+            Shape::Curve(m) => result.polylines.push(m.get_polyline(&query)),
+            Shape::Facet(m) => result.meshes.push(m.get_mesh(&query)),
             _ => ()
         }
     }
@@ -91,31 +91,31 @@ pub fn get_poly(val: JsValue) -> Result<JsValue, JsValue> {
 //     Ok(serde_wasm_bindgen::to_value(&vector)?)
 // }
 
-pub fn get_trivec(u_count: usize, v_count: usize) -> Vec<usize>{ 
-    //let &DiscreteQuery {u_count, v_count, ..} = query;
-    get_trivec_with_offset(u_count, v_count, 0)
-}
+// pub fn get_trivec(u_count: usize, v_count: usize) -> Vec<usize>{ 
+//     //let &DiscreteQuery {u_count, v_count, ..} = query;
+//     get_trivec_with_offset(u_count, v_count, 0)
+// }
 
-pub fn get_trivec_with_offset(u_count: usize, v_count: usize, offset: usize) -> Vec<usize>{
-    let mut vector = vec![];
-    for u in 0..u_count-1 {
-        for v in 0..v_count-1 {
-            let local_u0_v0 = u * v_count + v + offset;
-            let local_u0_v1 = u * v_count + v + 1 + offset;
-            let local_u1_v0 = (u + 1) * v_count + v + offset;
-            let local_u1_v1 = (u + 1) * v_count + v + 1 + offset;
-            // patch triangle 1
-            vector.push(local_u0_v0);
-            vector.push(local_u0_v1);
-            vector.push(local_u1_v0);
-            // patch triangle 2
-            vector.push(local_u0_v1);
-            vector.push(local_u1_v1);
-            vector.push(local_u1_v0);
-        }
-    }
-    vector
-}
+// pub fn get_trivec_with_offset(u_count: usize, v_count: usize, offset: usize) -> Vec<usize>{
+//     let mut vector = vec![];
+//     for u in 0..u_count-1 {
+//         for v in 0..v_count-1 {
+//             let local_u0_v0 = u * v_count + v + offset;
+//             let local_u0_v1 = u * v_count + v + 1 + offset;
+//             let local_u1_v0 = (u + 1) * v_count + v + offset;
+//             let local_u1_v1 = (u + 1) * v_count + v + 1 + offset;
+//             // patch triangle 1
+//             vector.push(local_u0_v0);
+//             vector.push(local_u0_v1);
+//             vector.push(local_u1_v0);
+//             // patch triangle 2
+//             vector.push(local_u0_v1);
+//             vector.push(local_u1_v1);
+//             vector.push(local_u1_v0);
+//         }
+//     }
+//     vector
+// }
 
 
 

@@ -1,4 +1,4 @@
-use crate::{Model, Shape, get_shapes};
+use crate::{Model, Shape, get_shapes, get_vec3_or};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -7,9 +7,9 @@ use glam::*;
 #[serde(default = "Group::default")]
 pub struct Group {
     pub parts:    Vec<Model>,
-    pub scale:    Box<Model>,
-    pub position: Box<Model>, // TODO: switch to slice?
-    pub axis:     Box<Model>,
+    pub scale:    [f32; 3],//Box<Model>,
+    pub position: [f32; 3],//Box<Model>, // TODO: switch to slice?
+    pub axis:     [f32; 3],//Box<Model>,
     pub angle:    f32,
 }
 
@@ -24,11 +24,11 @@ impl Group {
     }
     fn get_matrix(&self) -> Mat4 {
         let mut mat4 = Mat4::IDENTITY;
-        let position = self.position.get_vec3_or(Vec3::ZERO);
+        let position = get_vec3_or(&self.position, Vec3::ZERO);
         mat4 *= Mat4::from_translation(position);
-        let axis = self.axis.get_vec3_or(Vec3::Z);
-        mat4 *= Mat4::from_axis_angle(axis, self.angle);
-        let scale = self.scale.get_vec3_or(Vec3::ONE);
+        let axis = get_vec3_or(&self.axis, Vec3::Z);
+        mat4 *= Mat4::from_axis_angle(axis, self.angle); //Mat4::from_euler(order, a, b, c)
+        let scale = get_vec3_or(&self.scale, Vec3::ONE);
         mat4 *= Mat4::from_scale(scale);
         mat4
     }

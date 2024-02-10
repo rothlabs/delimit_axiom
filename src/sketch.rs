@@ -1,4 +1,4 @@
-use crate::{Model, Shape, Nurbs};
+use crate::{Model, Nurbs, Revolve, Shape, log};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -6,45 +6,83 @@ use glam::*;
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Sketch::default")]
 pub struct Sketch {
-    pub parts: Vec<Model>,
+    pub actions: Vec<Action>,
     //pub reverse: bool,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub enum Action {
+    MoveTo([f32; 2]),
+    LineTo([f32; 2]),
+    Turn(Turn),
+}
+
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "ArcTo::default")]
-pub struct ArcTo {
+#[serde(default = "Turn::default")]
+pub struct Turn {
     pub angle:  f32,
     pub radius: f32,
-    //pub radii: Box<Model>,
+}
+
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
 impl Sketch { 
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut shapes = vec![];
-        let mut start_point = Shape::Point([0.; 3]);//vec![0.; 3];
-        for part in &self.parts {
-            match part {
-                Model::MoveTo(m) => {
-                    start_point = Shape::Point([m[0], m[1], 0.]);
-                    shapes.push(start_point.clone());
+        let mut turtle = Turtle::default();
+        for action in &self.actions {
+            match action {
+                Action::MoveTo(p) => {
+                    turtle.move_to(p[0], p[1]);
                 },
-                Model::LineTo(m) => {
-                    let end_point = Shape::Point([m[0], m[1], 0.]);
+                Action::LineTo(p) => {
                     let mut nurbs = Nurbs::default();
-                    nurbs.controls = vec![start_point.clone(), end_point.clone()]; 
+                    nurbs.controls = vec![Shape::Point([turtle.pos.x, turtle.pos.y, 0.]), Shape::Point([p[0], p[1], 0.])]; 
                     shapes.push(Shape::Curve(nurbs));
-                    start_point = end_point.clone();
-                    shapes.push(end_point);
+                    shapes.push(Shape::Point([p[0], p[1], 0.]));
+                    turtle.move_to(p[0], p[1]);
                 },
-                // Model::ArcTo(m) => {
-                //     let mut nurbs = Nurbs::default();
-                //     nurbs.controls = vec![start_point.clone(), m.get_vector_or(start_point)]; 
-                //     curves.push(nurbs);
-                // },
-                _ => (),
+                Action::Turn(turn) => {
+                    let center = turtle.pos + turtle.dir.perp() * turn.radius * turn.angle.signum(); 
+                    //console_log!("turtle X: {}", turtle.pos.x);
+                    //console_log!("turtle Y: {}", turtle.pos.y);
+                    let revolve = Revolve {
+                        parts: vec![Model::Point([turtle.pos.x, turtle.pos.y, 0.])],
+                        center: [center.x, center.y, 0.],
+                        axis: [0., 0., turn.angle.signum()],
+                        angle: turn.angle.abs(),
+                    };
+                    let r_shapes = revolve.get_shapes();
+                    console_log!("r shapes: {}", r_shapes.len());
+                    shapes.extend(r_shapes);
+                    turtle.turn(center, turn.angle);
+                },
             }
         }
         shapes
+    }
+}
+
+#[derive(Default)]
+struct Turtle {
+    pos: Vec2,
+    dir: Vec2,
+}
+
+impl Turtle {
+    fn move_to(&mut self, x: f32, y: f32) {
+        let to = vec2(x, y);
+        self.dir = (to - self.pos).normalize();
+        self.pos = to;
+    }
+    fn turn(&mut self, center: Vec2, angle: f32) {
+        let mat3 = Mat3::from_translation(center)
+            * Mat3::from_axis_angle(Vec3::Z, angle)
+            * Mat3::from_translation(-center);
+        self.pos = mat3.mul_vec3(self.pos.extend(1.)).truncate();
+        self.dir = Vec2::from_angle(self.dir.to_angle() + angle);
     }
 }
 

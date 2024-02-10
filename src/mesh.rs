@@ -17,7 +17,7 @@ pub struct Mesh {
 }
 
 #[wasm_bindgen]
-pub fn get_poly(val: JsValue) -> Result<JsValue, JsValue> {
+pub fn get_shapes(val: JsValue) -> Result<JsValue, JsValue> {
     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
     let query = query.get_valid();
     let mut result = DiscreteShapes::default();
@@ -26,7 +26,6 @@ pub fn get_poly(val: JsValue) -> Result<JsValue, JsValue> {
             Shape::Point(m) => result.points.push(m.to_vec()),
             Shape::Curve(m) => result.polylines.push(m.get_polyline(&query)),
             Shape::Facet(m) => result.meshes.push(m.get_mesh(&query)),
-            _ => ()
         }
     }
     Ok(serde_wasm_bindgen::to_value(&result)?)

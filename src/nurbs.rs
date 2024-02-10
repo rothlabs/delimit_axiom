@@ -1,5 +1,5 @@
 use crate::mesh::Mesh;
-use super::{Shape, Model, Parameter, DiscreteQuery};
+use super::{Shape, Parameter, DiscreteQuery, log};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
@@ -8,6 +8,12 @@ use lyon::path::Winding;
 //use rayon::prelude::*;
 
 // ((a % b) + b) % b)  ->  a modulo b
+
+// macro_rules! console_log {
+//     // Note that this is using the `log` function imported above during
+//     // `bare_bones`
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Nurbs::default")]
@@ -20,6 +26,20 @@ pub struct Nurbs {
 }
 
 impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
+        let mut is_facet = false;
+        for control in &self.controls {
+            if let Shape::Curve(_) = control {
+                is_facet = true;
+            }
+        }
+        if is_facet {
+            vec![Shape::Facet(self.clone())]
+        } else {
+            vec![Shape::Curve(self.clone())]
+        }
+    }
+
     pub fn get_transformed(&self, mat4: Mat4) -> Nurbs {
         let mut nurbs = Nurbs {
             order: self.order,
@@ -43,6 +63,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
                 if u_count < sample_count { u_count = sample_count; } 
             }
         }
+        
         let v_count = nurbs.get_sample_count(query.count);
         let mut builder = lyon::path::Path::builder();
         if nurbs.boundaries.is_empty() {
@@ -135,21 +156,27 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     pub fn get_vector_at_uv(&self, u: f32, v: f32) -> Vec<f32> {
         let basis = self.get_rational_basis_at_t(v);
         let mut vector = vec![];
-        for component_index in 0..self.get_control_vector(0, 0.).len() { 
-            vector.push(
-                (0..self.controls.len())
-                    .map(|i| self.get_control_vector(i, u)[component_index] * basis[i]).sum()
-            );
+        if ! self.controls.is_empty() {
+            for component_index in 0..self.get_control_vector(0, 0.).len() { 
+                vector.push(
+                    (0..self.controls.len())
+                        .map(|i| self.get_control_vector(i, u)[component_index] * basis[i]).sum()
+                );
+            }
         }
         vector
     }
 
     fn get_control_vector(&self, index: usize, t: f32) -> Vec<f32> {
-        match &self.controls[index] { 
-            Shape::Point(m) => m.to_vec(),  
-            Shape::Curve(m) => m.get_vector_at_uv(0., t),
-            _ => vec![0.; 3], 
-        }
+        //if index < self.controls.len(){
+            match &self.controls[index] { 
+                Shape::Point(m) => m.to_vec(),  
+                Shape::Curve(m) => m.get_vector_at_uv(0., t),
+                _ => vec![0.; 3], 
+            }
+        //}else{
+        //    vec![0.; 3]
+        //}
     }
 
     fn get_rational_basis_at_t(&self, t: f32) -> Vec<f32> {
@@ -225,7 +252,11 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     fn get_valid_order(&self) -> usize {
-        self.order.clamp(2, self.controls.len()) //if self.order == 0 {3} else {self.order.clamp(2, 10)}
+        self.order.min(2).max(self.controls.len())
+        //log("clamp");
+        //let wow = self.order.clamp(2, self.controls.len()); //if self.order == 0 {3} else {self.order.clamp(2, 10)}
+        //log("clamp worked");
+        //wow
     }
 
     fn get_valid_weights(&self) -> Vec<f32> {

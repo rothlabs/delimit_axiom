@@ -27,13 +27,13 @@ use revolve::*;
 
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
+    Vector3([f32; 3]),
     Point([f32; 3]),
     Curve(Nurbs),
     Facet(Nurbs),
-    MoveTo([f32; 2]),
-    LineTo([f32; 2]),
-    ArcTo(ArcTo),
-    Vector(Vec<f32>),
+    // MoveTo([f32; 2]),
+    // LineTo([f32; 2]),
+    // ArcTo(ArcTo),
     Sketch(Sketch),
     Area(Area),
     Group(Group),
@@ -49,6 +49,9 @@ pub enum Model {
 impl Model {
     pub fn get_shapes(&self) -> Vec<Shape> {
         match self {
+            Model::Point(m)   => vec![Shape::Point(*m)],
+            Model::Curve(m)   => m.get_shapes(),
+            Model::Facet(m)   => m.get_shapes(),
             Model::Group(m)   => m.get_shapes(),
             Model::Area(m)    => m.get_shapes(),
             Model::Sketch(m)  => m.get_shapes(),
@@ -56,23 +59,32 @@ impl Model {
             _ => vec![] 
         }
     }
-    pub fn get_vec3_or(&self, alt: Vec3) -> Vec3 {
-        match self {
-            Model::Vector(m) => {
-                let vec3 = Vec3::from_slice(m);
-                if vec3.length() > 0. {
-                    vec3
-                } else {
-                    alt
-                }
-            },
-            _ => alt,
-        }
-    }
+    // pub fn get_vec3_or(&self, alt: Vec3) -> Vec3 {
+    //     match self {
+    //         Model::Vector3(m) => {
+    //             let vec3 = Vec3::from_slice(m);
+    //             if vec3.length() > 0. {
+    //                 vec3
+    //             } else {
+    //                 alt
+    //             }
+    //         },
+    //         _ => alt,
+    //     }
+    // }
 }
 
 impl Default for Model {
-    fn default() -> Self { Model::Vector(vec![0.; 3]) }
+    fn default() -> Self { Model::Vector3([0.; 3]) }
+}
+
+pub fn get_vec3_or(slice: &[f32; 3], alt: Vec3) -> Vec3 {
+    let vec3 = Vec3::from_slice(slice);
+    if vec3.length() > 0. {
+        vec3
+    } else {
+        alt
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -163,7 +175,7 @@ pub struct DiscreteQuery {
 
 impl DiscreteQuery {
     fn get_valid(self) -> DiscreteQuery {
-        let mut count = 4;
+        let mut count = 8;
         if self.count > 0 { count = self.count.clamp(2, 100); }
         let mut tolerance = 0.1;
         if self.tolerance > 0. { tolerance = self.tolerance.clamp(0.01, 10.); }

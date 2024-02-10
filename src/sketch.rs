@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use crate::{Model, Nurbs, Revolve, Shape, log};
 use serde::{Deserialize, Serialize};
 use glam::*;
@@ -24,9 +25,9 @@ pub struct Turn {
     pub radius: f32,
 }
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
+// macro_rules! console_log {
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }
 
 impl Sketch { 
     pub fn get_shapes(&self) -> Vec<Shape> {
@@ -46,17 +47,13 @@ impl Sketch {
                 },
                 Action::Turn(turn) => {
                     let center = turtle.pos + turtle.dir.perp() * turn.radius * turn.angle.signum(); 
-                    //console_log!("turtle X: {}", turtle.pos.x);
-                    //console_log!("turtle Y: {}", turtle.pos.y);
                     let revolve = Revolve {
                         parts: vec![Model::Point([turtle.pos.x, turtle.pos.y, 0.])],
                         center: [center.x, center.y, 0.],
                         axis: [0., 0., turn.angle.signum()],
                         angle: turn.angle.abs(),
                     };
-                    let r_shapes = revolve.get_shapes();
-                    console_log!("r shapes: {}", r_shapes.len());
-                    shapes.extend(r_shapes);
+                    shapes.extend(revolve.get_shapes());
                     turtle.turn(center, turn.angle);
                 },
             }
@@ -86,74 +83,29 @@ impl Turtle {
     }
 }
 
-
-
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Circle::default")]
 pub struct Circle {
-    pub center: Box<Model>, 
+    pub center: [f32; 2], 
     pub radius: f32,
 }
 
-// impl Circle {
-//     pub fn get_polyline(&self, tolerance: f32) -> Vec<f32> {
-//         get_polyline(self.get_path(), tolerance)
-//     }
-//     pub fn get_path(&self) -> lyon::path::Path {
-//         let center = get_point(&*self.center);
-//         let mut builder = lyon::path::Path::builder();
-//         builder.add_circle(center, self.radius, Winding::Positive); 
-//         builder.build()
-//     }
-// }
+impl Circle {
+    pub fn get_shapes(&self) -> Vec<Shape> {
+        let revolve = Revolve {
+            parts: vec![Model::Point([self.center[0] + self.radius, self.center[1], 0.])],
+            center: [self.center[0], self.center[1], 0.],
+            axis: [0., 0., 1.],
+            angle: PI*2.,
+        };
+        revolve.get_shapes()
+    }
+}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Rectangle::default")]
 pub struct Rectangle {
-    pub min:    Box<Model>, 
-    pub max:    Box<Model>, 
+    pub min:    [f32; 2], 
+    pub max:    [f32; 2], 
     pub radius: f32,
 }
-
-// impl Rectangle {
-//     pub fn get_polyline(&self, tolerance: f32) -> Vec<f32> {
-//         get_polyline(self.get_path(), tolerance)
-//     }
-//     pub fn get_path(&self) -> lyon::path::Path { 
-//         let min = get_point(&*self.min);
-//         let max = get_point(&*self.max);
-//         let mut builder = lyon::path::Path::builder();
-//         builder.add_rounded_rectangle(
-//             &Box2D {min, max},
-//             &BorderRadii {
-//                 top_left:     self.radius,
-//                 top_right:    self.radius,
-//                 bottom_left:  self.radius,
-//                 bottom_right: self.radius,
-//             },
-//             Winding::Positive,
-//         );
-//         builder.build()
-//     }
-// }
-
-// fn get_point(model: &Model) -> Point {
-//     match model {
-//         Model::Vector(m) => point(m[0], m[1]),
-//         _ => point(0., 0.),
-//     }
-// }
-
-// fn get_point2(model: &Model) -> Vec<f32> {
-//     match model {
-//         Model::Vector(m) => vec![m[0], m[1], 0.],
-//         _ => vec![0.; 3],
-//     }
-// }
-
-// fn get_vector(model: &Model) -> Vector {
-//     match model {
-//         Model::Vector(m) => vector(m[0], m[1]),
-//         _ => vector(0., 0.),
-//     }
-// }

@@ -29,10 +29,12 @@ impl Area {
         let mut facet = Nurbs::default();
         let mut curve0 = Nurbs::default();
         let mut curve1 = Nurbs::default();
-        curve0.controls.push(Shape::Point([min.x, min.y, 0.]));
-        curve0.controls.push(Shape::Point([max.x, min.y, 0.]));
-        curve1.controls.push(Shape::Point([min.x, max.y, 0.]));
-        curve1.controls.push(Shape::Point([max.x, max.y, 0.]));
+
+        curve0.controls.push(Shape::Point([min.x, max.y, 0.]));
+        curve0.controls.push(Shape::Point([max.x, max.y, 0.]));
+        curve1.controls.push(Shape::Point([min.x, min.y, 0.]));
+        curve1.controls.push(Shape::Point([max.x, min.y, 0.]));
+        
         facet.controls.extend([Shape::Curve(curve0), Shape::Curve(curve1)]);
         for curve in &curves {
             let mut boundary = curve.clone();
@@ -40,7 +42,7 @@ impl Area {
             for p in boundary.get_controls_as_vec2() {
                 normalized_points.push(Shape::Point([
                     (p.x - min.x) / (max.x - min.x), 
-                    (p.y - min.y) / (max.y - min.y), 
+                    1.-(p.y - min.y) / (max.y - min.y), 
                     0.
                 ]));
             }

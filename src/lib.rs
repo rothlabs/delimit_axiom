@@ -52,9 +52,10 @@ impl Model {
             Model::Point(m)   => vec![Shape::Point(*m)],
             Model::Curve(m)   => m.get_shapes(),
             Model::Facet(m)   => m.get_shapes(),
+            Model::Sketch(m)  => m.get_shapes(),
+            Model::Circle(m)  => m.get_shapes(),
             Model::Group(m)   => m.get_shapes(),
             Model::Area(m)    => m.get_shapes(),
-            Model::Sketch(m)  => m.get_shapes(),
             Model::Revolve(m) => m.get_shapes(),
             _ => vec![] 
         }

@@ -18,11 +18,12 @@ use lyon::path::Winding;
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Nurbs::default")]
 pub struct Nurbs {
-    pub order:      usize,       // order = polynomial_degree + 1
-    pub knots:      Vec<f32>,    // knot_count = order + control_count
-    pub weights:    Vec<f32>,    // weight_count = control_count
-    pub controls:   Vec<Shape>,
-    pub boundaries: Vec<Nurbs>,
+    pub order:       usize,       // order = polynomial_degree + 1
+    pub knots:       Vec<f32>,    // knot_count = order + control_count
+    pub weights:     Vec<f32>,    // weight_count = control_count
+    pub controls:    Vec<Shape>,
+    pub boundaries:  Vec<Nurbs>,
+    pub reversed:    bool,
 }
 
 impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
@@ -40,13 +41,29 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         }
     }
 
+    pub fn get_reversed_and_transformed(&self, mat4: Mat4) -> Nurbs {
+        let mut nurbs = Nurbs {
+            order: self.order,
+            knots: self.knots.clone(),
+            weights: self.weights.clone(),
+            controls: vec![],
+            boundaries: self.boundaries.clone(),
+            reversed: true,
+        };
+        for control in self.controls.iter().rev() {
+            nurbs.controls.push(control.get_transformed(mat4));
+        }
+        nurbs
+    }
+
     pub fn get_transformed(&self, mat4: Mat4) -> Nurbs {
         let mut nurbs = Nurbs {
             order: self.order,
             knots: self.knots.clone(),
-            weights: self.knots.clone(),
+            weights: self.weights.clone(),
             controls: vec![],
             boundaries: self.boundaries.clone(),
+            reversed: false,
         };
         for control in &self.controls {
             nurbs.controls.push(control.get_transformed(mat4));
@@ -63,7 +80,6 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
                 if u_count < sample_count { u_count = sample_count; } 
             }
         }
-        
         let v_count = nurbs.get_sample_count(query.count);
         let mut builder = lyon::path::Path::builder();
         if nurbs.boundaries.is_empty() {
@@ -81,7 +97,9 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         let mut start_point = lyon::geom::Point::default();
         for curve in &nurbs.boundaries { 
             for p in curve.get_polyline(query).chunks(3) {  
-                let point = lyon::geom::Point::new(p[0], p[1]);
+                let mut y = p[1];
+                if nurbs.reversed {y = 1.-y;}
+                let point = lyon::geom::Point::new(p[0], y);
                 if open_loop {
                     if start_point.distance_to(point) > f32::EPSILON { // f32::EPSILON*1000.
                         builder.line_to(point);
@@ -240,6 +258,7 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             weights: self.get_valid_weights(),
             controls: self.controls.iter().map(|c| self.get_valid_control(c)).collect(), // self.controls.clone(), //
             boundaries: self.boundaries.clone(),
+            reversed: self.reversed,
         }
     }
     
@@ -252,7 +271,19 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     fn get_valid_order(&self) -> usize {
-        self.order.min(2).max(self.controls.len())
+        let mut order = self.order;
+        if order > self.controls.len() {
+            order = self.controls.len();
+        }
+        if order < 2 {
+            order = 2;
+        }
+        order 
+
+        
+
+        //self.order.min(self.controls.len()).max(2)
+
         //log("clamp");
         //let wow = self.order.clamp(2, self.controls.len()); //if self.order == 0 {3} else {self.order.clamp(2, 10)}
         //log("clamp worked");

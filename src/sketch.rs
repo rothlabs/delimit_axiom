@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::f32::consts::{FRAC_PI_2, PI};
 use crate::{Model, Nurbs, Revolve, Shape, log};
 use serde::{Deserialize, Serialize};
 use glam::*;
@@ -40,6 +40,9 @@ impl Sketch {
                 },
                 Action::LineTo(p) => {
                     let mut nurbs = Nurbs::default();
+                    nurbs.order = 2;
+                    nurbs.knots = vec![0., 0., 1., 1.];
+                    nurbs.weights = vec![1., 1.];
                     nurbs.controls = vec![Shape::Point([turtle.pos.x, turtle.pos.y, 0.]), Shape::Point([p[0], p[1], 0.])]; 
                     shapes.push(Shape::Curve(nurbs));
                     shapes.push(Shape::Point([p[0], p[1], 0.]));
@@ -59,6 +62,15 @@ impl Sketch {
             }
         }
         shapes
+    }
+    fn move_to(&mut self, x: f32, y: f32) {
+        self.actions.push(Action::MoveTo([x, y]));
+    }
+    fn line_to(&mut self, x: f32, y: f32) {
+        self.actions.push(Action::LineTo([x, y]));
+    }
+    fn turn(&mut self, angle: f32, radius: f32) {
+        self.actions.push(Action::Turn(Turn{angle, radius}));
     }
 }
 
@@ -108,4 +120,20 @@ pub struct Rectangle {
     pub min:    [f32; 2], 
     pub max:    [f32; 2], 
     pub radius: f32,
+}
+
+impl Rectangle {
+    pub fn get_shapes(&self) -> Vec<Shape> {
+        let mut sketch = Sketch::default();
+        sketch.move_to(self.min[0]+self.radius, self.min[1]);
+        sketch.line_to(self.max[0]-self.radius, self.min[1]);
+        sketch.turn(FRAC_PI_2, self.radius);
+        sketch.line_to(self.max[0], self.max[1]-self.radius);
+        sketch.turn(FRAC_PI_2, self.radius);
+        sketch.line_to(self.min[0]+self.radius, self.max[1]);
+        sketch.turn(FRAC_PI_2, self.radius);
+        sketch.line_to(self.min[0], self.min[1]+self.radius);
+        sketch.turn(FRAC_PI_2, self.radius);
+        sketch.get_shapes()
+    }
 }

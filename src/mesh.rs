@@ -24,7 +24,7 @@ pub fn get_shapes(val: JsValue) -> Result<JsValue, JsValue> {
     for part in query.model.get_shapes() {
         match &part {
             Shape::Point(m) => result.points.push(m.to_vec()),
-            Shape::Curve(m) => result.polylines.push(m.get_polyline(&query)),
+            Shape::Curve(m) => result.polylines.extend(m.get_polylines(&query)),
             Shape::Facet(m) => result.meshes.push(m.get_mesh(&query)),
         }
     }

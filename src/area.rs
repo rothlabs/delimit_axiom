@@ -1,5 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{Model, Shape, Nurbs, get_curves, get_points};
+use crate::{Model, Shape, Nurbs, Boundary, get_curves, get_points};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -42,19 +42,14 @@ impl Area {
             for p in boundary.get_controls_as_vec2() {
                 normalized_points.push(Shape::Point([
                     (p.x - min.x) / (max.x - min.x), 
-                    1.-(p.y - min.y) / (max.y - min.y), 
+                    1. - (p.y - min.y) / (max.y - min.y), 
                     0.
                 ]));
             }
             boundary.controls = normalized_points;
-            facet.boundaries.push(boundary);
+            facet.boundaries.push(Boundary::Curve(boundary));
         }
         shapes.push(Shape::Facet(facet));
         shapes
     }
 }
-
-// curve0.controls.push(Model::Point([min.x, min.y, 0.]));
-//         curve0.controls.push(Model::Point([min.x, max.y, 0.]));
-//         curve1.controls.push(Model::Point([max.x, min.y, 0.]));
-//         curve1.controls.push(Model::Point([max.x, max.y, 0.]));

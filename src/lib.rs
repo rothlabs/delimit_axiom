@@ -3,8 +3,8 @@ mod utils;
 //mod vector;
 mod group;
 mod nurbs;
-mod slice;
-//mod polyline;
+//mod slice;
+mod union;
 mod mesh;
 //mod turtled;
 mod sketch;
@@ -18,8 +18,8 @@ use wasm_bindgen::prelude::*;
 use glam::*;
 use group::*;
 use nurbs::*;
-use slice::*;
-//use turtled::*;
+//use slice::*;
+use union::*;
 use sketch::*;
 use area::*;
 //use extrusion::*;
@@ -37,8 +37,8 @@ pub enum Model {
     Sketch(Sketch),
     Area(Area),
     Group(Group),
-    Slice(Slice),
-    //Turtled(Turtled),
+    //Slice(Slice),
+    Union(Union),
     Circle(Circle),
     Rectangle(Rectangle),
     //Extrusion(Extrusion),
@@ -49,14 +49,16 @@ pub enum Model {
 impl Model {
     pub fn get_shapes(&self) -> Vec<Shape> {
         match self {
-            Model::Point(m)   => vec![Shape::Point(*m)],
-            Model::Curve(m)   => m.get_shapes(),
-            Model::Facet(m)   => m.get_shapes(),
-            Model::Sketch(m)  => m.get_shapes(),
-            Model::Circle(m)  => m.get_shapes(),
-            Model::Group(m)   => m.get_shapes(),
-            Model::Area(m)    => m.get_shapes(),
-            Model::Revolve(m) => m.get_shapes(),
+            Model::Point(m)     => vec![Shape::Point(*m)],
+            Model::Curve(m)     => m.get_shapes(),
+            Model::Facet(m)     => m.get_shapes(),
+            Model::Sketch(m)    => m.get_shapes(),
+            Model::Circle(m)    => m.get_shapes(),
+            Model::Rectangle(m) => m.get_shapes(),
+            Model::Union(m)     => m.get_shapes(),
+            Model::Group(m)     => m.get_shapes(),
+            Model::Area(m)      => m.get_shapes(),
+            Model::Revolve(m)   => m.get_shapes(),
             _ => vec![] 
         }
     }
@@ -142,6 +144,23 @@ pub fn get_points(parts: &Vec<Model>) -> Vec<[f32; 3]> {
     }
     result
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub enum Boundary {
+    V(BoundaryV), // U and angle
+    Curve(Nurbs),
+}
+
+impl Default for Boundary {
+    fn default() -> Self { Boundary::V(BoundaryV::default()) }
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+pub struct BoundaryV {
+    v: f32,
+    angle: f32,
+}
+
 
 // #[derive(Clone, Default)] 
 // pub struct Shape {

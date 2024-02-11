@@ -1,5 +1,8 @@
+use std::f32::consts::PI;
+
 use crate::mesh::Mesh;
-use super::{Shape, Parameter, DiscreteQuery, log};
+use crate::BoundaryV;
+use super::{Model, Shape, Boundary, Parameter, DiscreteQuery, log};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
@@ -9,11 +12,11 @@ use lyon::path::Winding;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
-// macro_rules! console_log {
-//     // Note that this is using the `log` function imported above during
-//     // `bare_bones`
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
+
+//static default_boundary: BoundaryV = BoundaryV::default();
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Nurbs::default")]
@@ -22,7 +25,7 @@ pub struct Nurbs {
     pub knots:       Vec<f32>,    // knot_count = order + control_count
     pub weights:     Vec<f32>,    // weight_count = control_count
     pub controls:    Vec<Shape>,
-    pub boundaries:  Vec<Nurbs>,
+    pub boundaries:  Vec<Boundary>,
     pub reversed:    bool,
 }
 
@@ -95,22 +98,26 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         }
         let mut open_loop = false;
         let mut start_point = lyon::geom::Point::default();
-        for curve in &nurbs.boundaries { 
-            for p in curve.get_polyline(query).chunks(3) {  
-                let mut y = p[1];
-                if nurbs.reversed {y = 1.-y;}
-                let point = lyon::geom::Point::new(p[0], y);
-                if open_loop {
-                    if start_point.distance_to(point) > f32::EPSILON { // f32::EPSILON*1000.
-                        builder.line_to(point);
-                    }else {
-                        builder.end(true);
-                        open_loop = false;
+        for boundary in &nurbs.boundaries { 
+            if let Boundary::Curve(curve) = boundary {
+                for polyline in curve.get_polylines(query) {// .chunks(3) {  
+                    for p in polyline.chunks(3) {
+                        let mut y = p[1];
+                        if nurbs.reversed {y = 1.-y;}
+                        let point = lyon::geom::Point::new(p[0], y);
+                        if open_loop {
+                            if start_point.distance_to(point) > f32::EPSILON { // f32::EPSILON*1000.
+                                builder.line_to(point);
+                            }else {
+                                builder.end(true);
+                                open_loop = false;
+                            }
+                        }else{
+                            builder.begin(point);
+                            start_point = point;
+                            open_loop = true;
+                        }
                     }
-                }else{
-                    builder.begin(point);
-                    start_point = point;
-                    open_loop = true;
                 }
             }
         }
@@ -130,12 +137,18 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         }
     }
 
-    pub fn get_polyline(&self, query: &DiscreteQuery) -> Vec<f32> {
+    // pub fn get_control_points(&self) -> Vec<[f32; 3]> {
+    //     for control in &self.controls {
+
+    //     }
+    // }
+
+    pub fn get_polylines(&self, query: &DiscreteQuery) -> Vec<Vec<f32>> {
         let nurbs = self.get_valid();
         nurbs.get_polyline_at_t(&Parameter::U(0.), query.count)
     }
 
-    pub fn get_polyline_at_t(&self, t: &Parameter, count: usize) -> Vec<f32> {
+    pub fn get_polyline_at_t(&self, t: &Parameter, count: usize) -> Vec<Vec<f32>> {
         let nurbs = self.get_valid();
         match t {
             Parameter::U(u) => nurbs.get_polyline_at_u(*u, count),
@@ -158,17 +171,66 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
         self.controls.len() + count * (self.order - 2) * mul
     }
 
-    fn get_polyline_at_u(&self, u: f32, count: usize) -> Vec<f32> {
+    fn get_polyline_at_u(&self, u: f32, count: usize) -> Vec<Vec<f32>> {
+        let mut polylines: Vec<Vec<f32>> = vec![];
+        let mut polyline = vec![];
+        let mut boundaries = vec![];
+        let bound = BoundaryV::default();
+        boundaries.push(&bound);
+        for boundary in &self.boundaries {
+            if let Boundary::V(boundary) = boundary {
+                boundaries.push(boundary);
+            }
+        }
+        let bound = BoundaryV {v: 1., angle: 0.};
+        boundaries.push(&bound);
+        boundaries.sort_by(|a, b| a.v.partial_cmp(&b.v).unwrap());
         let v_count = self.get_sample_count(count);
-        (0..v_count).into_iter()
-            .map(|t| self.get_vector_at_uv(u, t as f32 / (v_count-1) as f32)) 
-            .flatten().collect()
+        let mut stops: Vec<f32> = (0..v_count).map(|step| step as f32 / (v_count-1) as f32).collect();
+        stops.extend(boundaries.iter().map(|b| b.v));
+        stops.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        stops.dedup();
+        // if stops.len() > 3 {
+        //     console_log!("stops count: {}", stops.len());
+        //     console_log!("stops: {}, {}, {}, {}", stops[0], stops[1], stops[2], stops[3]);
+        // }
+        let mut on = false;
+        if boundaries.len() > 2{
+            if boundaries[1].angle > 0. { on = true; }
+        }
+        let mut bi = 0;
+        let mut polyline_in_progress = false;
+        for v in stops {
+            if v >= boundaries[bi].v { 
+                on = !on;
+                if on {
+                    polyline = self.get_vector_at_uv(u, boundaries[bi].v);
+                    polyline_in_progress = true;
+                }else{
+                    if polyline_in_progress {
+                        polyline.extend(self.get_vector_at_uv(u, boundaries[bi].v));
+                        polylines.push(polyline.clone());
+                        polyline_in_progress = false;
+                    }
+                }
+                if bi < boundaries.len()-1 { bi += 1; }
+            }
+            if polyline_in_progress {
+                polyline.extend(self.get_vector_at_uv(u, v));
+            }
+        }
+        polylines
     }
 
-    fn get_polyline_at_v(&self, v: f32, count: usize) -> Vec<f32> {
-        (0..count).into_iter()
+    fn get_polyline_at_v(&self, v: f32, count: usize) -> Vec<Vec<f32>> {
+        vec![(0..count).into_iter()
             .map(|t| self.get_vector_at_uv(t as f32 / (count-1) as f32, v)) 
-            .flatten().collect()
+            .flatten().collect()]
+    }
+
+    pub fn get_vec2_at_v(&self, v: f32) -> Vec2 {
+        let p = self.get_vector_at_uv(0., v);
+        vec2(p[0], p[1])
     }
 
     pub fn get_vector_at_uv(&self, u: f32, v: f32) -> Vec<f32> {
@@ -252,6 +314,8 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
     }
 
     fn get_valid(&self) -> Nurbs {
+        //let mut boundaries = self.boundaries.clone(); // vec![];
+        //if bo
         Nurbs {
             order: self.get_valid_order(),
             knots: self.get_valid_knots(),
@@ -279,8 +343,6 @@ impl Nurbs { // impl<T: Default + IntoIterator<Item=f32>> Nurbs<T> {
             order = 2;
         }
         order 
-
-        
 
         //self.order.min(self.controls.len()).max(2)
 

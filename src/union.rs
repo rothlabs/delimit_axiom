@@ -7,6 +7,13 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
+#[derive(Clone, Default)]
+struct SampleCell {
+    curves: Vec<usize>,
+    points: Vec<Vec2>,
+    params: Vec<f32>,
+}
+
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Union::default")]
 pub struct Union {
@@ -16,15 +23,12 @@ pub struct Union {
 impl Union { 
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut shapes = vec![];
-        //let mut curve_map: HashMap<usize, &mut Vec<Boundary>> = HashMap::new();
+        let sample_map = self.get_sample_map();
+        //let mut sample_cells = vec![];
         //shapes.extend(get_curves(&self.parts).iter().map(|nurbs| Shape::Curve(nurbs.clone())));
         let curves = get_curves(&self.parts);
         //let mut count = 0;
-        let mut boundaries: Vec<Vec<Boundary>> = vec![];
-        for _ in 0..curves.len() { //}.iter().enumerate() {
-            boundaries.push(vec![]);
-            //curve_map.insert(i, vec![]);
-        }
+        let mut boundaries: Vec<Vec<Boundary>> = vec![]; //             boundaries.push(vec![]);
         for (i0, curve0) in curves.iter().enumerate() {
             for (i1, curve1) in curves[i0..].iter().enumerate(){
                 for p0 in curve0.get_controls_as_vec2().windows(2) {// }.enumerate() {
@@ -58,6 +62,31 @@ impl Union {
         }
         //console_log!("intersections: {}", count);
         shapes
+    }
+
+    fn get_sample_map(&self) -> HashMap<String, SampleCell> {
+        let mut sample_map: HashMap<String, SampleCell> = HashMap::new();
+        let sample_count = 100;
+        let cell_size = 10.;
+        for (i, curve) in get_curves(&self.parts).iter().enumerate() { 
+            for step in 0..sample_count {
+                let v = step as f32 / (sample_count - 1) as f32;
+                let p = curve.get_vec2_at_v(v);
+                let key = (p.x/cell_size).round().to_string() + "," + &(p.y/cell_size).round().to_string();
+                if let Some(sample_cell) = sample_map.get_mut(&key) {
+                    sample_cell.curves.push(i);
+                    sample_cell.points.push(p);
+                    sample_cell.params.push(v);
+                }else{
+                    sample_map.insert(key, SampleCell {
+                        curves: vec![i],
+                        points: vec![p],
+                        params: vec![v],
+                    });
+                }
+            }
+        }
+        sample_map
     }
 }
 

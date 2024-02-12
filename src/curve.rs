@@ -29,7 +29,6 @@ pub struct Curve {
 
 impl Curve {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        
         vec![Shape::Curve(CurveShape{
             controls: get_points(&self.controls),
             knots: self.knots.clone(),
@@ -80,9 +79,43 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         curve
     }
 
+    pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
+        1. / (self.get_sample_count_with_max_distance(min_count, max_distance) - 1) as f32
+    }
+
+    pub fn get_param_samples(&self, min_count: usize, max_distance: f32) -> Vec<f32> {
+        let mut sample_params = vec![];
+        let count = self.get_sample_count_with_max_distance(min_count, max_distance);
+        for step in 0..count {
+            sample_params.push(step as f32 / (count-1) as f32);
+        }
+        sample_params
+    }
+
+    pub fn get_sample_count(&self, count: usize) -> usize { 
+        let mul = self.controls.len()-1;
+        self.controls.len() + count * (self.order - 2) * mul
+    }
+
+    pub fn get_sample_count_with_max_distance(&self, min_count: usize, max_distance: f32) -> usize {
+        let curve = self.get_valid();
+        let mut distance = 0.;
+        for step in 0..curve.controls.len()-1 {
+            let u0 = step as f32 / (curve.controls.len()-1) as f32;
+            let u1 = (step+1) as f32 / (curve.controls.len()-1) as f32;
+            let dist = curve.get_vec2_at_u(u0).distance(curve.get_vec2_at_u(u1));
+            if distance < dist {distance = dist;}
+        }
+        let mut count = min_count;
+        let distance_based_count = (distance / max_distance).ceil() as usize;
+        if distance_based_count > min_count {count = distance_based_count; }
+        count = count*(curve.controls.len()-1) + curve.controls.len();
+        count
+    }
+
     pub fn get_polyline(&self, query: &DiscreteQuery) -> Vec<f32> {
         let curve = self.get_valid();
-        let count = self.get_sample_count(query.count);
+        let count = curve.get_sample_count(query.count);
         (0..count).into_iter()
             .map(|u| curve.get_vector_at_u(u as f32 / (count-1) as f32)) 
             .flatten().collect()
@@ -92,11 +125,6 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         self.controls.iter().map(|p| {
             vec2(p[0], p[1])
         }).collect()
-    }
-
-    pub fn get_sample_count(&self, count: usize) -> usize { 
-        let mul = self.controls.len()-1;
-        self.controls.len() + count * (self.order - 2) * mul
     }
 
     pub fn get_vec2_at_u(&self, u: f32) -> Vec2 {

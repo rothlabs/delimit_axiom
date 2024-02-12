@@ -105,12 +105,12 @@ impl FacetShape { // impl<T: Default + IntoIterator<Item=f32>> FacetShape<T> {
         let mut u_count = 0;
         for curve in &facet.controls {
             let sample_count = curve.get_sample_count(query.count);
-            console_log!("curve sample count done {}", sample_count);
+            //console_log!("curve sample count done {}", sample_count);
             if u_count < sample_count { u_count = sample_count; } 
         }
         let v_count = facet.get_sample_count(query.count);
-        console_log!("u_count {}", u_count);
-        console_log!("v_count {}", v_count);
+        //console_log!("u_count {}", u_count);
+        //console_log!("v_count {}", v_count);
         let mut builder = lyon::path::Path::builder();
         if facet.boundaries.is_empty() {
             builder.add_rectangle(&Box2D{min:Point::new(0., 0.), max:Point::new(1., 1.)}, Winding::Positive);

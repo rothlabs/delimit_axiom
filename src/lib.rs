@@ -1,6 +1,6 @@
 mod utils;
 
-//mod vector;
+mod spatial_map;
 mod group;
 mod curve;
 mod facet;
@@ -8,19 +8,20 @@ mod mesh;
 mod sketch;
 mod area;
 mod revolve;
-//mod union;
+mod union;
 
 use utils::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use glam::*;
+use spatial_map::*;
 use group::*;
 use curve::*;
 use facet::*;
 use sketch::*;
 use area::*;
 use revolve::*;
-//use union::*;
+use union::*;
 
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
@@ -34,7 +35,7 @@ pub enum Model {
     Circle(Circle),
     Rectangle(Rectangle),
     Revolve(Revolve),
-    //Union(Union),
+    Union(Union),
 }
 
 impl Model {
@@ -49,7 +50,7 @@ impl Model {
             Model::Group(m)     => m.get_shapes(),
             Model::Area(m)      => m.get_shapes(),
             Model::Revolve(m)   => m.get_shapes(),
-            //Model::Union(m)     => m.get_shapes(),
+            Model::Union(m)     => m.get_shapes(),
             _ => vec![] 
         }
     }

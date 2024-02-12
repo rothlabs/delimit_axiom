@@ -38,8 +38,8 @@ impl Union {
                             //shapes.push(Shape::Point([ci.x, ci.y, 0.]));
                             let vva = search_intersection(&curve0, &curve1, ci);
                             if let Option::Some(vva) = vva {
-                                let ip0 = curve0.get_vec2_at_v(vva[0]);
-                                let ip1 = curve1.get_vec2_at_v(vva[1]);
+                                let ip0 = curve0.get_vec2_at_u(vva[0]);
+                                let ip1 = curve1.get_vec2_at_u(vva[1]);
                                 shapes.push(Shape::Point([ip0.x, ip0.y, 0.]));
                                 shapes.push(Shape::Point([ip1.x, ip1.y, 0.]));
                                 //console_log!("intersection angle0 {}", vva[2]);
@@ -71,7 +71,7 @@ impl Union {
         for (i, curve) in get_curves(&self.parts).iter().enumerate() { 
             for step in 0..sample_count {
                 let v = step as f32 / (sample_count - 1) as f32;
-                let p = curve.get_vec2_at_v(v);
+                let p = curve.get_vec2_at_u(v);
                 let key = (p.x/cell_size).round().to_string() + "," + &(p.y/cell_size).round().to_string();
                 if let Some(sample_cell) = sample_map.get_mut(&key) {
                     sample_cell.curves.push(i);
@@ -150,27 +150,3 @@ fn search_intersection(nurbs0: &Nurbs, nurbs1: &Nurbs, proxy: Vec2) -> Option<[f
     }
 }
 
-fn get_line_intersection(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<Vec2> {
-    if p1.distance(p2) < EPSILON {
-        return None;
-    }
-    if p3.distance(p4) < EPSILON {
-        return  None;
-    }
-    let t = ((p1.x - p3.x)*(p3.y - p4.y) - (p1.y - p3.y)*(p3.x - p4.x)) 
-        / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
-    let u = - ((p1.x - p2.x)*(p1.y - p3.y) - (p1.y - p2.y)*(p1.x - p3.x))
-        / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
-    if 0. > t || t > 1. || 0. > u || u > 1. {
-        return None;
-    }
-    if (EPSILON > t || t+EPSILON > 1.) && (EPSILON > u || u+EPSILON > 1.) {
-        return None;
-    }
-    let x = p3.x + u*(p4.x - p3.x);
-    let y = p3.y + u*(p4.y - p3.y);
-    if x.is_nan() || y.is_nan() {
-        return None;
-    }
-    Some(vec2(x, y))
-}

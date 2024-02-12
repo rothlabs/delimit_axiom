@@ -2,48 +2,39 @@ mod utils;
 
 //mod vector;
 mod group;
-mod nurbs;
-//mod slice;
-mod union;
+mod curve;
+mod facet;
 mod mesh;
-//mod turtled;
 mod sketch;
 mod area;
-//mod extrusion;
 mod revolve;
+//mod union;
 
 use utils::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use glam::*;
 use group::*;
-use nurbs::*;
-//use slice::*;
-use union::*;
+use curve::*;
+use facet::*;
 use sketch::*;
 use area::*;
-//use extrusion::*;
 use revolve::*;
+//use union::*;
 
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
     Vector3([f32; 3]),
     Point([f32; 3]),
-    Curve(Nurbs),
-    Facet(Nurbs),
-    // MoveTo([f32; 2]),
-    // LineTo([f32; 2]),
-    // ArcTo(ArcTo),
+    Curve(Curve),
+    Facet(Facet),
     Sketch(Sketch),
     Area(Area),
     Group(Group),
-    //Slice(Slice),
-    Union(Union),
     Circle(Circle),
     Rectangle(Rectangle),
-    //Extrusion(Extrusion),
     Revolve(Revolve),
-    Close(bool), // TODO: find way to remove bool
+    //Union(Union),
 }
 
 impl Model {
@@ -55,13 +46,17 @@ impl Model {
             Model::Sketch(m)    => m.get_shapes(),
             Model::Circle(m)    => m.get_shapes(),
             Model::Rectangle(m) => m.get_shapes(),
-            Model::Union(m)     => m.get_shapes(),
             Model::Group(m)     => m.get_shapes(),
             Model::Area(m)      => m.get_shapes(),
             Model::Revolve(m)   => m.get_shapes(),
+            //Model::Union(m)     => m.get_shapes(),
             _ => vec![] 
         }
     }
+    // pub fn get_transformed(&self, mat4: Mat4) -> Self {
+    //     let mut shapes = vec![];
+    //     for shape in self.get_shapes()
+    // }
     // pub fn get_vec3_or(&self, alt: Vec3) -> Vec3 {
     //     match self {
     //         Model::Vector3(m) => {
@@ -90,11 +85,11 @@ pub fn get_vec3_or(slice: &[f32; 3], alt: Vec3) -> Vec3 {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)] // Serialize, Deserialize
 pub enum Shape {
     Point([f32; 3]),
-    Curve(Nurbs),
-    Facet(Nurbs),
+    Curve(CurveShape),
+    Facet(FacetShape),
 }
 
 impl Default for Shape {
@@ -104,13 +99,15 @@ impl Default for Shape {
 impl Shape {
     pub fn get_transformed(&self, mat4: Mat4) -> Self {
         match self {
-            Shape::Point(m) => Shape::Point(
-                mat4.mul_vec4(Vec3::from_slice(m).extend(1.)).truncate().to_array()
-            ),
+            Shape::Point(point) => Shape::Point(get_transformed_point(point, mat4)),
             Shape::Curve(m) => Shape::Curve(m.get_transformed(mat4)),
             Shape::Facet(m) => Shape::Facet(m.get_transformed(mat4)),
         }
     }
+}
+
+pub fn get_transformed_point(point: &[f32; 3], mat4: Mat4) -> [f32; 3] {
+    mat4.mul_vec4(Vec3::from_slice(point).extend(1.)).truncate().to_array()
 }
 
 pub fn get_shapes(parts: &Vec<Model>) -> Vec<Shape> {
@@ -121,7 +118,7 @@ pub fn get_shapes(parts: &Vec<Model>) -> Vec<Shape> {
     result
 }
 
-pub fn get_curves(parts: &Vec<Model>) -> Vec<Nurbs> {
+pub fn get_curves(parts: &Vec<Model>) -> Vec<CurveShape> {
     let mut result = vec![];
     for part in parts {
         for shape in part.get_shapes() {
@@ -145,21 +142,21 @@ pub fn get_points(parts: &Vec<Model>) -> Vec<[f32; 3]> {
     result
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Boundary {
-    V(BoundaryV), // U and angle
-    Curve(Nurbs),
-}
+// #[derive(Clone, Serialize, Deserialize)]
+// pub enum Boundary {
+//     V(BoundaryV), // U and angle
+//     Curve(Nurbs),
+// }
 
-impl Default for Boundary {
-    fn default() -> Self { Boundary::V(BoundaryV::default()) }
-}
+// impl Default for Boundary {
+//     fn default() -> Self { Boundary::V(BoundaryV::default()) }
+// }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
-pub struct BoundaryV {
-    v: f32,
-    angle: f32,
-}
+// #[derive(Clone, Default, Serialize, Deserialize)]
+// pub struct BoundaryV {
+//     v: f32,
+//     angle: f32,
+// }
 
 
 // #[derive(Clone, Default)] 

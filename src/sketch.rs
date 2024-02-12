@@ -1,5 +1,5 @@
 use std::f32::consts::{FRAC_PI_2, PI};
-use crate::{Model, Nurbs, Revolve, Shape, log};
+use crate::{Model, CurveShape, Revolve, Shape, log};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -39,12 +39,11 @@ impl Sketch {
                     turtle.move_to(p[0], p[1]);
                 },
                 Action::LineTo(p) => {
-                    let mut nurbs = Nurbs::default();
-                    nurbs.order = 2;
-                    nurbs.knots = vec![0., 0., 1., 1.];
-                    nurbs.weights = vec![1., 1.];
-                    nurbs.controls = vec![Shape::Point([turtle.pos.x, turtle.pos.y, 0.]), Shape::Point([p[0], p[1], 0.])]; 
-                    shapes.push(Shape::Curve(nurbs));
+                    let mut curve = CurveShape::default();
+                    curve.knots = vec![0., 0., 1., 1.];
+                    curve.weights = vec![1., 1.];
+                    curve.controls = vec![[turtle.pos.x, turtle.pos.y, 0.], [p[0], p[1], 0.]]; 
+                    shapes.push(Shape::Curve(curve));
                     shapes.push(Shape::Point([p[0], p[1], 0.]));
                     turtle.move_to(p[0], p[1]);
                 },

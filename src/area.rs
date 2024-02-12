@@ -1,5 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{Model, Shape, Nurbs, Boundary, get_curves, get_points};
+use crate::{Model, Shape, FacetShape, CurveShape, get_curves, get_points};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -26,28 +26,28 @@ impl Area {
                 max = max.max(point);
             }
         }
-        let mut facet = Nurbs::default();
-        let mut curve0 = Nurbs::default();
-        let mut curve1 = Nurbs::default();
+        let mut facet = FacetShape::default();
+        let mut curve0 = CurveShape::default();
+        let mut curve1 = CurveShape::default();
 
-        curve0.controls.push(Shape::Point([min.x, max.y, 0.]));
-        curve0.controls.push(Shape::Point([max.x, max.y, 0.]));
-        curve1.controls.push(Shape::Point([min.x, min.y, 0.]));
-        curve1.controls.push(Shape::Point([max.x, min.y, 0.]));
+        curve0.controls.push([min.x, max.y, 0.]);
+        curve0.controls.push([max.x, max.y, 0.]);
+        curve1.controls.push([min.x, min.y, 0.]);
+        curve1.controls.push([max.x, min.y, 0.]);
         
-        facet.controls.extend([Shape::Curve(curve0), Shape::Curve(curve1)]);
+        facet.controls.extend([curve0, curve1]);
         for curve in &curves {
             let mut boundary = curve.clone();
             let mut normalized_points = vec![];
             for p in boundary.get_controls_as_vec2() {
-                normalized_points.push(Shape::Point([
+                normalized_points.push([
                     (p.x - min.x) / (max.x - min.x), 
                     1. - (p.y - min.y) / (max.y - min.y), 
                     0.
-                ]));
+                ]);
             }
             boundary.controls = normalized_points;
-            facet.boundaries.push(Boundary::Curve(boundary));
+            facet.boundaries.push(boundary);
         }
         shapes.push(Shape::Facet(facet));
         shapes

@@ -1,5 +1,5 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{Model, Shape, Nurbs, get_shapes, get_vec3_or};
+use crate::{Model, Shape, CurveShape, FacetShape, get_shapes, get_vec3_or, get_transformed_point};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -64,33 +64,42 @@ impl Revolve {
 
         let mut shapes = vec![];
         for shape in get_shapes(&self.parts) {
-            let get_nurbs = || {
-                let mut nurbs = Nurbs {
-                    order: 3,
-                    knots: knots.clone(),
-                    weights: weights.clone(),
-                    controls: vec![shape.clone()], 
-                    boundaries: vec![],
-                    reversed: false,
-                };
-                for &mat4 in &transforms {
-                    nurbs.controls.push(shape.get_transformed(mat4)); 
-                }
-                nurbs.controls.push(shape.get_transformed(end_mat4)); 
-                nurbs
-            };
             shapes.push(shape.clone());
             match &shape {
-                Shape::Point(_) => {
-                    shapes.push(Shape::Curve(get_nurbs()));
+                Shape::Point(point) => {
+                    let mut curve = CurveShape {
+                        order: 3,
+                        knots: knots.clone(),
+                        weights: weights.clone(),
+                        controls: vec![*point], 
+                        min: 0.,
+                        max: 1.,
+                    };
+                    for &mat4 in &transforms {
+                        curve.controls.push(get_transformed_point(point, mat4)); 
+                    }
+                    curve.controls.push(get_transformed_point(point, end_mat4)); 
+                    shapes.push(Shape::Curve(curve));
                     shapes.push(shape.get_transformed(end_mat4));
                 },
-                Shape::Curve(_) => {
-                    shapes.push(Shape::Facet(get_nurbs()));
+                Shape::Curve(curve) => {
+                    let mut facet = FacetShape {
+                        order: 3,
+                        knots: knots.clone(),
+                        weights: weights.clone(),
+                        controls: vec![curve.clone()], 
+                        boundaries: vec![],
+                        reversed: false,
+                    };
+                    for &mat4 in &transforms {
+                        facet.controls.push(curve.get_transformed(mat4)); 
+                    }
+                    facet.controls.push(curve.get_transformed(end_mat4)); 
+                    shapes.push(Shape::Facet(facet));
                     shapes.push(shape.get_transformed(end_mat4));
                 },
-                Shape::Facet(nurbs) => {
-                    shapes.push(Shape::Facet(nurbs.get_reversed_and_transformed(end_mat4)));
+                Shape::Facet(facet) => {
+                    shapes.push(Shape::Facet(facet.get_reversed_and_transformed(end_mat4)));
                 },
             }
         }

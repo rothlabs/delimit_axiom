@@ -15,15 +15,15 @@ pub struct Union {
 
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        let cell_size = 8.;
+        let cell_size = 4.;
         let curves = get_curves(&self.parts);
-        let mut curve_ranges = vec![];
+        let mut curve_ranges: HashMap<usize, CurveRange> = HashMap::new(); // = vec![];
         //let mut curve_steps = vec![];
         
         for (i, curve) in curves.iter().enumerate() {
             let params = curve.get_param_samples(4, cell_size);
             let step = curve.get_param_step(4, cell_size);
-            curve_ranges.push(CurveRange{
+            curve_ranges.insert(i, CurveRange{
                 i, 
                 step,
                 params,
@@ -62,7 +62,7 @@ struct CurveRange {
 #[derive(Clone, Default)]
 struct UnionShape {
     curves: Vec<CurveShape>,
-    curve_ranges: Vec<CurveRange>,
+    curve_ranges: HashMap<usize, CurveRange>, //Vec<CurveRange>,
     //curve_steps: Vec<f32>,
     cell_size: f32,
     shapes: Vec<Shape>,
@@ -74,6 +74,7 @@ impl UnionShape {
         //let mut intersection_map: SpatialMap<()> = SpatialMap::new(0.025);//HashMap<String, ()> = HashMap::new();
         //let mut count = 0.;
         self.shapes.extend(self.curves.iter().map(|curve| Shape::Curve(curve.clone())));
+        self.reduce_ranges(false);
         self.reduce_ranges(true);
         //self.reduce_ranges(true);
         //console_log!("Intersection count! {}", count);
@@ -81,146 +82,92 @@ impl UnionShape {
     }
 
     fn reduce_ranges(&mut self, add_points: bool) { // fn get_approx_intersections(&self) -> Vec<SampleCell> {  
-        let mut curve_ranges_map: HashMap<String, CurveRange> = HashMap::new();
+        //let mut curve_ranges: HashMap<usize, CurveRange> = HashMap::new();
         let spatial_map = self.get_spatial_map();
+        for i in 0..self.curves.len() {
+            if let Some(cr) = self.curve_ranges.get_mut(&i) {
+                cr.params = vec![];
+                // curve_ranges.insert(i, CurveRange{
+                //     i, 
+                //     step: cr.step,
+                //     params: vec![],
+                // });
+            }
+        }
         let mut key_parts = [0; 2];
         //console_log!("spatial map count: {}", spatial_map.map.len());
-        for (cell_key, sample_cell) in &spatial_map.map {
+        for (cell_key, sample_cell0) in &spatial_map.map {
             let split_key = cell_key.split(",");
             for (i, string_int) in split_key.enumerate() {
                 key_parts[i] = string_int.parse().expect("failed to parse key in union");
             }
-            for (i0, c0) in sample_cell.curves.iter().enumerate() {
+            for (i0, c0) in sample_cell0.curves.iter().enumerate() {
                 //let p0 = sample_cell.points[i0];
                 //self.shapes.push(Shape::Point([p0.x, p0.y, 0.]));
                 for x in -1..2 {
                     for y in -1..2 {
                         let key = (key_parts[0]+x).to_string()+","+&(key_parts[1]+y).to_string();// + ",";
                         //console_log!("key {}", cell_key);
-                        let sample_cell2 = spatial_map.map.get(&key); // get_mut(&vec2(key_parts[0] as f32 + x as f32, key_parts[1] as f32 + y as f32), &meta);
-                        if let Some(sample_cell2) = sample_cell2 {
-                            for (i1, c1) in sample_cell2.curves.iter().enumerate() {//sample_cell.curves[i0..].iter().enumerate() {
+                        let sample_cell1 = spatial_map.map.get(&key); // get_mut(&vec2(key_parts[0] as f32 + x as f32, key_parts[1] as f32 + y as f32), &meta);
+                        if let Some(sample_cell1) = sample_cell1 {
+                            for (i1, c1) in sample_cell1.curves.iter().enumerate() {//sample_cell.curves[i0..].iter().enumerate() {
                                 if c0 == c1 {continue}
-                                let key = c0.to_string() + &cell_key;
-                                if let Some(cr) = curve_ranges_map.get_mut(&key) {
-                                    //for cri in 0..curve_ranges.len() {
-                                    //    if let Some(cr) = curve_ranges.get_mut(cri) {
-                                            //if cr.i == *c1 {
-                                                //make_new_curve_range = false;
-                                                //cr.keep = true;
-                                                if cr.min > sample_cell.params[i0] {
-                                                    cr.min = sample_cell.params[i0];
-                                                }
-                                                if cr.max < sample_cell.params[i0] {
-                                                    cr.max = sample_cell.params[i0];
-                                                }
-                                            //}
-                                    //    }
-                                    //}
-                                }else {
-                                    curve_ranges_map.insert(key, CurveRange {
-                                        i: *c0,
-                                        min: sample_cell.params[i0],
-                                        max: sample_cell.params[i0],
-                                    });
+                                //let key = c0.to_string() + &cell_key;
+                                if sample_cell0.points[i0].distance(sample_cell1.points[i1]) > self.cell_size {continue}
+                                if let Some(cr) = self.curve_ranges.get_mut(&c0) {
+                                    cr.params.push(sample_cell0.params[i0]);
                                 }
                                 if add_points {
-                                    let p0 = sample_cell.points[i0];
+                                    let p0 = sample_cell0.points[i0];
                                     //let p1 = sample_cell2.points[i1];
                                     self.shapes.push(Shape::Point([p0.x, p0.y, 0.]));
                                     //self.shapes.push(Shape::Point([p1.x, p1.y, 0.]));
                                 }
-                                //let mut make_new_curve_range = true;
-                                // for cri in 0..self.curve_ranges.len() {
-                                //     let curve_range = self.curve_ranges.get_mut(cri);
-                                //     if let Some(cr) = curve_range {
-                                //         if cr.i == *c0 {
-                                //             //make_new_curve_range = false;
-                                //             cr.keep = true;
-                                //             if cr.min > sample_cell.params[i0] {
-                                //                 cr.min = sample_cell.params[i0];
-                                //             }
-                                //             if cr.max < sample_cell.params[i0] {
-                                //                 cr.max = sample_cell.params[i0];
-                                //             }
-                                //         }
-                                //     }
-                                // }
-                                // if make_new_curve_range {
-                                //     curve_ranges.push(CurveRange{
-                                //         i: c0,
-                                //         step: 
-                                //     });
-                                // }
-
-                                        //let intersection_key = c0.to_string() + "," + &c1.to_string() + "," + &cell_key;
-                                        //if intersection_map.contains_key(&intersection_key) {continue}
-                                        //intersection_map.insert(intersection_key, ());
-                                
-                                // let uua = search_intersection(&curves[*c0], &curves[*c1], sample_cell.params[i0], sample_cell.params[i1], cell_size);
-                                // if let Some(uua) = uua {
-                                //     if 0. < uua[0] && uua[0] < 1. {
-                                //         let ip0 = curves[*c0].get_vec2_at_u(uua[0]);
-                                //         let meta = c0.to_string() + "," + &c1.to_string();
-                                //         if !intersection_map.contains_key(&ip0, &meta) {
-                                //             intersection_map.insert(&ip0, &meta, ());
-                                //             shapes.push(Shape::Point([ip0.x, ip0.y, 0.]));
-                                //             count += 0.5;
-                                //         }
-                                //     } 
-                                //     if 0. < uua[1] && uua[1] < 1. {
-                                //         let ip1 = curves[*c1].get_vec2_at_u(uua[1]);
-                                //         let meta = c1.to_string() + "," + &c0.to_string();
-                                //         if !intersection_map.contains_key(&ip1, &meta) {
-                                //             intersection_map.insert(&ip1, &meta, ());
-                                //             shapes.push(Shape::Point([ip1.x, ip1.y, 0.]));
-                                //             count += 0.5;
-                                //         }
-                                //     }
-                                // }
                             }
                         }
                     }
                 }
             }
-            
         }
-        // let mut curve_ranges: Vec<CurveRange> = vec![];
-        // for cr in &self.curve_ranges {
-        //     if cr.keep {
-        //         curve_ranges.push(CurveRange{
-        //             i: cr.i,
-        //             step: cr.step / 10.,
-        //             min: cr.min,
-        //             max: cr.max,
-        //             keep: false,
-        //         });
-        //     }
-        // }
-        // self.curve_ranges = curve_ranges;
-
-        self.curve_ranges = curve_ranges_map.values().map(|cr| cr.clone()).collect();
+        for i in 0..self.curves.len() {
+            if let Some(cr) = self.curve_ranges.get_mut(&i) {
+                cr.params.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                if cr.params.is_empty() {continue}
+                let mut filled = vec![cr.params[0]];
+                for uu in cr.params.windows(2) {
+                    if uu[1] - uu[0] <= cr.step + EPSILON {
+                        for k in 1..20 {
+                            let fill_u = uu[0] + k as f32 * (cr.step/10.);
+                            if fill_u >= uu[1] {break}
+                            filled.push(fill_u);
+                        }
+                    }
+                    filled.push(uu[1]);
+                }
+                cr.params = filled;
+                cr.step /= 10.
+            }
+        }
+        //self.curve_ranges = curve_ranges; //curve_ranges_map.values().map(|cr| cr.clone()).collect();
         self.cell_size /= 10.;
     }
 
     fn get_spatial_map(&self) -> SpatialMap<SampleCell> { // , curves: Vec<CurveShape>, curve_ranges: Vec<CurveRange>, cell_size: f32
         let meta = String::from("");
         let mut spatial_map: SpatialMap<SampleCell> = SpatialMap::new(self.cell_size); 
-        for CurveRange {i, min, max, ..} in &self.curve_ranges { // get_curves(&self.parts).iter().enumerate() { 
-            //let CurveRange {i, step, min, max} = curve_range;
-            let step = self.curves[*i].get_param_step(4, self.cell_size);
-            for step_i in 0..((max-min)/step).ceil() as usize { // self.curve_steps[*i] // curve.get_param_samples(1, cell_size*0.75) {
-                let u = min + step * step_i as f32;
-                let point = self.curves[*i].get_vec2_at_u(u);
+        for (_, CurveRange {i, params, ..}) in &self.curve_ranges { 
+            for u in params {
+                //let u = min + step * step_i as f32;
+                let point = self.curves[*i].get_vec2_at_u(*u);
                 if let Some(sample_cell) = spatial_map.get_mut(&point, &meta) {
                     sample_cell.curves.push(*i);
                     sample_cell.points.push(point);
-                    sample_cell.params.push(u);
+                    sample_cell.params.push(*u);
                 }else{
                     spatial_map.insert(&point, &meta, &SampleCell {
                         curves: vec![*i],
                         points: vec![point],
-                        params: vec![u],
+                        params: vec![*u],
                     });
                 }
             }
@@ -237,7 +184,7 @@ impl UnionShape {
 
 fn search_intersection(curve0: &CurveShape, curve1: &CurveShape, u_start0: f32, u_start1: f32, cell_size: f32) -> Option<[f32; 3]> {
     let tolerance = 0.01; // 0.0025; // approx 0.0001 inch
-    let iterations = 10000;
+    let iterations = 1000;
     let mut move_t0 = true; 
     let mut t0 = u_start0;
     let mut t1 = u_start1;

@@ -1,5 +1,10 @@
+use crate::{log};
 use std::collections::HashMap;
 use glam::*;
+
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 pub struct SpatialMap<T> {
     pub map: HashMap<String, T>,
@@ -15,7 +20,7 @@ impl<T: Clone> SpatialMap<T> {
         }
     }
 
-    pub fn insert(&mut self, point: &Vec2, meta: &String, item: T) {
+    pub fn insert(&mut self, point: &Vec2, meta: &String, item: &T) {
         //let s = self.cell_size;
         //for x in [point.x-s, point.x, point.x+s] {
         //    for y in [point.y-s, point.y, point.y+s] {
@@ -42,7 +47,9 @@ impl<T: Clone> SpatialMap<T> {
     // }
 
     pub fn get_spatial_key(&self, x: f32, y: f32, meta: &String) -> String {
-        (x/self.cell_size).round().to_string() + "," + &(y/self.cell_size).round().to_string() + "," + meta
+        let key = (x/self.cell_size).round().to_string() + "," + &(y/self.cell_size).round().to_string();// + "," + meta;
+        //console_log!("{}", key);
+        key
     }
 }
 

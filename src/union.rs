@@ -36,6 +36,7 @@ impl Union {
             //curve_steps,
             cell_size,
             shapes: vec![],
+            intersection_map: SpatialMap::new(0.025),
         };
         union_shape.get_shapes()
     }
@@ -59,19 +60,20 @@ struct CurveRange {
     //keep: bool,
 }
 
-#[derive(Clone, Default)]
+//#[derive(Clone, Default)]
 struct UnionShape {
     curves: Vec<CurveShape>,
     curve_ranges: HashMap<usize, CurveRange>, //Vec<CurveRange>,
     //curve_steps: Vec<f32>,
     cell_size: f32,
     shapes: Vec<Shape>,
+    intersection_map: SpatialMap<()>,
 }
 
 impl UnionShape { 
     pub fn get_shapes(&mut self) -> Vec<Shape> {
         //let mut shapes = vec![];
-        //let mut intersection_map: SpatialMap<()> = SpatialMap::new(0.025);//HashMap<String, ()> = HashMap::new();
+        //let mut intersection_map: SpatialMap<()> = SpatialMap::new(0.025);
         //let mut count = 0.;
         self.shapes.extend(self.curves.iter().map(|curve| Shape::Curve(curve.clone())));
         self.reduce_ranges(false);
@@ -118,10 +120,35 @@ impl UnionShape {
                                     cr.params.push(sample_cell0.params[i0]);
                                 }
                                 if add_points {
-                                    let p0 = sample_cell0.points[i0];
+                                    ///let p0 = sample_cell0.points[i0];
                                     //let p1 = sample_cell2.points[i1];
-                                    self.shapes.push(Shape::Point([p0.x, p0.y, 0.]));
+                                    ///self.shapes.push(Shape::Point([p0.x, p0.y, 0.]));
                                     //self.shapes.push(Shape::Point([p1.x, p1.y, 0.]));
+
+
+                                    let uua = search_intersection(&self.curves[*c0], &self.curves[*c1], sample_cell0.params[i0], sample_cell1.params[i1], self.cell_size);
+                                    if let Some(uua) = uua {
+                                        if 0.01 < uua[0] && uua[0] < 0.99 {
+                                            let ip0 = self.curves[*c0].get_vec2_at_u(uua[0]);
+                                            //let meta = String::from(",") + &c0.to_string();// + "," + &c1.to_string();
+                                            //if !self.intersection_map.contains_key(&ip0, &meta) {
+                                            //    self.intersection_map.insert(&ip0, &meta, &());
+                                                self.shapes.push(Shape::Point([ip0.x, ip0.y, 0.]));
+                                                //count += 0.5;
+                                            //}
+                                        } 
+                                        // if 0. < uua[1] && uua[1] < 1. {
+                                        //     let ip1 = self.curves[*c1].get_vec2_at_u(uua[1]);
+                                        //     let meta = c1.to_string() + "," + &c0.to_string();
+                                        //     if !self.intersection_map.contains_key(&ip1, &meta) {
+                                        //         self.intersection_map.insert(&ip1, &meta, &());
+                                        //         self.shapes.push(Shape::Point([ip1.x, ip1.y, 0.]));
+                                        //         //count += 0.5;
+                                        //     }
+                                        // }
+                                    }
+
+
                                 }
                             }
                         }

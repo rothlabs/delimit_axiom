@@ -47,7 +47,7 @@ impl<T: Clone> SpatialMap<T> {
     // }
 
     pub fn get_spatial_key(&self, x: f32, y: f32, meta: &String) -> String {
-        let key = (x/self.cell_size).round().to_string() + "," + &(y/self.cell_size).round().to_string();// + "," + meta;
+        let key = (x/self.cell_size).floor().to_string() + "," + &(y/self.cell_size).floor().to_string();// + "," + meta;
         //console_log!("{}", key);
         key
     }

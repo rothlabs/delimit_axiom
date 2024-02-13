@@ -30,16 +30,20 @@ impl Union {
         let curves = get_curves(&self.parts);
         shapes.extend(curves.iter().map(|curve| Shape::Curve(curve.clone())));
         //shapes.push(Shape::Curve(curves[*c0].clone()));
-        for (cell_key, sample_cell) in cell_map.map {
+        //console_log!("cell_map count: {}", cell_map.map.len());
+        for (cell_key, sample_cell) in &cell_map.map {
             //console_log!("sample_cell curve count: {}", sample_cell.curves.len());
             for (i0, c0) in sample_cell.curves.iter().enumerate() {
-                let p = sample_cell.points[i0];
-                //shapes.push(Shape::Point([p[0], p[1], 0.]));
+                
                 for (i1, c1) in sample_cell.curves.iter().enumerate() {//sample_cell.curves[i0..].iter().enumerate() {
                     if c0 == c1 {continue}
                             //let intersection_key = c0.to_string() + "," + &c1.to_string() + "," + &cell_key;
                             //if intersection_map.contains_key(&intersection_key) {continue}
                             //intersection_map.insert(intersection_key, ());
+                    // let p0 = sample_cell.points[i0];
+                    // let p1 = sample_cell.points[i1];
+                    // shapes.push(Shape::Point([p0.x, p0.y, 0.]));
+                    // shapes.push(Shape::Point([p1.x, p1.y, 0.]));
                     let uua = search_intersection(&curves[*c0], &curves[*c1], sample_cell.params[i0], sample_cell.params[i1], cell_size);
                     if let Some(uua) = uua {
                         if 0. < uua[0] && uua[0] < 1. {
@@ -64,28 +68,54 @@ impl Union {
                 }
             }
         }
-        console_log!("Intersection count! {}", count);
+        //console_log!("Intersection count! {}", count);
         shapes
     }
 
     fn get_cell_map(&self, cell_size: f32) -> SpatialMap<SampleCell> {
         let meta = String::from("");
+        let s = cell_size;
+        let offsets = vec![
+            vec2(-s, -s),
+            vec2(-s, s),
+            vec2(s, -s),
+            vec2(s, s),
+            vec2(0., -s),
+            vec2(0., s),
+            vec2(-s, 0.),
+            vec2(s, 0.),
+            vec2(0., 0.),
+        ];
         let mut sample_map: SpatialMap<SampleCell> = SpatialMap::new(cell_size); //let mut sample_map: HashMap<String, SampleCell> = HashMap::new();
         for (i, curve) in get_curves(&self.parts).iter().enumerate() { 
-            for u in curve.get_param_samples(4, cell_size/2.) {
+            for u in curve.get_param_samples(4, cell_size) {
                 let point = curve.get_vec2_at_u(u);
                 //let key = get_spatial_key(p, cell_size);//(p.x/cell_size).round().to_string() + "," + &(p.y/cell_size).round().to_string();
-                if let Some(sample_cell) = sample_map.get_mut(&point, &meta) {
-                    log("add to sample cell!!!");
-                    sample_cell.curves.push(i);
-                    sample_cell.points.push(point);
-                    sample_cell.params.push(u);
-                }else{
-                    sample_map.insert(&point, &meta, SampleCell {
-                        curves: vec![i],
-                        points: vec![point],
-                        params: vec![u],
-                    });
+                // if let Some(sample_cell) = sample_map.get_mut(&point, &meta) {
+                //     //log("add to sample cell!!!");
+                //     sample_cell.curves.push(i);
+                //     sample_cell.points.push(point);
+                //     sample_cell.params.push(u);
+                // }else{
+                //     sample_map.insert(&point, &meta, SampleCell {
+                //         curves: vec![i],
+                //         points: vec![point],
+                //         params: vec![u],
+                //     });
+                // }
+                for offset in &offsets {
+                    if let Some(sample_cell) = sample_map.get_mut(&(point + *offset), &meta) {
+                        //log("add to sample cell!!!");
+                        sample_cell.curves.push(i);
+                        sample_cell.points.push(point);
+                        sample_cell.params.push(u);
+                    }else{
+                        sample_map.insert(&point, &meta, SampleCell {
+                            curves: vec![i],
+                            points: vec![point],
+                            params: vec![u],
+                        });
+                    }
                 }
             }
         }

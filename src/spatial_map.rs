@@ -25,12 +25,21 @@ impl<T: Clone> SpatialMap<T> {
     }
 
     pub fn get_mut(&mut self, point: &Vec2, meta: &String) -> Option<&mut T> {
+        // let s = self.cell_size;
+        // for x in [point.x-s, point.x, point.x+s] {
+        //     for y in [point.y-s, point.y, point.y+s] {
+        //         self.map.get_mut(&self.get_spatial_key(point.x, point.y, meta))
+        //     }
+        // }
         self.map.get_mut(&self.get_spatial_key(point.x, point.y, meta))
     }
 
-    pub fn contains_key(&self, point: &Vec2, meta: &String) -> bool {
+    pub fn contains_key(&self, point: &Vec2, meta: &String) -> bool { 
         self.map.contains_key(&self.get_spatial_key(point.x, point.y, meta))
     }
+    // pub fn contains_key(&self, x: f32, y: f32, meta: &String) -> bool { //point: &Vec2
+    //     self.map.contains_key(&self.get_spatial_key(x, y, meta))
+    // }
 
     pub fn get_spatial_key(&self, x: f32, y: f32, meta: &String) -> String {
         (x/self.cell_size).round().to_string() + "," + &(y/self.cell_size).round().to_string() + "," + meta

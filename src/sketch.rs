@@ -95,19 +95,22 @@ impl Turtle {
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "Circle::default")]
-pub struct Circle {
+#[serde(default = "Arc::default")]
+pub struct Arc {
     pub center: [f32; 2], 
     pub radius: f32,
+    pub angle: f32,
 }
 
-impl Circle {
+impl Arc {
     pub fn get_shapes(&self) -> Vec<Shape> {
+        let mut angle = self.angle;
+        if angle == 0. {angle = PI*2.;}
         let revolve = Revolve {
             parts: vec![Model::Point([self.center[0] + self.radius, self.center[1], 0.])],
             center: [self.center[0], self.center[1], 0.],
             axis: [0., 0., 1.],
-            angle: PI*2.,
+            angle,
         };
         revolve.get_shapes()
     }

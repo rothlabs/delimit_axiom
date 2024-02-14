@@ -157,7 +157,8 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     }
 
     fn get_basis_at_u(&self, normal_u: f32) -> Vec<f32> {
-        let u = *self.knots.last().unwrap_or(&0.) * normal_u; // .unwrap_throw("") to js client
+        let bounded_u = self.min*(1.-normal_u) + self.max*normal_u;
+        let u = *self.knots.last().unwrap_or(&0.) * bounded_u; // .unwrap_throw("") to js client
         let mut basis = self.get_basis_of_degree_0_at_u(u);
         for degree in 1..self.order {
             for i0 in 0..self.controls.len() {
@@ -173,7 +174,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
                 basis[i0] = f * basis[i0] + g * basis[i1];
             }
         }
-        if normal_u == 1. { 
+        if bounded_u == 1. { 
             basis[self.controls.len() - 1] = 1.; // last control edge case
         }
         basis

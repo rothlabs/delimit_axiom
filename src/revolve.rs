@@ -14,12 +14,14 @@ pub struct Revolve {
 
 impl Revolve {
     pub fn get_shapes(&self) -> Vec<Shape> { // , query: &DiscreteQuery
+        let angle = self.angle.abs();
         let center = get_vec3_or(&self.center, Vec3::ZERO);
         let axis = get_vec3_or(&self.axis, Vec3::Z).normalize(); 
         let basis = Basis {
             axis,
             translation: Mat4::from_translation(center),
             reverse_translation: Mat4::from_translation(-center),
+            direction: self.angle.signum(),
         };
         let mut knots = vec![0.; 3];
         let mut weights = vec![1.];
@@ -27,7 +29,7 @@ impl Revolve {
         let mut base_angle = 0.;
 
         // over quarter turn 
-        if self.angle > FRAC_PI_2 { 
+        if angle > FRAC_PI_2 { 
             base_angle = FRAC_PI_2; 
             knots.extend([base_angle, base_angle]);
             weights.extend([FRAC_1_SQRT_2, 1.]);
@@ -36,7 +38,7 @@ impl Revolve {
         } 
 
         // over half turn 
-        if self.angle > PI { 
+        if angle > PI { 
             base_angle = PI;
             knots.extend([base_angle, base_angle]);
             weights.extend([FRAC_1_SQRT_2, 1.]);
@@ -45,7 +47,7 @@ impl Revolve {
         } 
 
         // over three quarter turn  
-        if self.angle > FRAC_PI_2*3. { 
+        if angle > FRAC_PI_2*3. { 
             base_angle = FRAC_PI_2*3.;
             knots.extend([base_angle, base_angle]);
             weights.extend([FRAC_1_SQRT_2, 1.]);
@@ -54,12 +56,12 @@ impl Revolve {
         }
 
         // final turn 
-        let advance = (self.angle - base_angle) / 2.;
-        knots.extend([self.angle, self.angle, self.angle]);
+        let advance = (angle - base_angle) / 2.;
+        knots.extend([angle, angle, angle]);
         weights.extend([advance.cos(), 1.]);
         transforms.push(basis.get_transform(base_angle + advance, advance.cos()));
-        let end_mat4 = basis.get_transform(self.angle, 1.);
-        //let end_mat4 = Mat4::from_axis_angle(axis, self.angle);
+        let end_mat4 = basis.get_transform(angle * self.angle.signum(), 1.);
+        //let end_mat4 = Mat4::from_axis_angle(axis, angle);
 
 
         let mut shapes = vec![];
@@ -111,6 +113,7 @@ struct Basis {
     axis: Vec3,
     translation: Mat4,
     reverse_translation: Mat4,
+    direction: f32,
 }
 
 // TODO: fix skewing from diagonal axis 
@@ -122,7 +125,7 @@ impl Basis {
             (1./weight)*(1.-self.axis.dot(Vec3::Y).abs()) + self.axis.dot(Vec3::Y).abs(),
             (1./weight)*(1.-self.axis.dot(Vec3::Z).abs()) + self.axis.dot(Vec3::Z).abs(),
         ))
-        * Mat4::from_axis_angle(self.axis, angle)
+        * Mat4::from_axis_angle(self.axis, angle * self.direction)
         * self.reverse_translation
     }
 }

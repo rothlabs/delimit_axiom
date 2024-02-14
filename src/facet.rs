@@ -99,9 +99,9 @@ impl FacetShape { // impl<T: Default + IntoIterator<Item=f32>> FacetShape<T> {
     }
 
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { 
-        log("get mesh!! 0");
+        //log("get mesh!! 0");
         let facet = self.get_valid();
-        log("valid done");
+        //log("valid done");
         let mut u_count = 0;
         for curve in &facet.controls {
             let sample_count = curve.get_sample_count(query.count);

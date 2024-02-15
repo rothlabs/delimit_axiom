@@ -34,8 +34,8 @@ impl Union {
             cell_size,
             shapes: vec![],
             tolerance: 0.01,
-            max_walk_iterations: 400,
-            sample_cells: vec![],
+            max_walk_iterations: 1000,
+            samples: vec![],
         };
         union_shape.get_shapes()
     }
@@ -65,7 +65,7 @@ struct UnionShape {
     intersections: Vec<Vec<Intersection>>,
     tolerance: f32,
     max_walk_iterations: usize,
-    sample_cells: Vec<Sample>,
+    samples: Vec<Sample>,
 }
 
 #[derive(Clone)]
@@ -92,10 +92,10 @@ impl UnionShape {
             let mut point = first.point;
             let mut intersections = vec![first];
             for itc in &self.intersections[i] {
-                if itc.point.distance(point) > self.tolerance * 10. {
+                if itc.point.distance(point) > self.cell_size*2. {
                     intersections.push(itc);
-                    point = itc.point;
                 }
+                point = itc.point;
             }
             for itc in intersections { 
                 self.shapes.push(Shape::Point(vec3(itc.point.x, itc.point.y, 0.)));
@@ -120,27 +120,25 @@ impl UnionShape {
         let spatial_map = self.get_spatial_map();
         for i in 0..self.curves.len() {
             if let Some(cr) = self.curve_ranges.get_mut(&i) {
-                cr.params = vec![];
+                cr.params.clear();
             }
         }
-        let mut check_pair = |i0: usize, i1: usize| { //for pairs in spatial_map.get_pairs() {
-            let Sample {curve: c0, point: p0, u: u0} = self.sample_cells[i0];
-            let Sample {curve: c1, point: p1, u: u1} = self.sample_cells[i1];
+        spatial_map.for_pairs(&mut |i0: usize, i1: usize| { //for pairs in spatial_map.get_pairs() {
+            let Sample {curve: c0, point: p0, u: u0} = self.samples[i0];
+            let Sample {curve: c1, point: p1, u: u1} = self.samples[i1];
             if c0 == c1 {return}
             if p0.distance(p1) > self.cell_size {return}
             if let Some(cr) = self.curve_ranges.get_mut(&c0) {
                 cr.params.push(u0);
             }
             if add_intersections {
-                let itc = self.search_intersection(&c0, &c1, u0, u1);
-                if let Some(itc) = itc {
+                if let Some(itc) = self.get_intersection(&c0, &c1, u0, u1) {
                     if 0.01 < itc.u && itc.u < 0.99 {
                         self.intersections[c0].push(itc.clone());
                     } 
                 }
             }
-        };
-        spatial_map.for_pairs(&mut check_pair);
+        });
         for i in 0..self.curves.len() {
             if let Some(cr) = self.curve_ranges.get_mut(&i) {
                 cr.params.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -168,134 +166,95 @@ impl UnionShape {
         for (_, CurveRange {i, params, ..}) in &self.curve_ranges { 
             for u in params {
                 let point = self.curves[*i].get_vec2_at_u(*u);
-                self.sample_cells.push(Sample {
+                self.samples.push(Sample {
                     curve: *i,
                     point,
                     u: *u,
                 });
-                spatial_map.insert(&point, self.sample_cells.len()-1);
+                spatial_map.insert(&point, self.samples.len()-1);
             }
         }
         spatial_map
     }
 
-    fn search_intersection(&self, c0: &usize, c1: &usize, u_start0: f32, u_start1: f32) -> Option<Intersection> {
+    fn get_intersection(&self, c0: &usize, c1: &usize, u_start0: f32, u_start1: f32) -> Option<Intersection> {
         let curve0 = &self.curves[*c0];
         let curve1 = &self.curves[*c1];
         let mut move_t0 = true; 
-        let mut t0 = u_start0;
-        let mut t1 = u_start1;
-        let mut p0 = curve0.get_vec2_at_u(t0);
-        let mut p1 = curve1.get_vec2_at_u(t1);
+        let mut u0 = u_start0;
+        let mut u1 = u_start1;
+        let mut p0 = curve0.get_vec2_at_u(u0);
+        let mut p1 = curve1.get_vec2_at_u(u1);
         let mut distance = p0.distance(p1);
-        let mut dir0 = curve0.get_param_step(4, self.cell_size/2.);
-        let mut dir1 = curve1.get_param_step(4, self.cell_size/2.); 
+        let mut dir0 = curve0.get_param_step(4, self.cell_size/10.);
+        let mut dir1 = curve1.get_param_step(4, self.cell_size/10.); 
         for i in 0..self.max_walk_iterations {
             if distance < self.tolerance { 
                 break; 
             }
             // if i == self.max_walk_iterations-1 {
-            //     //log("Hit max iterations in search_intersection!");
+            //     log("Hit max iterations in get_intersection!");
             // }
             if move_t0 {
-                t0 = (t0 + dir0).clamp(0., 1.);
-                p0 = curve0.get_vec2_at_u(t0);
+                u0 = (u0 + dir0).clamp(0., 1.);
+                p0 = curve0.get_vec2_at_u(u0);
             }else{
-                t1 = (t1 + dir1).clamp(0., 1.);
-                p1 = curve1.get_vec2_at_u(t1);
+                u1 = (u1 + dir1).clamp(0., 1.);
+                p1 = curve1.get_vec2_at_u(u1);
             }
             let dist = p0.distance(p1);
             if dist >= distance {
                 if move_t0 {
-                    dir0 = dir0 * -0.9;
+                    dir0 = dir0 * -0.99;
                 }else{
-                    dir1 = dir1 * -0.9;
+                    dir1 = dir1 * -0.99;
                 }
                 move_t0 = !move_t0;
             }
             distance = dist;
         }
         if distance < self.tolerance {
-            let d0 = curve0.get_vec2_at_u(t0 + 0.001);
-            let d1 = curve1.get_vec2_at_u(t1 + 0.001);
-            let angle = (d0-p0).angle_between(d1-p1);
-            Some(Intersection {
-                u: t0,
-                angle,
-                point: curve0.get_vec2_at_u(t0),
-            })
+            let delta = 0.0001;
+            let d0 = u0 + delta;
+            let d1 = u1 + delta;
+            let pd0 = curve0.get_vec2_at_u(d0);
+            let pd1 = curve1.get_vec2_at_u(d1);
+            if let Some(ip) = get_line_intersection(p0, pd0, p1, pd1) {
+                let ratio = p0.distance(ip) / p0.distance(pd0);
+                let mut u = u0 + (d0-u0)*ratio;
+                let mut point = curve0.get_vec2_at_u(u);
+                let alt_u = u0 + (u0-d0)*ratio;
+                let alt_point = curve0.get_vec2_at_u(alt_u);
+                if alt_point.distance(ip) < point.distance(ip) {
+                    u = alt_u;
+                    point = alt_point;
+                }
+                let angle = (pd0-p0).angle_between(pd1-p1);
+                Some(Intersection {
+                    u,
+                    point,
+                    angle,
+                })
+            }else{
+                None
+            }
         }else{
             None
         }
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-// let dist0 = curves[*c0].get_vec2_at_u(0.).distance(curves[*c1].get_vec2_at_u(0.));
-//                                 let dist1 = curves[*c0].get_vec2_at_u(0.).distance(curves[*c1].get_vec2_at_u(1.));
-//                                 let dist2 = curves[*c0].get_vec2_at_u(1.).distance(curves[*c1].get_vec2_at_u(0.));
-//                                 let dist3 = curves[*c0].get_vec2_at_u(1.).distance(curves[*c1].get_vec2_at_u(1.));
-//                                 if dist0 < tolerance || dist1 < tolerance || dist2 < tolerance || dist3 < tolerance {continue}
-
-
-// let offsets = vec![
-//             vec2(-s, -s),
-//             vec2(-s, s),
-//             vec2(s, -s),
-//             vec2(s, s),
-//             vec2(0., -s),
-//             vec2(0., s),
-//             vec2(-s, 0.),
-//             vec2(s, 0.),
-//             vec2(0., 0.),
-//         ];
-
-// fn get_spatial_key(point: Vec2, cell_size: f32) -> String {
-//     (point.x/cell_size).round().to_string() + "," + &(point.y/cell_size).round().to_string()
-// }
-
-
-// //let mut count = 0;
-// let mut boundaries: Vec<Vec<Boundary>> = vec![]; //             boundaries.push(vec![]);
-// for (i0, curve0) in curves.iter().enumerate() {
-//     for (i1, curve1) in curves[i0..].iter().enumerate(){
-//         for p0 in curve0.get_controls_as_vec2().windows(2) {// }.enumerate() {
-//             for p1 in curve1.get_controls_as_vec2().windows(2) {//}.enumerate() {
-//                 let control_intersect = get_line_intersection(p0[0], p0[1], p1[0], p1[1]);
-//                 if let Option::Some(ci) = control_intersect {
-//                     //shapes.push(Shape::Point([ci.x, ci.y, 0.]));
-//                     let vva = search_intersection(&curve0, &curve1, ci);
-//                     if let Option::Some(vva) = vva {
-//                         let ip0 = curve0.get_vec2_at_u(vva[0]);
-//                         let ip1 = curve1.get_vec2_at_u(vva[1]);
-//                         shapes.push(Shape::Point([ip0.x, ip0.y, 0.]));
-//                         shapes.push(Shape::Point([ip1.x, ip1.y, 0.]));
-//                         //console_log!("intersection angle0 {}", vva[2]);
-//                         //console_log!("intersection angle1 {}", PI*2.-vva[2]);
-//                         let boundary0 = BoundaryV {v:vva[0], angle:vva[2]};
-//                         let boundary1 = BoundaryV {v:vva[1], angle:-vva[2]};
-//                         boundaries[i0].push(Boundary::V(boundary0));
-//                         boundaries[i0+i1].push(Boundary::V(boundary1));
-//                     }
-//                     //count += 1;
-//                 }
-//             }
-//         }
-//     }
-// }
-// for (i, curve) in curves.iter().enumerate() {
-//     let mut nurbs = curve.clone();
-//     nurbs.boundaries.extend(boundaries[i].clone());
-//     shapes.push(Shape::Curve(nurbs));
-// }
-// //console_log!("intersections: {}", count);
-// shapes
+fn get_line_intersection(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<Vec2> {
+    // let t = ((p1.x - p3.x)*(p3.y - p4.y) - (p1.y - p3.y)*(p3.x - p4.x)) 
+    //     / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
+    // let x = p1.x + t*(p2.x - p1.x);
+    // let y = p1.y + t*(p2.y - p1.y);
+    let u = - ((p1.x - p2.x)*(p1.y - p3.y) - (p1.y - p2.y)*(p1.x - p3.x))
+        / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
+    let x = p3.x + u*(p4.x - p3.x);
+    let y = p3.y + u*(p4.y - p3.y);
+    if x.is_nan() || y.is_nan() {
+        return None;
+    }
+    Some(vec2(x, y))
+}

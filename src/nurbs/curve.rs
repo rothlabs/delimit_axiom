@@ -60,7 +60,7 @@ impl Default for CurveShape {
 }
 
 impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
-    pub fn get_transformed(&self, mat4: Mat4) -> CurveShape {
+    pub fn get_transformed(&self, mat4: Mat4) -> Self {
         let mut curve = CurveShape {
             nurbs: self.nurbs.clone(),
             controls: vec![],

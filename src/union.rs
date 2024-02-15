@@ -44,12 +44,19 @@ impl Union {
     }
 }
 
+// #[derive(Clone, Default)]
+// struct SampleCell {
+//     //curves: Vec<CurveSample>,
+//     curves: Vec<usize>,
+//     points: Vec<Vec2>,
+//     params: Vec<f32>,
+// }
+
 #[derive(Clone, Default)]
 struct SampleCell {
-    //curves: Vec<CurveSample>,
-    curves: Vec<usize>,
-    points: Vec<Vec2>,
-    params: Vec<f32>,
+    curve: usize,
+    point: Vec2,
+    u: f32,
 }
 
 #[derive(Clone, Default)]
@@ -130,36 +137,20 @@ impl UnionShape {
                 cr.params = vec![];
             }
         }
-        let mut key_parts = [0; 2];
-        for (cell_key, sample_cell0) in &spatial_map.map {
-            let split_key = cell_key.split(",");
-            for (i, string_int) in split_key.enumerate() {
-                key_parts[i] = string_int.parse().expect("failed to parse key in union");
+        for pairs in spatial_map.get_pairs() {
+            let SampleCell {curve: c0, point: p0, u: u0} = pairs[0];
+            let SampleCell {curve: c1, point: p1, u: u1} = pairs[1];
+            if c0 == c1 {continue}
+            if p0.distance(p1) > self.cell_size {continue}
+            if let Some(cr) = self.curve_ranges.get_mut(&c0) {
+                cr.params.push(u0);
             }
-            for (i0, c0) in sample_cell0.curves.iter().enumerate() {
-                for x in -1..2 {
-                    for y in -1..2 {
-                        let key = (key_parts[0]+x).to_string()+","+&(key_parts[1]+y).to_string();// + ",";
-                        let sample_cell1 = spatial_map.map.get(&key); 
-                        if let Some(sample_cell1) = sample_cell1 {
-                            for (i1, c1) in sample_cell1.curves.iter().enumerate() {
-                                if c0 == c1 {continue}
-                                if sample_cell0.points[i0].distance(sample_cell1.points[i1]) > self.cell_size {continue}
-                                if let Some(cr) = self.curve_ranges.get_mut(&c0) {
-                                    cr.params.push(sample_cell0.params[i0]);
-                                }
-                                if add_intersections {
-                                    let itc = self.search_intersection(c0, c1, sample_cell0.params[i0], sample_cell1.params[i1]);
-                                    if let Some(itc) = itc {
-                                        if 0.01 < itc.u && itc.u < 0.99 {
-                                            self.intersections[*c0].push(itc.clone());
-                                            //self.shapes.push(Shape::Point([itc.point.x, itc.point.y, 0.]));
-                                        } 
-                                    }
-                                }
-                            }
-                        }
-                    }
+            if add_intersections {
+                let itc = self.search_intersection(&c0, &c1, u0, u1);
+                if let Some(itc) = itc {
+                    if 0.01 < itc.u && itc.u < 0.99 {
+                        self.intersections[c0].push(itc.clone());
+                    } 
                 }
             }
         }
@@ -185,24 +176,17 @@ impl UnionShape {
         self.cell_size /= 10.;
     }
 
-    fn get_spatial_map(&self) -> SpatialMap<SampleCell> { // , curves: Vec<CurveShape>, curve_ranges: Vec<CurveRange>, cell_size: f32
+    fn get_spatial_map(&self) -> SpatialMap<SampleCell> { 
         let meta = String::from("");
         let mut spatial_map: SpatialMap<SampleCell> = SpatialMap::new(self.cell_size); 
         for (_, CurveRange {i, params, ..}) in &self.curve_ranges { 
             for u in params {
-                //let u = min + step * step_i as f32;
                 let point = self.curves[*i].get_vec2_at_u(*u);
-                if let Some(sample_cell) = spatial_map.get_mut(&point, &meta) {
-                    sample_cell.curves.push(*i);
-                    sample_cell.points.push(point);
-                    sample_cell.params.push(*u);
-                }else{
-                    spatial_map.insert(&point, &meta, &SampleCell {
-                        curves: vec![*i],
-                        points: vec![point],
-                        params: vec![*u],
-                    });
-                }
+                spatial_map.insert(&point, &meta, &SampleCell {
+                    curve: *i,
+                    point,
+                    u: *u,
+                });
             }
         }
         spatial_map

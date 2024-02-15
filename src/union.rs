@@ -105,7 +105,7 @@ impl UnionShape {
                 }
             }
             for itc in intersections { 
-                self.shapes.push(Shape::Point([itc.point.x, itc.point.y, 0.]));
+                self.shapes.push(Shape::Point(vec3(itc.point.x, itc.point.y, 0.)));
                 if set_min {
                     curve.min = itc.u;
                 }else{

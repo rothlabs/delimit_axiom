@@ -1,13 +1,13 @@
-use crate::mesh::Mesh;
-//use crate::CurveShape;
-use crate::{Model, Shape, CurveShape, DiscreteQuery, get_curves, log};
+use crate::nurbs::Nurbs;
+use crate::query::DiscreteQuery;
+use crate::result::Mesh;
+use crate::{Model, Shape, CurveShape, get_curves, log};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
 use lyon::geom::{Box2D, Point};
 use lyon::path::Winding;
 
-use super::Nurbs;
 //use rayon::prelude::*;
 
 // ((a % b) + b) % b)  ->  a modulo b
@@ -15,8 +15,6 @@ use super::Nurbs;
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
-
-//static default_boundary: BoundaryV = BoundaryV::default();
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Facet::default")]
@@ -63,7 +61,7 @@ impl Default for FacetShape {
     }
 }
 
-impl FacetShape { // impl<T: Default + IntoIterator<Item=f32>> FacetShape<T> {
+impl FacetShape { 
     pub fn get_reversed_and_transformed(&self, mat4: Mat4) -> Self {
         let mut facet = self.get_clone_with_empty_controls(true);
         for control in self.controls.iter().rev() {
@@ -142,7 +140,7 @@ impl FacetShape { // impl<T: Default + IntoIterator<Item=f32>> FacetShape<T> {
         }
         Mesh {
             vector, //:    geometry.vertices.into_iter().flatten().collect(),
-            triangles: geometry.indices, 
+            trivec: geometry.indices, 
         }
     }
 
@@ -171,6 +169,17 @@ impl FacetShape { // impl<T: Default + IntoIterator<Item=f32>> FacetShape<T> {
 }
 
 
+#[derive(Clone, Serialize, Deserialize)] 
+pub enum Parameter {
+    U(f32),
+    V(f32),
+}
+
+impl Default for Parameter {
+    fn default() -> Self { Parameter::U(0.) }
+}
+
+
 // // visual tests
 // impl FacetShape {
 //     // for examining the "basis functions" as pictured on wikipedia
@@ -184,92 +193,3 @@ impl FacetShape { // impl<T: Default + IntoIterator<Item=f32>> FacetShape<T> {
 //             .collect()
 //     }
 // }
-
-
-// fn get_valid_order(&self) -> usize {
-//     self.order.min(self.controls.len()).max(2)
-// }
-
-// fn get_valid_weights(&self) -> Vec<f32> {
-//     if self.weights.len() == self.controls.len() {
-//         self.weights.clone()
-//     } else {
-//         vec![1.; self.controls.len()]
-//     }
-// }
-
-// fn get_valid_knots(&self) -> Vec<f32> {
-//     if self.knots.len() == self.controls.len() + self.get_valid_order() {
-//         self.knots.clone()
-//     } else {
-//         self.get_open_knots()
-//     }
-// }
-
-// fn get_open_knots(&self) -> Vec<f32> {
-//     let order = self.get_valid_order();
-//     let repeats = order - 1; // knot multiplicity = order for ends of knot vector
-//     let max_knot = self.controls.len() + order - (repeats * 2) - 1;
-//     let mut knots = vec![0_f32; repeats];
-//     knots.extend((0..=max_knot).map(|k| k as f32));
-//     knots.extend(vec![max_knot as f32; repeats]);
-//     knots
-// }
-
-    // fn get_rational_basis_at_v(&self, v: f32) -> Vec<f32> {
-    //     let basis = self.get_basis_at_v(v);
-    //     let sum: f32 = self.weights.iter().enumerate().map(|(i, w)| basis[i] * w).sum();
-    //     if sum > 0. {
-    //         self.weights.iter().enumerate().map(|(i, w)| basis[i] * w / sum).collect()
-    //     } else {
-    //         vec![0.; self.weights.len()]
-    //     }
-    // }
-
-    // fn get_basis_at_v(&self, normal_v: f32) -> Vec<f32> {
-    //     let t = *self.knots.last().unwrap_or(&0.) * normal_v; // .unwrap_throw("") to js client
-    //     let mut basis = self.get_basis_of_degree_0_at_v(t);
-    //     for degree in 1..self.order {
-    //         for i0 in 0..self.controls.len() {
-    //             let i1 = i0 + 1; 
-    //             let mut f = 0.;
-    //             let mut g = 0.;
-    //             if basis[i0] != 0. {
-    //                 f = (t - self.knots[i0]) / (self.knots[degree + i0] - self.knots[i0]) 
-    //             }
-    //             if basis[i1] != 0. {
-    //                 g = (self.knots[degree + i1] - t) / (self.knots[degree + i1] - self.knots[i1])
-    //             }
-    //             basis[i0] = f * basis[i0] + g * basis[i1];
-    //         }
-    //     }
-    //     if normal_v == 1. { 
-    //         basis[self.controls.len() - 1] = 1.; // last control edge case
-    //     }
-    //     basis
-    // }
-
-    // fn get_basis_of_degree_0_at_v(&self, v: f32) -> Vec<f32> {
-    //     self.knots.windows(2)
-    //         .map(|knots| {
-    //             if v >= knots[0] && v < knots[1] {
-    //                 1.
-    //             } else {
-    //                 0.
-    //             }
-    //         }).collect()
-    // }
-
-
-        // pub fn get_polyline_at_parameter(&self, t: &Parameter, count: usize) -> Vec<Vec<f32>> {
-    //     let facet = self.get_valid();
-    //     match t {
-    //         Parameter::U(u) => facet.get_polyline_at_u(*u, count),
-    //         Parameter::V(v) => facet.get_polyline_at_v(*v, count),
-    //     }
-    // }
-
-    // fn get_sample_count(&self, count: usize) -> usize { 
-    //     let mul = self.controls.len()-1;
-    //     self.controls.len() + count * (self.order - 2) * mul
-    // }

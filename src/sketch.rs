@@ -38,9 +38,9 @@ impl Sketch {
                     let mut curve = CurveShape::default();
                     curve.nurbs.knots = vec![0., 0., 1., 1.];
                     curve.nurbs.weights = vec![1., 1.];
-                    curve.controls = vec![[turtle.pos.x, turtle.pos.y, 0.], [p[0], p[1], 0.]]; 
+                    curve.controls = vec![vec3(turtle.pos.x, turtle.pos.y, 0.), vec3(p[0], p[1], 0.)]; 
                     shapes.push(Shape::Curve(curve));
-                    shapes.push(Shape::Point([p[0], p[1], 0.]));
+                    shapes.push(Shape::Point(vec3(p[0], p[1], 0.)));
                     turtle.move_to(p[0], p[1]);
                 },
                 Action::Turn(turn) => {

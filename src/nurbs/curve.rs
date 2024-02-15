@@ -1,5 +1,5 @@
 
-use crate::{Model, Shape, DiscreteQuery, get_points, get_transformed_point, log};
+use crate::{Model, Shape, query::DiscreteQuery, get_points, get_transformed_point, log};
 use glam::*;
 use serde::{Deserialize, Serialize};
 
@@ -21,8 +21,8 @@ pub struct Curve {
     pub knots:    Vec<f32>,    // knot_count = order + control_count
     pub weights:  Vec<f32>,    // weight_count = control_count
     pub order:    usize,       // order = polynomial_degree + 1
-    pub min:      f32,
-    pub max:      f32,
+    //pub min:      f32,
+    //pub max:      f32,
 }
 
 impl Curve {
@@ -33,9 +33,9 @@ impl Curve {
                 knots:   self.knots.clone(),
                 weights: self.weights.clone(),
             },
-            controls: get_points(&self.controls), //.iter().map(|p| vec3(p[0], p[1], p[2])).collect(),
-            min: self.min,
-            max: self.max,
+            controls: get_points(&self.controls),//.iter().map(|p| vec3(p[0], p[1], p[2])).collect(),
+            min: 0., //self.min,
+            max: 1., //self.max,
         })]
     }
 }
@@ -43,7 +43,7 @@ impl Curve {
 #[derive(Clone)]
 pub struct CurveShape {
     pub nurbs:    Nurbs,
-    pub controls: Vec<[f32; 3]>, // [f32; 3]
+    pub controls: Vec<Vec3>, // [f32; 3]
     pub min:      f32,
     pub max:      f32,
 }
@@ -74,11 +74,11 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     }
     
     pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
-        self.nurbs.get_param_step(min_count, max_distance, self.get_controls_as_vec3())
+        self.nurbs.get_param_step(min_count, max_distance, &self.controls)
     }
 
     pub fn get_param_samples(&self, min_count: usize, max_distance: f32) -> Vec<f32> {
-        self.nurbs.get_param_samples(min_count, max_distance, self.get_controls_as_vec3())
+        self.nurbs.get_param_samples(min_count, max_distance, &self.controls)
     }
 
     pub fn get_polyline(&self, query: &DiscreteQuery) -> Vec<f32> {
@@ -89,17 +89,17 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
             .flatten().collect()
     }
 
-    pub fn get_controls_as_vec2(&self) -> Vec<Vec2> {
-        self.controls.iter().map(|p| {
-            vec2(p[0], p[1])
-        }).collect()
-    }
+    // pub fn get_controls_as_vec2(&self) -> Vec<Vec2> {
+    //     self.controls.iter().map(|p| {
+    //         vec2(p[0], p[1])
+    //     }).collect()
+    // }
 
-    pub fn get_controls_as_vec3(&self) -> Vec<Vec3> {
-        self.controls.iter().map(|p| {
-            vec3(p[0], p[1], 0.)
-        }).collect()
-    }
+    // pub fn get_controls_as_vec3(&self) -> Vec<Vec3> {
+    //     self.controls.iter().map(|p| {
+    //         vec3(p[0], p[1], 0.)
+    //     }).collect()
+    // }
 
     pub fn get_vec2_at_u(&self, u: f32) -> Vec2 {
         let p = self.get_vector_at_u(u);
@@ -111,7 +111,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         let basis = self.nurbs.get_rational_basis_at_u(bounded_u);
         let mut vector = vec![];
         if !self.controls.is_empty() {
-            for component_index in 0..self.controls[0].len() { 
+            for component_index in 0..3 { // self.controls[0].len() { 
                 vector.push(
                     (0..self.controls.len())
                         .map(|i| self.controls[i][component_index] * basis[i]).sum()

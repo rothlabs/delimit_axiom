@@ -1,5 +1,5 @@
 use std::f32::consts::{FRAC_PI_2, PI};
-use crate::{Model, CurveShape, Revolve, Shape, log};
+use crate::{Model, CurveShape, Revolve, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -24,10 +24,6 @@ pub struct Turn {
     pub angle:  f32,
     pub radius: f32,
 }
-
-// macro_rules! console_log {
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
 
 impl Sketch { 
     pub fn get_shapes(&self) -> Vec<Shape> {

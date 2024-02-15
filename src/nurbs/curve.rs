@@ -33,7 +33,7 @@ impl Curve {
                 knots:   self.knots.clone(),
                 weights: self.weights.clone(),
             },
-            controls: get_points(&self.controls),
+            controls: get_points(&self.controls), //.iter().map(|p| vec3(p[0], p[1], p[2])).collect(),
             min: self.min,
             max: self.max,
         })]
@@ -43,14 +43,14 @@ impl Curve {
 #[derive(Clone)]
 pub struct CurveShape {
     pub nurbs:    Nurbs,
-    pub controls: Vec<[f32; 3]>,
+    pub controls: Vec<[f32; 3]>, // [f32; 3]
     pub min:      f32,
     pub max:      f32,
 }
 
 impl Default for CurveShape {
     fn default() -> Self {
-        CurveShape {
+        Self {
             nurbs: Nurbs::default(),
             controls: vec![],
             min: 0.,
@@ -61,7 +61,7 @@ impl Default for CurveShape {
 
 impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     pub fn get_transformed(&self, mat4: Mat4) -> Self {
-        let mut curve = CurveShape {
+        let mut curve = Self {
             nurbs: self.nurbs.clone(),
             controls: vec![],
             min: self.min,

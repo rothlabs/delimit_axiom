@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f32::{consts::PI, EPSILON, INFINITY, NEG_INFINITY}, fmt::Result};
+use std::{collections::HashMap, f32::EPSILON};
 use crate::{get_curves, log, CurveShape, Model, Shape, SpatialMap};
 use serde::{Deserialize, Serialize};
 use glam::*;

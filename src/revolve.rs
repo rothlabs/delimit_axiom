@@ -16,7 +16,7 @@ impl Revolve {
     pub fn get_shapes(&self) -> Vec<Shape> { // , query: &DiscreteQuery
         let center = get_vec3_or(&self.center, Vec3::ZERO);
         let axis = get_vec3_or(&self.axis, Vec3::Z).normalize(); 
-        let mut basis = Basis::new(center, axis, self.angle);
+        let mut basis = RevolveBasis::new(center, axis, self.angle);
         basis.add_intermediate_turn_if_needed(FRAC_PI_2,    FRAC_PI_4);
         basis.add_intermediate_turn_if_needed(PI,           FRAC_PI_4*3.);
         basis.add_intermediate_turn_if_needed(FRAC_PI_2*3., FRAC_PI_4*5.);
@@ -63,7 +63,7 @@ impl Revolve {
     }
 }
 
-struct Basis {
+struct RevolveBasis {
     nurbs: Nurbs,
     axis: Vec3,
     angle: f32,
@@ -74,9 +74,9 @@ struct Basis {
     reverse_translation: Mat4,
 }
 
-impl Basis {
+impl RevolveBasis {
     fn new(center: Vec3, axis: Vec3, angle: f32) -> Self {
-        Basis {
+        Self {
             nurbs: Nurbs {
                 order:   3,
                 knots:   vec![0.; 3],

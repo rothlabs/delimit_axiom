@@ -21,13 +21,8 @@ impl Nurbs {
     }
 
     pub fn get_param_samples(&self, min_count: usize, max_distance: f32, controls: Vec<Vec3>) -> Vec<f32> {
-        // let mut sample_params = vec![];
         let count = self.get_sample_count_with_max_distance(min_count, max_distance, controls);
         (0..count).map(|s| s as f32 / (count-1) as f32).collect()
-        // for step in 0..count {
-        //     sample_params.push(step as f32 / (count-1) as f32);
-        // }
-        // sample_params
     }
 
     pub fn get_sample_count_with_max_distance(&self, min_count: usize, max_distance: f32, controls: Vec<Vec3>) -> usize {
@@ -53,10 +48,6 @@ impl Nurbs {
         }
     }
 
-    // fn get_valid_order(&self, control_count: usize) -> usize {
-    //     self.order.min(control_count).max(2)
-    // }
-
     fn get_valid_weights(&self, control_count: usize) -> Vec<f32> {
         if self.weights.len() == control_count {
             self.weights.clone()
@@ -66,7 +57,7 @@ impl Nurbs {
     }
 
     fn get_valid_knots(&self, control_count: usize, order: usize) -> Vec<f32> {
-        if self.knots.len() == control_count + order { // self.get_valid_order(control_count)
+        if self.knots.len() == control_count + order { 
             self.knots.clone()
         } else {
             self.get_open_knots(control_count, order)
@@ -74,7 +65,6 @@ impl Nurbs {
     }
 
     fn get_open_knots(&self, control_count: usize, order: usize) -> Vec<f32> {
-        //let order = self.get_valid_order(control_count);
         let repeats = order - 1; // knot multiplicity = order for ends of knot vector
         let max_knot = control_count + order - (repeats * 2) - 1;
         let mut knots = vec![0_f32; repeats];

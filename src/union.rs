@@ -1,5 +1,5 @@
 use std::{collections::HashMap, f32::{consts::PI, EPSILON, INFINITY, NEG_INFINITY}, fmt::Result};
-use crate::{curve, get_curves, log, CurveShape, Model, Shape, SpatialMap};
+use crate::{get_curves, log, CurveShape, Model, Shape, SpatialMap};
 use serde::{Deserialize, Serialize};
 use glam::*;
 

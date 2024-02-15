@@ -40,8 +40,8 @@ impl Sketch {
                 },
                 Action::LineTo(p) => {
                     let mut curve = CurveShape::default();
-                    curve.knots = vec![0., 0., 1., 1.];
-                    curve.weights = vec![1., 1.];
+                    curve.nurbs.knots = vec![0., 0., 1., 1.];
+                    curve.nurbs.weights = vec![1., 1.];
                     curve.controls = vec![[turtle.pos.x, turtle.pos.y, 0.], [p[0], p[1], 0.]]; 
                     shapes.push(Shape::Curve(curve));
                     shapes.push(Shape::Point([p[0], p[1], 0.]));

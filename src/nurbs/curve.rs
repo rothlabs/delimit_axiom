@@ -1,11 +1,9 @@
-use std::f32::consts::PI;
 
-use crate::{Model, Shape, Parameter, DiscreteQuery, get_points, get_transformed_point, log};
+use crate::{Model, Shape, DiscreteQuery, get_points, get_transformed_point, log};
 use glam::*;
 use serde::{Deserialize, Serialize};
-use lyon::tessellation::*;
-use lyon::geom::{Box2D, Point};
-use lyon::path::Winding;
+
+use super::Nurbs;
 //use rayon::prelude::*;
 
 // ((a % b) + b) % b)  ->  a modulo b
@@ -30,10 +28,12 @@ pub struct Curve {
 impl Curve {
     pub fn get_shapes(&self) -> Vec<Shape> {
         vec![Shape::Curve(CurveShape{
+            nurbs: Nurbs {
+                order:   self.order,
+                knots:   self.knots.clone(),
+                weights: self.weights.clone(),
+            },
             controls: get_points(&self.controls),
-            knots: self.knots.clone(),
-            weights: self.weights.clone(),
-            order: self.order,
             min: self.min,
             max: self.max,
         })]
@@ -42,10 +42,8 @@ impl Curve {
 
 #[derive(Clone)]
 pub struct CurveShape {
+    pub nurbs:    Nurbs,
     pub controls: Vec<[f32; 3]>,
-    pub knots:    Vec<f32>,    // knot_count = order + control_count
-    pub weights:  Vec<f32>,    // weight_count = control_count
-    pub order:    usize,       // order = polynomial_degree + 1
     pub min:      f32,
     pub max:      f32,
 }
@@ -53,10 +51,8 @@ pub struct CurveShape {
 impl Default for CurveShape {
     fn default() -> Self {
         CurveShape {
+            nurbs: Nurbs::default(),
             controls: vec![],
-            knots: vec![],
-            weights: vec![],
-            order: 2,
             min: 0.,
             max: 1.,
         }
@@ -66,10 +62,8 @@ impl Default for CurveShape {
 impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     pub fn get_transformed(&self, mat4: Mat4) -> CurveShape {
         let mut curve = CurveShape {
+            nurbs: self.nurbs.clone(),
             controls: vec![],
-            order: self.order,
-            knots: self.knots.clone(),
-            weights: self.weights.clone(),
             min: self.min,
             max: self.max,
         };
@@ -78,44 +72,18 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         }
         curve
     }
-
+    
     pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
-        1. / (self.get_sample_count_with_max_distance(min_count, max_distance) - 1) as f32
+        self.nurbs.get_param_step(min_count, max_distance, self.get_controls_as_vec3())
     }
 
     pub fn get_param_samples(&self, min_count: usize, max_distance: f32) -> Vec<f32> {
-        let mut sample_params = vec![];
-        let count = self.get_sample_count_with_max_distance(min_count, max_distance);
-        for step in 0..count {
-            sample_params.push(step as f32 / (count-1) as f32);
-        }
-        sample_params
-    }
-
-    pub fn get_sample_count(&self, count: usize) -> usize { 
-        let mul = self.controls.len()-1;
-        self.controls.len() + count * (self.order - 2) * mul
-    }
-
-    pub fn get_sample_count_with_max_distance(&self, min_count: usize, max_distance: f32) -> usize {
-        let curve = self.get_valid();
-        let mut distance = 0.;
-        for step in 0..curve.controls.len()-1 {
-            let u0 = step as f32 / (curve.controls.len()-1) as f32;
-            let u1 = (step+1) as f32 / (curve.controls.len()-1) as f32;
-            let dist = curve.get_vec2_at_u(u0).distance(curve.get_vec2_at_u(u1));
-            if distance < dist {distance = dist;}
-        }
-        let mut count = min_count;
-        let distance_based_count = (distance / max_distance).ceil() as usize;
-        if distance_based_count > min_count {count = distance_based_count; }
-        count = count*(curve.controls.len()-1) + curve.controls.len();
-        count
+        self.nurbs.get_param_samples(min_count, max_distance, self.get_controls_as_vec3())
     }
 
     pub fn get_polyline(&self, query: &DiscreteQuery) -> Vec<f32> {
         let curve = self.get_valid();
-        let count = curve.get_sample_count(query.count);
+        let count = curve.nurbs.get_sample_count(query.count);
         (0..count).into_iter()
             .map(|u| curve.get_vector_at_u(u as f32 / (count-1) as f32)) 
             .flatten().collect()
@@ -127,13 +95,20 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         }).collect()
     }
 
+    pub fn get_controls_as_vec3(&self) -> Vec<Vec3> {
+        self.controls.iter().map(|p| {
+            vec3(p[0], p[1], 0.)
+        }).collect()
+    }
+
     pub fn get_vec2_at_u(&self, u: f32) -> Vec2 {
         let p = self.get_vector_at_u(u);
         vec2(p[0], p[1])
     }
 
     pub fn get_vector_at_u(&self, u: f32) -> Vec<f32> {
-        let basis = self.get_rational_basis_at_u(u);
+        let bounded_u = self.min*(1.-u) + self.max*u;
+        let basis = self.nurbs.get_rational_basis_at_u(bounded_u);
         let mut vector = vec![];
         if !self.controls.is_empty() {
             for component_index in 0..self.controls[0].len() { 
@@ -146,76 +121,21 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         vector
     }
 
-    fn get_rational_basis_at_u(&self, u: f32) -> Vec<f32> {
-        let basis = self.get_basis_at_u(u);
-        let sum: f32 = self.weights.iter().enumerate().map(|(i, w)| basis[i] * w).sum();
-        if sum > 0. {
-            self.weights.iter().enumerate().map(|(i, w)| basis[i] * w / sum).collect()
-        } else {
-            vec![0.; self.weights.len()]
-        }
-    }
-
-    fn get_basis_at_u(&self, normal_u: f32) -> Vec<f32> {
-        let bounded_u = self.min*(1.-normal_u) + self.max*normal_u;
-        let u = *self.knots.last().unwrap_or(&0.) * bounded_u; // .unwrap_throw("") to js client
-        let mut basis = self.get_basis_of_degree_0_at_u(u);
-        for degree in 1..self.order {
-            for i0 in 0..self.controls.len() {
-                let i1 = i0 + 1; 
-                let mut f = 0.;
-                let mut g = 0.;
-                if basis[i0] != 0. {
-                    f = (u - self.knots[i0]) / (self.knots[degree + i0] - self.knots[i0]) 
-                }
-                if basis[i1] != 0. {
-                    g = (self.knots[degree + i1] - u) / (self.knots[degree + i1] - self.knots[i1])
-                }
-                basis[i0] = f * basis[i0] + g * basis[i1];
-            }
-        }
-        if bounded_u == 1. { 
-            basis[self.controls.len() - 1] = 1.; // last control edge case
-        }
-        basis
-    }
-
-    fn get_basis_of_degree_0_at_u(&self, u: f32) -> Vec<f32> {
-        self.knots.windows(2)
-            .map(|knots| {
-                if u >= knots[0] && u < knots[1] {
-                    1.
-                } else {
-                    0.
-                }
-            }).collect()
-    }
-
-
     pub fn get_valid(&self) -> CurveShape {
-        // log("get valid curve!!!!");
-        // console_log!("controls {}", self.controls.len());
-        // let order = self.get_valid_order();
-        // console_log!("order {}", order);
-        // let knots = self.get_valid_knots();
-        // console_log!("knots {}", knots.len());
-        // let weights = self.get_valid_weights();
-        // console_log!("weights {}", weights.len());
-        // let controls  = self.controls.clone();
-        // console_log!("controls {}", controls.len());
-        let curve = CurveShape {
-            order: self.get_valid_order(),
-            knots: self.get_valid_knots(),
-            weights: self.get_valid_weights(),
-            controls: self.controls.clone(), //self.controls.iter().map(|c| self.get_valid_control(c)).collect(), // self.controls.clone(), //
+        CurveShape {
+            nurbs: self.nurbs.get_valid(self.controls.len()),
+            controls: self.controls.clone(), 
             min: self.min,
             max: self.max,
-        };
-        //console_log!("get_valid curve control count: {}", curve.controls.len());
-        curve
+        }
     }
-    
-    // fn get_valid_control(&self, control: &Shape) -> Shape {
+}
+
+
+
+
+
+// fn get_valid_control(&self, control: &Shape) -> Shape {
     //     match control {
     //         Shape::Point(m) => Shape::Point(*m),
     //         Shape::Curve(m) => Shape::Curve(m.get_valid()),
@@ -223,37 +143,72 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     //     }
     // }
 
-    fn get_valid_order(&self) -> usize {
-        self.order.min(self.controls.len()).max(2)
-    }
+    // fn get_valid_order(&self) -> usize {
+    //     self.order.min(self.controls.len()).max(2)
+    // }
 
-    fn get_valid_weights(&self) -> Vec<f32> {
-        if self.weights.len() == self.controls.len() {
-            self.weights.clone()
-        } else {
-            vec![1.; self.controls.len()]
-        }
-    }
+    // fn get_valid_weights(&self) -> Vec<f32> {
+    //     if self.weights.len() == self.controls.len() {
+    //         self.weights.clone()
+    //     } else {
+    //         vec![1.; self.controls.len()]
+    //     }
+    // }
 
-    fn get_valid_knots(&self) -> Vec<f32> {
-        if self.knots.len() == self.controls.len() + self.get_valid_order() {
-            self.knots.clone()
-        } else {
-            self.get_open_knots()
-        }
-    }
+    // fn get_valid_knots(&self) -> Vec<f32> {
+    //     if self.knots.len() == self.controls.len() + self.get_valid_order() {
+    //         self.knots.clone()
+    //     } else {
+    //         self.get_open_knots()
+    //     }
+    // }
 
-    fn get_open_knots(&self) -> Vec<f32> {
-        let order = self.get_valid_order();
-        let repeats = order - 1; // knot multiplicity = order for ends of knot vector
-        let max_knot = self.controls.len() + order - (repeats * 2) - 1;
-        let mut knots = vec![0_f32; repeats];
-        knots.extend((0..=max_knot).map(|k| k as f32));
-        knots.extend(vec![max_knot as f32; repeats]);
-        knots
-    }
-}
+    // fn get_open_knots(&self) -> Vec<f32> {
+    //     let order = self.get_valid_order();
+    //     let repeats = order - 1; // knot multiplicity = order for ends of knot vector
+    //     let max_knot = self.controls.len() + order - (repeats * 2) - 1;
+    //     let mut knots = vec![0_f32; repeats];
+    //     knots.extend((0..=max_knot).map(|k| k as f32));
+    //     knots.extend(vec![max_knot as f32; repeats]);
+    //     knots
+    // }
 
+
+
+
+    // pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
+    //     1. / (self.get_sample_count_with_max_distance(min_count, max_distance) - 1) as f32
+    // }
+
+    // pub fn get_param_samples(&self, min_count: usize, max_distance: f32) -> Vec<f32> {
+    //     let mut sample_params = vec![];
+    //     let count = self.get_sample_count_with_max_distance(min_count, max_distance);
+    //     for step in 0..count {
+    //         sample_params.push(step as f32 / (count-1) as f32);
+    //     }
+    //     sample_params
+    // }
+
+    // pub fn get_sample_count(&self, count: usize) -> usize { 
+    //     let mul = self.controls.len()-1;
+    //     self.controls.len() + count * (self.nurbs.order - 2) * mul
+    // }
+
+    // pub fn get_sample_count_with_max_distance(&self, min_count: usize, max_distance: f32) -> usize {
+    //     let curve = self.get_valid();
+    //     let mut distance = 0.;
+    //     for step in 0..curve.controls.len()-1 {
+    //         let u0 = step as f32 / (curve.controls.len()-1) as f32;
+    //         let u1 = (step+1) as f32 / (curve.controls.len()-1) as f32;
+    //         let dist = curve.get_vec2_at_u(u0).distance(curve.get_vec2_at_u(u1));
+    //         if distance < dist {distance = dist;}
+    //     }
+    //     let mut count = min_count;
+    //     let distance_based_count = (distance / max_distance).ceil() as usize;
+    //     if distance_based_count > min_count {count = distance_based_count; }
+    //     count = count*(curve.controls.len()-1) + curve.controls.len();
+    //     count
+    // }
 
 
 

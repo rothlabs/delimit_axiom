@@ -1,18 +1,16 @@
-use std::{collections::HashMap, f32::EPSILON};
-use crate::{get_curves, log, CurveShape, Model, Shape, SpatialMap, UnionBasis};
-use serde::{Deserialize, Serialize};
+use super::union2::UnionBasis2;
 use glam::*;
 
 
 #[derive(Clone)]
-pub struct Intersection {
+pub struct Intersection2 {
     pub u: f32,
     pub angle: f32,
     pub point: Vec2,
 }
 
-impl UnionBasis { 
-    pub fn get_intersection(&self, c0: &usize, c1: &usize, u_start0: f32, u_start1: f32) -> Option<Intersection> {
+impl UnionBasis2 { 
+    pub fn get_intersection(&self, c0: &usize, c1: &usize, u_start0: f32, u_start1: f32) -> Option<Intersection2> {
         let curve0 = &self.curves[*c0];
         let curve1 = &self.curves[*c1];
         let mut move_u0 = true; 
@@ -23,7 +21,7 @@ impl UnionBasis {
         let mut dir0 = curve0.get_param_step(4, self.cell_size/10.);
         let mut dir1 = curve1.get_param_step(4, self.cell_size/10.); 
         let mut distance = p0.distance(p1);
-        for i in 0..self.max_walk_iterations {
+        for _ in 0..self.max_walk_iterations {
             if distance < self.tolerance { 
                 break; 
             }
@@ -64,7 +62,7 @@ impl UnionBasis {
                     point = alt_point;
                 }
                 let angle = (pd0-p0).angle_between(pd1-p1);
-                Some(Intersection {
+                Some(Intersection2 {
                     u,
                     point,
                     angle,

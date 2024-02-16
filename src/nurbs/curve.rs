@@ -1,5 +1,5 @@
 
-use crate::{Model, Shape, query::DiscreteQuery, get_points, get_transformed_point, log};
+use crate::{Model, Shape, query::DiscreteQuery, get_points, get_transformed_point};
 use glam::*;
 use serde::{Deserialize, Serialize};
 
@@ -8,9 +8,9 @@ use super::Nurbs;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
+// macro_rules! console_log {
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }
 
 //static default_boundary: BoundaryV = BoundaryV::default();
 
@@ -89,21 +89,14 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
             .flatten().collect()
     }
 
-    // pub fn get_controls_as_vec2(&self) -> Vec<Vec2> {
-    //     self.controls.iter().map(|p| {
-    //         vec2(p[0], p[1])
-    //     }).collect()
-    // }
-
-    // pub fn get_controls_as_vec3(&self) -> Vec<Vec3> {
-    //     self.controls.iter().map(|p| {
-    //         vec3(p[0], p[1], 0.)
-    //     }).collect()
-    // }
-
     pub fn get_vec2_at_u(&self, u: f32) -> Vec2 {
         let p = self.get_vector_at_u(u);
         vec2(p[0], p[1])
+    }
+
+    pub fn get_vec3_at_u(&self, u: f32) -> Vec3 {
+        let p = self.get_vector_at_u(u);
+        vec3(p[0], p[1], p[2])
     }
 
     pub fn get_vector_at_u(&self, u: f32) -> Vec<f32> {

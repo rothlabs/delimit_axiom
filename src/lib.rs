@@ -11,7 +11,7 @@ mod union;
 
 use utils::*;
 use nurbs::{curve::*, facet::*};
-use spatial::*;
+use spatial::{spatial2::*, spatial3::*};
 use group::*;
 use sketch::*;
 use area::*;
@@ -92,6 +92,18 @@ pub fn get_shapes(parts: &Vec<Model>) -> Vec<Shape> {
     result
 }
 
+pub fn get_points(parts: &Vec<Model>) -> Vec<Vec3> {
+    let mut result = vec![];
+    for part in parts {
+        for shape in part.get_shapes() {
+            if let Shape::Point(point) = shape {
+                result.push(point);
+            }
+        }
+    }
+    result
+}
+
 pub fn get_curves(parts: &Vec<Model>) -> Vec<CurveShape> {
     let mut result = vec![];
     for part in parts {
@@ -104,16 +116,31 @@ pub fn get_curves(parts: &Vec<Model>) -> Vec<CurveShape> {
     result
 }
 
-pub fn get_points(parts: &Vec<Model>) -> Vec<Vec3> {
+pub fn get_facets(parts: &Vec<Model>) -> Vec<FacetShape> {
     let mut result = vec![];
     for part in parts {
         for shape in part.get_shapes() {
-            if let Shape::Point(point) = shape {
-                result.push(point);
+            if let Shape::Facet(facet) = shape {
+                result.push(facet);
             }
         }
     }
     result
+}
+
+pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>) {
+    let mut curves = vec![];
+    let mut facets = vec![];
+    for part in parts {
+        for shape in part.get_shapes() {
+            match shape {
+                Shape::Curve(s) => curves.push(s),
+                Shape::Facet(s) => facets.push(s),
+                _ => (),
+            }
+        }
+    }
+    (curves, facets)
 }
 
 pub fn get_transformed_point(point: &Vec3, mat4: Mat4) -> Vec3 { // [f32; 3] {

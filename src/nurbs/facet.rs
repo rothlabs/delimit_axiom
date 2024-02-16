@@ -1,7 +1,9 @@
+use std::ops::DivAssign;
+
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::result::Mesh;
-use crate::{Model, Shape, CurveShape, get_curves, log};
+use crate::{Model, Shape, CurveShape, get_curves};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
@@ -12,9 +14,9 @@ use lyon::path::Winding;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
+// macro_rules! console_log {
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Facet::default")]
@@ -63,7 +65,7 @@ impl Default for FacetShape {
 
 impl FacetShape { 
     pub fn get_reversed_and_transformed(&self, mat4: Mat4) -> Self {
-        let mut facet = self.get_clone_with_empty_controls(true);
+        let mut facet = self.clone_with_empty_controls(true);
         for control in self.controls.iter().rev() {
             facet.controls.push(control.get_transformed(mat4));
         }
@@ -71,20 +73,42 @@ impl FacetShape {
     }
 
     pub fn get_transformed(&self, mat4: Mat4) -> Self {
-        let mut facet = self.get_clone_with_empty_controls(false);
+        let mut facet = self.clone_with_empty_controls(false);
         for control in &self.controls {
             facet.controls.push(control.get_transformed(mat4));
         }
         facet
     }
 
-    fn get_clone_with_empty_controls(&self, reversed: bool) -> Self {
+    fn clone_with_empty_controls(&self, reversed: bool) -> Self {
         FacetShape {
             nurbs: self.nurbs.clone(),
             controls: vec![],
             boundaries: self.boundaries.clone(),
             reversed,
         }
+    }
+
+    pub fn get_param_step_and_samples(&self, min_count: usize, max_distance: f32) -> (Vec2, Vec<Vec2>) {
+        let mut params = vec![];
+        let mut u_count = 0;
+        let mut average_v_controls = vec![];
+        for curve in &self.controls {
+            let sample_count = self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &curve.controls);
+            if u_count < sample_count { u_count = sample_count; } 
+            let mut point = Vec3::ZERO;
+            for p in &curve.controls {
+                point += *p;
+            }
+            average_v_controls.push(point / curve.controls.len() as f32);
+        }
+        let v_count = self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &average_v_controls);
+        for u in 0..u_count {
+            for v in 0..v_count {
+                params.push(vec2(u as f32 / (u_count-1) as f32, v as f32 / (v_count-1) as f32));
+            }
+        }
+        (vec2(1./u_count as f32, 1./v_count as f32), params)
     }
 
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { 

@@ -73,12 +73,17 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         curve
     }
     
-    pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
-        self.nurbs.get_param_step(min_count, max_distance, &self.controls)
-    }
+    // pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
+    //     1. / self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &self.controls) as f32 // self.nurbs.get_param_step(min_count, max_distance, &self.controls)
+    // }
 
-    pub fn get_param_samples(&self, min_count: usize, max_distance: f32) -> Vec<f32> {
-        self.nurbs.get_param_samples(min_count, max_distance, &self.controls)
+    // pub fn get_param_samples(&self, min_count: usize, max_distance: f32) -> Vec<f32> {
+    //     self.nurbs.get_param_samples(min_count, max_distance, &self.controls)
+    // }
+
+    pub fn get_param_step_and_samples(&self, min_count: usize, max_distance: f32) -> (f32, Vec<f32>) {
+        let count = self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &self.controls);
+        (1./(count-1) as f32, (0..count).map(|u| u as f32 / (count-1) as f32).collect())
     }
 
     pub fn get_polyline(&self, query: &DiscreteQuery) -> Vec<f32> {

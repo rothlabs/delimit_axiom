@@ -108,7 +108,7 @@ impl FacetShape {
                 params.push(vec2(u as f32 / (u_count-1) as f32, v as f32 / (v_count-1) as f32));
             }
         }
-        (vec2(1./u_count as f32, 1./v_count as f32), params)
+        (vec2(1./(u_count-1) as f32, 1./(v_count-1) as f32), params)
     }
 
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { 

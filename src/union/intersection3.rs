@@ -18,8 +18,8 @@ impl UnionBasis3 {
         let mut u1 = u_start1;
         let mut p0 = curve0.get_vec3_at_u(u0);
         let mut p1 = curve1.get_vec3_at_u(u1);
-        let mut dir0 = curve0.get_param_step(4, self.cell_size/10.);
-        let mut dir1 = curve1.get_param_step(4, self.cell_size/10.); 
+        let mut dir0 = self.curve_ranges[c0].step / 10.;//curve0.get_param_step(4, self.cell_size/10.);
+        let mut dir1 = self.curve_ranges[c1].step / 10.;//curve1.get_param_step(4, self.cell_size/10.); 
         let mut distance = p0.distance(p1);
         for _ in 0..self.max_walk_iterations {
             if distance < self.tolerance { 

@@ -18,8 +18,8 @@ impl UnionBasis2 {
         let mut u1 = u_start1;
         let mut p0 = curve0.get_vec2_at_u(u0);
         let mut p1 = curve1.get_vec2_at_u(u1);
-        let mut dir0 = curve0.get_param_step(4, self.cell_size/10.);
-        let mut dir1 = curve1.get_param_step(4, self.cell_size/10.); 
+        let mut dir0 = self.curve_ranges.get(c0).unwrap().step / 10.;
+        let mut dir1 = self.curve_ranges.get(c1).unwrap().step / 10.;
         let mut distance = p0.distance(p1);
         for _ in 0..self.max_walk_iterations {
             if distance < self.tolerance { 
@@ -90,3 +90,7 @@ fn get_line_intersection(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<Vec2>
     }
     Some(vec2(x, y))
 }
+
+
+        // let mut dir0 = curve0.get_param_step(4, self.cell_size/10.);
+        // let mut dir1 = curve1.get_param_step(4, self.cell_size/10.);

@@ -16,15 +16,6 @@ impl Nurbs {
         self.weights.len() + count * (self.order - 2) * mul
     }
 
-    pub fn get_param_step(&self, min_count: usize, max_distance: f32, controls: &Vec<Vec3>) -> f32 {
-        1. / (self.get_sample_count_with_max_distance(min_count, max_distance, controls) - 1) as f32
-    }
-
-    pub fn get_param_samples(&self, min_count: usize, max_distance: f32, controls: &Vec<Vec3>) -> Vec<f32> {
-        let count = self.get_sample_count_with_max_distance(min_count, max_distance, controls);
-        (0..count).map(|s| s as f32 / (count-1) as f32).collect()
-    }
-
     pub fn get_sample_count_with_max_distance(&self, min_count: usize, max_distance: f32, controls: &Vec<Vec3>) -> usize {
         let curve = self;//.get_valid(controls.len());
         let mut distance = 0.;
@@ -127,3 +118,14 @@ impl Default for Nurbs {
         }
     }
 }
+
+
+
+    // pub fn get_param_step(&self, min_count: usize, max_distance: f32, controls: &Vec<Vec3>) -> f32 {
+    //     1. / (self.get_sample_count_with_max_distance(min_count, max_distance, controls) - 1) as f32
+    // }
+
+    // pub fn get_param_samples(&self, min_count: usize, max_distance: f32, controls: &Vec<Vec3>) -> Vec<f32> {
+    //     let count = self.get_sample_count_with_max_distance(min_count, max_distance, controls);
+    //     (0..count).map(|s| s as f32 / (count-1) as f32).collect()
+    // }

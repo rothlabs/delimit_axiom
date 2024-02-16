@@ -1,6 +1,6 @@
 use std::{collections::HashMap, f32::EPSILON};
 use crate::{CurveShape, Shape, Spatial3};
-use super::{intersection3::Intersection3, CurveRange};
+use super::{intersection3::Intersection3, CurveParams, FacetParams};
 use glam::*;
 
 
@@ -13,7 +13,8 @@ pub struct Sample3 {
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
     pub curves: Vec<CurveShape>,
-    pub curve_ranges: HashMap<usize, CurveRange>, 
+    pub curve_ranges: HashMap<usize, CurveParams>, 
+    pub facet_ranges: HashMap<usize, FacetParams>, 
     pub cell_size: f32,
     pub shapes: Vec<Shape>,
     pub intersections: Vec<Vec<Intersection3>>,
@@ -109,7 +110,7 @@ impl UnionBasis3 {
 
     fn get_spatial_map(&mut self) -> Spatial3 { 
         let mut spatial_map: Spatial3 = Spatial3::new(self.cell_size); 
-        for (_, CurveRange {i, params, ..}) in &self.curve_ranges { 
+        for (_, CurveParams {i, params, ..}) in &self.curve_ranges { 
             for u in params {
                 let point = self.curves[*i].get_vec3_at_u(*u);
                 self.samples.push(Sample3 {

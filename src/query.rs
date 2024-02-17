@@ -11,9 +11,9 @@ pub struct DiscreteQuery {
 
 impl DiscreteQuery {
     pub fn get_valid(self) -> DiscreteQuery {
-        let mut count = 8;
+        let mut count = 50; // 8
         if self.count > 0 { 
-            count = self.count.clamp(2, 100); 
+            count = self.count.clamp(50, 100); 
         }
         let mut tolerance = 0.1;
         if self.tolerance > 0. { 

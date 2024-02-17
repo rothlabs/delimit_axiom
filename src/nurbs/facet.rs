@@ -89,6 +89,19 @@ impl FacetShape {
         }
     }
 
+    pub fn get_normal_at_uv(&self, uv: Vec2) -> Vec3 {
+        let d = 0.0001;
+        let p0 = self.get_point_at_uv(uv);
+        let p1 = self.get_point_at_uv(uv + Vec2::X * d);
+        let p2 = self.get_point_at_uv(uv + Vec2::Y * d);
+        (p0 - p1).normalize().cross((p0 - p2).normalize()).normalize() // TODO: remove final normalize after Union3 works!!!!
+    }
+
+    pub fn get_point_at_uv(&self, uv: Vec2) -> Vec3 {
+        let p = self.get_vector_at_uv(uv.x, uv.y);
+        vec3(p[0], p[1], p[2])
+    }
+
     pub fn get_param_step_and_samples(&self, min_count: usize, max_distance: f32) -> (Vec2, Vec<Vec2>) {
         let mut params = vec![];
         let mut u_count = 0;
@@ -100,6 +113,7 @@ impl FacetShape {
             for p in &curve.controls {
                 point += *p;
             }
+            //let average_point = point / curve.controls.len() as f32 / 8.;
             average_v_controls.push(point / curve.controls.len() as f32);
         }
         let v_count = self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &average_v_controls);

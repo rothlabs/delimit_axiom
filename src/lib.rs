@@ -6,6 +6,7 @@ mod spatial;
 mod group;
 mod sketch;
 mod area;
+mod extrude;
 mod revolve;
 mod union;
 
@@ -15,6 +16,7 @@ use spatial::{spatial2::*, spatial3::*};
 use group::*;
 use sketch::*;
 use area::*;
+use extrude::*;
 use revolve::*;
 use union::*;
 
@@ -33,6 +35,7 @@ pub enum Model {
     Arc(Arc),
     Circle(Arc),
     Rectangle(Rectangle),
+    Extrude(Extrude),
     Revolve(Revolve),
     Union(Union),
 }
@@ -49,6 +52,7 @@ impl Model {
             Model::Rectangle(m) => m.get_shapes(),
             Model::Group(m)     => m.get_shapes(),
             Model::Area(m)      => m.get_shapes(),
+            Model::Extrude(m)   => m.get_shapes(),
             Model::Revolve(m)   => m.get_shapes(),
             Model::Union(m)     => m.get_shapes(),
         }

@@ -17,16 +17,16 @@ impl Nurbs {
     }
 
     pub fn get_sample_count_with_max_distance(&self, min_count: usize, max_distance: f32, controls: &Vec<Vec3>) -> usize {
-        let curve = self;//.get_valid(controls.len());
+        //let curve = self.get_valid(controls.len());
         let mut distance = 0.;
         for c in controls.windows(2) {
             let dist = c[0].distance(c[1]);
             if distance < dist {distance = dist;}
         }
-        let distance_based_count = (distance / max_distance).ceil() as usize;
+        let distance_based_count = (distance / max_distance).floor() as usize;
         let mut count = min_count;
         if distance_based_count > min_count {count = distance_based_count; }
-        count = count*(curve.weights.len()-1) + curve.weights.len();
+        count = count*(controls.len()-1) + controls.len();
         count
     }
 

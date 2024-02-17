@@ -1,10 +1,12 @@
 mod union2;
-mod intersection2;
+mod hit2;
 mod union3;
-mod intersection3;
+mod hit3;
 
 use std::collections::HashMap;
-use crate::{get_curves_and_facets, Model, Shape, Spatial2};
+use crate::{get_curves_and_facets, Model, Shape, Spatial2, log};
+use rand::SeedableRng;
+use rand::rngs::StdRng; //use rand::rngs::SmallRng;
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -22,41 +24,49 @@ pub struct Union {
 
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        let cell_size = 4.;
+        //log("Union get shapes");
+        let cell_size = 10.;
         let (curves, facets) = get_curves_and_facets(&self.parts);
-        let mut curve_ranges: HashMap<usize, CurveParams> = HashMap::new(); 
+        let mut curve_params: HashMap<usize, CurveParams> = HashMap::new(); 
         for (i, curve) in curves.iter().enumerate() {
-            let (step, params) = curve.get_param_step_and_samples(4, cell_size);
-            curve_ranges.insert(i, CurveParams{i, step, params});
+            let (step, params) = curve.get_param_step_and_samples(1, cell_size);
+            curve_params.insert(i, CurveParams{i, step, params});
         }
         if facets.is_empty(){
+            //log("try to make UnionBasis2");
             let mut basis = UnionBasis2 {
-                intersections: (0..curves.len()).map(|_| vec![]).collect(),
+                hits: (0..curves.len()).map(|_| vec![]).collect(),
                 curves,
-                curve_ranges,
+                curve_params,
                 cell_size,
-                shapes: vec![],
                 tolerance: 0.05,
                 max_walk_iterations: 1000,
                 samples: vec![],
+                shapes: vec![],
             };
             basis.get_shapes()
         }else{
-            let mut facet_ranges: HashMap<usize, FacetParams> = HashMap::new(); 
+            //log("try to make UnionBasis3");
+            let mut facet_params: HashMap<usize, FacetParams> = HashMap::new(); 
             for (i, facet) in facets.iter().enumerate() {
-                let (step, params) = facet.get_param_step_and_samples(4, cell_size);
-                facet_ranges.insert(i, FacetParams{i, step, params});
+                let (step, params) = facet.get_param_step_and_samples(1, cell_size);
+                facet_params.insert(i, FacetParams{i, step, params});
             }
+            let seed: [u8; 32] = *b"01234567891234560123456789123456";
             let mut basis = UnionBasis3 {
-                intersections: (0..curves.len()).map(|_| vec![]).collect(),
+                rng: StdRng::from_seed(seed),
+                facet_hits: (0..curves.len()).map(|_| vec![]).collect(),
+                curve_hits: (0..curves.len()).map(|_| vec![]).collect(),
                 curves,
-                curve_ranges,
-                facet_ranges,
+                facets,
+                curve_params,
+                facet_params,
                 cell_size,
-                shapes: vec![],
                 tolerance: 0.05,
                 max_walk_iterations: 1000,
-                samples: vec![],
+                curve_samples: vec![],
+                facet_samples: vec![],
+                shapes: vec![],
             };
             basis.get_shapes()
         }

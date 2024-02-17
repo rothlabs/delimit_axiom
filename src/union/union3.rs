@@ -24,11 +24,13 @@ pub struct FacetSample {
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
     pub rng: StdRng,
+    pub hit_map: Spatial3,
     pub curves: Vec<CurveShape>,
     pub facets: Vec<FacetShape>,
     pub curve_params: HashMap<usize, CurveParams>, 
     pub facet_params: HashMap<usize, FacetParams>, 
     pub cell_size: f32,
+    pub hit_cell_size: f32,
     pub shapes: Vec<Shape>,
     pub facet_hits: Vec<Vec<Facet_Hit>>,
     pub curve_hits: Vec<Vec<Curve_Hit>>,
@@ -45,7 +47,7 @@ impl UnionBasis3 {
         //console_log!("UnionBasis3 get_shapes");
         let spatial = self.set_samples_and_get_spatial();
         self.clear_params();
-        self.for_spatial_pairs(&spatial, &mut UnionBasis3::add_curve_param, &mut UnionBasis3::add_facet_intersection);
+        self.for_spatial_pairs(&spatial, &mut UnionBasis3::add_curve_param, &mut UnionBasis3::add_facet_hit);
         //console_log!("shape count: {}", self.shapes.len());
         self.shapes.clone()
     }
@@ -62,12 +64,14 @@ impl UnionBasis3 {
         }
     }
 
-    fn add_facet_intersection(&mut self, facet_index0: usize, facet_index1: usize, uv0: Vec2, uv1: Vec2) {
-        if let Some(itc) = self.get_facet_hit(&facet_index0, &facet_index1, uv0, uv1) {
+    fn add_facet_hit(&mut self, facet_index0: usize, facet_index1: usize, uv0: Vec2, uv1: Vec2) {
+        if let Some(hit) = self.get_facet_hit(&facet_index0, &facet_index1, uv0, uv1) {
             //if 0.01 < itc.u && itc.u < 0.99 {
-                self.facet_hits[facet_index0].push(itc.clone());
-                self.shapes.push(Shape::Point(itc.point0));
-                self.shapes.push(Shape::Point(itc.point1));
+                if self.hit_map.contains_key(&hit.point0) {return}
+                self.hit_map.insert(&hit.point0, 0);
+                self.facet_hits[facet_index0].push(hit.clone());
+                self.shapes.push(Shape::Point(hit.point0));
+                self.shapes.push(Shape::Point(hit.point1));
             //} 
         }
     }
@@ -75,6 +79,7 @@ impl UnionBasis3 {
     fn for_spatial_pairs<C, F>(&mut self, spatial: &Spatial3, curve_func: &mut C, facet_func: &mut F) 
     where C: FnMut(&mut UnionBasis3, usize, usize, f32, Vec2), 
           F: FnMut(&mut UnionBasis3, usize, usize, Vec2, Vec2) { 
+        let mut stop = false;
         spatial.for_pairs(&mut |i0: usize, i1: usize| { 
             if i1 < self.curve_samples.len() {return} // second index must be for facet_params
             let FacetSample {index: f1, point: p1, uv: uv1} = self.facet_samples[i1 - self.curve_samples.len()];
@@ -85,11 +90,13 @@ impl UnionBasis3 {
                 //curve_func(self, c0, f1, u0, uv1);
                 //self.shapes.push(Shape::Point(p0));
             }else{
+                if stop {return}
                 let FacetSample {index: f0, point: p0, uv: uv0} = self.facet_samples[i0 - self.curve_samples.len()];
                 //console_log!("facet: {}, {}, {}", p0.x, p0.y, p0.z);
                 if f0 == f1 {return}
                 if p0.distance(p1) > self.cell_size {return}
                 facet_func(self, f0, f1, uv0, uv1);
+                stop = true;
                 //self.shapes.push(Shape::Point(p0));
             }
         });

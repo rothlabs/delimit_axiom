@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use crate::log;
+use crate::{log, CurveShape, FacetShape, Shape};
 
 
 use super::union3::UnionBasis3;
@@ -41,9 +41,9 @@ impl UnionBasis3 {
             if distance < self.tolerance { 
                 break; 
             }
-            if i == self.max_walk_iterations-1 {
-                log("Hit3 max iterations!");
-            }
+            // if i == self.max_walk_iterations-1 {
+            //     log("Hit3 max iterations!");
+            // }
             if move_uv0 {
                 uv0 = (uv0 + dir0).clamp(Vec2::ZERO, Vec2::ONE);
                 p0 = facet0.get_point_at_uv(uv0);
@@ -63,47 +63,74 @@ impl UnionBasis3 {
             distance = dist;
         }
         if distance < self.tolerance {
-            let delta = 0.0001;
+            let hit = Facet_Hit {
+                uv0,
+                point0: p0,
+                uv1,
+                point1: p1,
+                dot: 0.,
+            };
+            let curve = self.get_hit_curve(f0, f1, &hit);
+            self.shapes.push(Shape::Curve(curve));
+            Some(hit)
+        }else{
+            None
+        }
+    }
+
+    fn get_hit_curve(&self, f0: &usize, f1: &usize, hit: &Facet_Hit) -> CurveShape {
+        let mut curve = CurveShape::default();
+        let facet0 = &self.facets[*f0];
+        let facet1 = &self.facets[*f1];
+        let Facet_Hit {mut uv0, mut uv1, point0: mut p0, point1: mut p1, dot} = hit.clone();
+        curve.controls.push(p0);
+        for k in 0..40 {
             let normal0 = facet0.get_normal_at_uv(uv0);
             let normal1 = facet1.get_normal_at_uv(uv1);
             let normal_cross = normal0.cross(normal1);
             let cross0 = normal0.cross(normal_cross);
             let cross1 = normal1.cross(normal_cross);
             let center = approx_line_intersection(p0, cross0, p1, cross1);
+            let target = center + normal_cross * self.hit_cell_size;
+            let mut dir = Vec2::X * self.hit_cell_size / 10.;
+            let mut distance = p0.distance(target);
+            for i in 0..self.max_walk_iterations {
+                if distance < self.tolerance { 
+                    break; 
+                }
+                if i == self.max_walk_iterations-1 {
+                    log("get_hit_curve max iterations!");
+                }
+                uv0 = (uv0 + dir).clamp(Vec2::ZERO, Vec2::ONE);
+                p0 = facet0.get_point_at_uv(uv0);
+                let dist = p0.distance(target);
+                if dist >= distance {
+                    dir = dir.perp() * 0.8;
+                }
+                distance = dist;
+            }
+            dir = Vec2::X * self.hit_cell_size / 10.;
+            distance = p1.distance(target);
+            for i in 0..self.max_walk_iterations {
+                if distance < self.tolerance { 
+                    break; 
+                }
+                if i == self.max_walk_iterations-1 {
+                    log("get_hit_curve max iterations!");
+                }
+                uv1 = (uv1 + dir).clamp(Vec2::ZERO, Vec2::ONE);
+                p1 = facet1.get_point_at_uv(uv1);
+                let dist = p1.distance(target);
+                if dist >= distance {
+                    dir = dir.perp() * 0.8;
+                }
+                distance = dist;
+            }
+            curve.controls.push(p0);
             
-            Some(Facet_Hit {
-                uv0,
-                point0: center,
-                uv1,
-                point1: center,
-                dot: 0.,
-            })
-            // let delta = 0.0001;
-            // let d0 = u0 + delta;
-            // let pd0 = facet0.get_vec3_at_u(d0);
-            // let pd1 = facet1.get_vec3_at_u(u1 + delta);
-            // if let Some(ip) = get_line_intersection(p0, pd0, p1, pd1) {
-            //     let ratio = p0.distance(ip) / p0.distance(pd0);
-            //     let mut u = u0 + (d0-u0)*ratio;
-            //     let mut point = facet0.get_vec3_at_u(u);
-            //     let alt_u = u0 + (u0-d0)*ratio;
-            //     let alt_point = facet0.get_vec3_at_u(alt_u);
-            //     if alt_point.distance(ip) < point.distance(ip) {
-            //         u = alt_u;
-            //         point = alt_point;
-            //     }
-            //     let dot = (pd0-p0).normalize().dot((pd1-p1).normalize());
-            //     Some(Facet_Hit {
-            //         u,
-            //         point,
-            //         dot,
-            //     })
-            // }else{
-            //     None
-            // }
-        }else{
-            None
         }
+        curve.nurbs.order = 3;
+        curve.get_valid()
     }
 }
 
@@ -127,3 +154,12 @@ fn approx_line_intersection(
 
     (p_closest + q_closest) / 2.//(p_closest, q_closest)
 }
+
+
+            //let delta = 0.0001;
+            // let normal0 = facet0.get_normal_at_uv(uv0);
+            // let normal1 = facet1.get_normal_at_uv(uv1);
+            // let normal_cross = normal0.cross(normal1);
+            // let cross0 = normal0.cross(normal_cross);
+            // let cross1 = normal1.cross(normal_cross);
+            // let center = approx_line_intersection(p0, cross0, p1, cross1);

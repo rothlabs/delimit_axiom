@@ -52,6 +52,10 @@ impl Spatial3 {
         self.map.get_mut(&self.get_spatial_key(point))
     }
 
+    pub fn contains_key(&mut self, point: &Vec3) -> bool {
+        self.map.contains_key(&self.get_spatial_key(point))
+    }
+
     pub fn get_spatial_key(&self, point: &Vec3) -> String {
         (point.x / self.cell_size).floor().to_string() + "," 
         + &(point.y / self.cell_size).floor().to_string() + "," 

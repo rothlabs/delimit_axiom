@@ -67,11 +67,11 @@ impl UnionBasis3 {
     fn add_facet_hit(&mut self, facet_index0: usize, facet_index1: usize, uv0: Vec2, uv1: Vec2) {
         if let Some(hit) = self.get_facet_hit(&facet_index0, &facet_index1, uv0, uv1) {
             //if 0.01 < itc.u && itc.u < 0.99 {
-                if self.hit_map.contains_key(&hit.point0) {return}
-                self.hit_map.insert(&hit.point0, 0);
+                // if self.hit_map.contains_key(&hit.point0) {return}
+                // self.hit_map.insert(&hit.point0, 0);
                 self.facet_hits[facet_index0].push(hit.clone());
-                self.shapes.push(Shape::Point(hit.point0));
-                self.shapes.push(Shape::Point(hit.point1));
+                //self.shapes.push(Shape::Point(hit.point0));
+                //self.shapes.push(Shape::Point(hit.point1));
             //} 
         }
     }
@@ -96,7 +96,7 @@ impl UnionBasis3 {
                 if f0 == f1 {return}
                 if p0.distance(p1) > self.cell_size {return}
                 facet_func(self, f0, f1, uv0, uv1);
-                stop = true;
+                //stop = true;
                 //self.shapes.push(Shape::Point(p0));
             }
         });

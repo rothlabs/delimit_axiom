@@ -89,7 +89,7 @@ impl UnionBasis3 {
                     let cross0 = normal0.cross(normal_cross);
                     let cross1 = normal1.cross(normal_cross);
                     let center = approx_line_intersection(p0, cross0, p1, cross1);
-                    let target = center + normal_cross * self.hit_cell_size * 4. * (1-direction*2) as f32;
+                    let target = center + normal_cross * self.hit_cell_size * (1-direction*2) as f32;
                     let mut dir = Vec2::X * self.hit_cell_size / 10.;
                     let mut distance = p0.distance(target);
                     for i in 0..self.max_walk_iterations {

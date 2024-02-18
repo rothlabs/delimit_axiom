@@ -25,6 +25,7 @@ pub struct FacetSample {
 pub struct UnionBasis3 {
     pub rng: StdRng,
     pub hit_map: Spatial3,
+    //pub hit_polylines: Vec<Vec<Vec2>>,
     pub curves: Vec<CurveShape>,
     pub facets: Vec<FacetShape>,
     pub curve_params: HashMap<usize, CurveParams>, 

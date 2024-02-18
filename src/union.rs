@@ -25,7 +25,7 @@ pub struct Union {
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
         //log("Union get shapes");
-        let cell_size = 10.;
+        let cell_size = 5.;
         let hit_cell_size = 1.;
         let (curves, facets) = get_curves_and_facets(&self.parts);
         let mut curve_params: HashMap<usize, CurveParams> = HashMap::new(); 

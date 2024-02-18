@@ -96,7 +96,7 @@ impl UnionBasis3 {
                 if f0 == f1 {return}
                 if p0.distance(p1) > self.cell_size {return}
                 facet_func(self, f0, f1, uv0, uv1);
-                //stop = true;
+                stop = true;
                 //self.shapes.push(Shape::Point(p0));
             }
         });

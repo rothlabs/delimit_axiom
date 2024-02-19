@@ -45,6 +45,10 @@ impl Spatial2 {
         }
     }
 
+    pub fn get(&mut self, point: &Vec2) -> Option<&Vec<usize>> {
+        self.map.get(&self.get_spatial_key(point))
+    }
+
     pub fn get_mut(&mut self, point: &Vec2) -> Option<&mut Vec<usize>> {
         self.map.get_mut(&self.get_spatial_key(point))
     }

@@ -1,5 +1,5 @@
 use std::{collections::HashMap, f32::EPSILON};
-use crate::{CurveShape, FacetShape, Shape, Spatial3, log};
+use crate::{log, CurveShape, FacetShape, Shape, Spatial2, Spatial3};
 use super::{hit3::{Curve_Hit, Facet_Hit}, CurveParams, FacetParams};
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
@@ -24,8 +24,8 @@ pub struct FacetSample {
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
     pub rng: StdRng,
-    pub hit_map: Spatial3,
-    //pub hit_polylines: Vec<Vec<Vec2>>,
+    pub hit_map: Spatial2,
+    pub hit_polylines: Vec<Vec<Vec<Vec2>>>,
     pub curves: Vec<CurveShape>,
     pub facets: Vec<FacetShape>,
     pub curve_params: HashMap<usize, CurveParams>, 
@@ -95,9 +95,9 @@ impl UnionBasis3 {
                 let FacetSample {index: f0, point: p0, uv: uv0} = self.facet_samples[i0 - self.curve_samples.len()];
                 //console_log!("facet: {}, {}, {}", p0.x, p0.y, p0.z);
                 if f0 == f1 {return}
-                if p0.distance(p1) > self.cell_size {return}
+                if p0.distance(p1) > self.cell_size * 0.5 {return}
                 facet_func(self, f0, f1, uv0, uv1);
-                stop = true;
+                //stop = true;
                 //self.shapes.push(Shape::Point(p0));
             }
         });

@@ -56,7 +56,9 @@ impl Union {
             let seed: [u8; 32] = *b"01234567891234560123456789123456";
             let mut basis = UnionBasis3 {
                 rng: StdRng::from_seed(seed),
-                hit_map: Spatial3::new(hit_cell_size),
+                hit_map: Spatial2::new(hit_cell_size),
+                hit_polylines: (0..facets.len()).map(|_| vec![]).collect(),
+                hit_cell_size,
                 facet_hits: (0..curves.len()).map(|_| vec![]).collect(),
                 curve_hits: (0..curves.len()).map(|_| vec![]).collect(),
                 curves,
@@ -64,7 +66,6 @@ impl Union {
                 curve_params,
                 facet_params,
                 cell_size,
-                hit_cell_size,
                 tolerance: 0.05,
                 max_walk_iterations: 800,
                 curve_samples: vec![],

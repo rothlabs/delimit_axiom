@@ -1,22 +1,24 @@
+use std::f32::EPSILON;
 use std::ops::DivAssign;
 
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::result::Mesh;
-use crate::{Model, Shape, CurveShape, get_curves};
+use crate::{Model, Shape, CurveShape, get_curves, log};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
 use lyon::geom::{Box2D, Point};
 use lyon::path::Winding;
+//use wasm_bindgen_test::console_log;
 
 //use rayon::prelude::*;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
-// macro_rules! console_log {
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Facet::default")]
@@ -89,11 +91,29 @@ impl FacetShape {
         }
     }
 
-    pub fn get_normal_at_uv(&self, uv: Vec2) -> Vec3 {
-        let d = 0.0001;
+    pub fn get_uv_and_point_from_3d_dir(&self, uv: Vec2, dir: Vec3) -> (Vec2, Vec3) {
+        let step = 0.0001;
         let p0 = self.get_point_at_uv(uv);
-        let p1 = self.get_point_at_uv(uv + Vec2::X * d);
-        let p2 = self.get_point_at_uv(uv + Vec2::Y * d);
+        let pu = self.get_point_at_uv(uv + Vec2::X * step);
+        let pv = self.get_point_at_uv(uv + Vec2::Y * step);
+        let length_ratio_u = dir.length() / p0.distance(pu) * step;
+        let length_ratio_v = dir.length() / p0.distance(pv) * step;
+        let uv_dir = vec2(
+            (pu-p0).normalize().dot(dir.normalize()) * length_ratio_u, 
+            (pv-p0).normalize().dot(dir.normalize()) * length_ratio_v
+        );
+        //let pd = self.get_point_at_uv(uv + Vec2::ONE.normalize()*step);
+        let uv1 = (uv + uv_dir).clamp(Vec2::ZERO, Vec2::ONE); // TODO: should be limited by length instead of component wise!!
+        
+        let point = self.get_point_at_uv(uv1);
+        (uv1, point)
+    }
+
+    pub fn get_normal_at_uv(&self, uv: Vec2) -> Vec3 {
+        let step = 0.0001;
+        let p0 = self.get_point_at_uv(uv);
+        let p1 = self.get_point_at_uv(uv + Vec2::X * step);
+        let p2 = self.get_point_at_uv(uv + Vec2::Y * step);
         (p0 - p1).normalize().cross((p0 - p2).normalize()).normalize() // TODO: remove final normalize after Union3 works!!!!
     }
 
@@ -216,6 +236,22 @@ pub enum Parameter {
 impl Default for Parameter {
     fn default() -> Self { Parameter::U(0.) }
 }
+
+
+
+// pub fn get_uv_and_point_from_3d_dir(&self, uv: Vec2, dir: Vec3) -> (Vec2, Vec3) {
+//     let step = 0.0001;
+//     let p0 = self.get_point_at_uv(uv);
+//     let pu = self.get_point_at_uv(uv + Vec2::X * step);
+//     let pv = self.get_point_at_uv(uv + Vec2::Y * step);
+//     let uv_dir = vec2((pu-p0).normalize().dot(dir.normalize()), (pv-p0).normalize().dot(dir.normalize()));
+//     let pd = self.get_point_at_uv(uv + Vec2::ONE.normalize()*step);
+//     let length_ratio = (dir.length() / p0.distance(pd)) * step;
+//     let uv1 = (uv + uv_dir * length_ratio).clamp(Vec2::ZERO, Vec2::ONE); // TODO: should be limited by length instead of component wise!!
+//     //console_log!("uv: {},{}", uv1.x, uv1.y);
+//     let point = self.get_point_at_uv(uv1);
+//     (uv1, point)
+// }
 
 
 // // visual tests

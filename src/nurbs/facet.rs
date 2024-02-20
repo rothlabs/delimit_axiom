@@ -162,9 +162,9 @@ impl FacetShape {
         }
         let v_count = facet.nurbs.get_sample_count(query.count);
         let mut builder = lyon::path::Path::builder();
-        if facet.boundaries.is_empty() {
+        //if facet.boundaries.is_empty() {
             builder.add_rectangle(&Box2D{min:Point::new(0., 0.), max:Point::new(1., 1.)}, Winding::Positive);
-        }
+        //}
         for ui in 0..u_count {
             let u = ui as f32 / (u_count-1) as f32;
             builder.add_rectangle(&Box2D{min:Point::new(u, 0.), max:Point::new(u, 1.)}, Winding::Positive);
@@ -181,7 +181,7 @@ impl FacetShape {
                 if facet.reversed {y = 1.-y;}
                 let point = lyon::geom::Point::new(p[0], y);
                 if loop_open {
-                    if start_point.distance_to(point) > f32::EPSILON { 
+                    if start_point.distance_to(point) > 0.0001 { // f32::EPSILON 
                         builder.line_to(point);
                     }else {
                         builder.end(true);
@@ -194,6 +194,7 @@ impl FacetShape {
                 }
             }
         }
+        builder.end(true);
         let path = builder.build();
         let options = FillOptions::default(); //tolerance(query.tolerance);
         let mut geometry: VertexBuffers<[f32; 2], usize> = VertexBuffers::new();

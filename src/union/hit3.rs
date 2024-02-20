@@ -10,14 +10,14 @@ macro_rules! console_log {
 }
 
 #[derive(Clone)]
-pub struct Curve_Hit {
+pub struct CurveHit {
     pub u: f32,
     pub point: Vec3,
     pub dot: f32,
 }
 
 #[derive(Clone)]
-pub struct Facet_Hit {
+pub struct FacetHit {
     pub uv0: Vec2,
     pub p0: Vec3,
     pub uv1: Vec2,
@@ -26,7 +26,7 @@ pub struct Facet_Hit {
 }
 
 impl UnionBasis3 { 
-    pub fn try_facet_hit(&mut self, start_uv0: Vec2, start_uv1: Vec2) -> Option<Facet_Hit> { // f0: &usize, f1: &usize, 
+    pub fn try_facet_hit(&mut self, start_uv0: Vec2, start_uv1: Vec2) -> Option<(CurveShape,CurveShape)> { // f0: &usize, f1: &usize, 
         let facet0 = &self.facets[self.facet_index0];
         let facet1 = &self.facets[self.facet_index1];
         let mut uv0 = start_uv0;
@@ -44,7 +44,7 @@ impl UnionBasis3 {
                 if self.hit_map.contains_key(&p0) {
                     None
                 } else {
-                    let start = Facet_Hit {uv0, uv1, p0, p1};
+                    let start = FacetHit {uv0, uv1, p0, p1};
                     let (curve0, curve1, curve2) = self.make_hit_curves(&start); // f0, f1, 
                     //self.hit_polylines[*f0].push(curve0.controls.iter().map(|v| v.truncate()).collect());
                     if curve0.controls.len() > 2 {
@@ -54,7 +54,7 @@ impl UnionBasis3 {
                         //self.shapes.push(Shape::Curve(curve1.get_valid()));
                         self.shapes.push(Shape::Curve(curve2.get_valid()));
                     }
-                    Some(start)
+                    Some((curve0, curve1))
                 }
             }
         }else{
@@ -62,7 +62,7 @@ impl UnionBasis3 {
         }
     }
 
-    fn make_hit_curves(&mut self, start: &Facet_Hit) -> (CurveShape, CurveShape, CurveShape) { 
+    fn make_hit_curves(&mut self, start: &FacetHit) -> (CurveShape, CurveShape, CurveShape) { 
         let mut curve0 = CurveShape::default();
         let mut curve1 = CurveShape::default();
         let mut curve2 = CurveShape::default();
@@ -77,16 +77,16 @@ impl UnionBasis3 {
         let mut backward_controls1 = vec![];
         let mut backward_controls2 = vec![];
         'dir_loop: for direction in 0..2 {
-            let Facet_Hit {mut uv0, mut uv1, mut p0, mut p1} = start;
-            let mut add_points = |pt0: Vec3, pt1: Vec3| {
+            let FacetHit {mut uv0, mut uv1, mut p0, mut p1} = start;
+            let mut add_points = |hit: FacetHit| {
                 if direction == 0 {
-                    forward_controls0.push(pt0);
-                    forward_controls1.push(pt1);
-                    forward_controls2.push((pt0 + pt1) / 2.);
+                    forward_controls0.push(hit.uv0.extend(0.));
+                    forward_controls1.push(hit.uv1.extend(0.));
+                    forward_controls2.push((hit.p0 + hit.p1) / 2.);
                 }else {
-                    backward_controls0.push(pt0);
-                    backward_controls1.push(pt1);
-                    backward_controls2.push((pt0 + pt1) / 2.);
+                    backward_controls0.push(hit.uv0.extend(0.));
+                    backward_controls1.push(hit.uv1.extend(0.));
+                    backward_controls2.push((hit.p0 + hit.p1) / 2.);
                 } 
             };
             for k in 0..10000 {
@@ -95,11 +95,11 @@ impl UnionBasis3 {
                 (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, center - p1);
                 if k > 14 {
                     if p0.distance(start.p0) < self.hit_step * 2. || p1.distance(start.p1) < self.hit_step * 2. {
-                        add_points(start.p0, start.p1);
+                        add_points(start.clone());
                         break 'dir_loop;
                     }
                 }
-                add_points(p0, p1);
+                add_points(FacetHit{uv0, uv1, p0, p1});
                 self.hit_map.insert(&p0, 0);
                 let normal0 = facet0.get_normal_at_uv(uv0);
                 let normal1 = facet1.get_normal_at_uv(uv1);
@@ -109,15 +109,15 @@ impl UnionBasis3 {
                 (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, dir);
                 if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
                     //if p0.distance(p1) > self.tolerance {
-                        (_, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, p0 - p1);
+                        (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, p0 - p1);
                     //}
-                    add_points(p0, p1);
+                    add_points(FacetHit{uv0, uv1, p0, p1});
                     break;
                 } else if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
                     //if p0.distance(p1) > self.tolerance {
-                        (_, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, p1 - p0);
+                        (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, p1 - p0);
                     //}
-                    add_points(p0, p1);
+                    add_points(FacetHit{uv0, uv1, p0, p1});
                     break;
                 }
             }

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, f32::EPSILON};
 use crate::{log, CurveShape, FacetShape, Shape, Spatial2, Spatial3};
-use super::{hit3::{Curve_Hit, Facet_Hit}, CurveParams, FacetParams};
+use super::{hit3::{CurveHit, FacetHit}, CurveParams, FacetParams};
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 use glam::*;
@@ -34,8 +34,8 @@ pub struct UnionBasis3 {
     pub cell_size: f32,
     pub hit_step: f32,
     pub shapes: Vec<Shape>,
-    pub facet_hits: Vec<Vec<Facet_Hit>>,
-    pub curve_hits: Vec<Vec<Curve_Hit>>,
+    pub facet_hits: Vec<Vec<CurveShape>>,
+    pub curve_hits: Vec<Vec<CurveHit>>,
     pub tolerance: f32,
     pub max_walk_iterations: usize,
     pub curve_samples: Vec<CurveSample>,
@@ -50,7 +50,17 @@ impl UnionBasis3 {
         let spatial = self.set_samples_and_get_spatial();
         self.clear_params();
         self.for_spatial_pairs(&spatial, &mut UnionBasis3::add_curve_param, &mut UnionBasis3::add_facet_hit);
-        //console_log!("shape count: {}", self.shapes.len());
+        for i in 0..self.facets.len() {
+            let mut facet = self.facets[i].clone();
+            // if self.facet_hits.is_empty() {
+            //     self.shapes.push(Shape::Facet(self.facets[i].clone()));
+            // }else{
+            //     let mut facet = self.facets[i].clone();
+            //     facet.boundaries.extend(self.facet_hits[i].clone());
+            // }
+            facet.boundaries.extend(self.facet_hits[i].clone());
+            self.shapes.push(Shape::Facet(facet));
+        }
         self.shapes.clone()
     }
 
@@ -60,21 +70,16 @@ impl UnionBasis3 {
         }
     }
 
-    fn add_facet_param(&mut self, facet_index0: usize, _f1: usize, uv0: Vec2, _uv1: Vec2) {
-        if let Some(cr) = self.facet_params.get_mut(&facet_index0) {
-            cr.params.push(uv0);
-        }
-    }
+    // fn add_facet_param(&mut self, facet_index0: usize, _f1: usize, uv0: Vec2, _uv1: Vec2) {
+    //     if let Some(cr) = self.facet_params.get_mut(&facet_index0) {
+    //         cr.params.push(uv0);
+    //     }
+    // }
 
     fn add_facet_hit(&mut self, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
         if let Some(hit) = self.try_facet_hit(uv0, uv1) { // &facet_index0, &facet_index1, 
-            //if 0.01 < itc.u && itc.u < 0.99 {
-                // if self.hit_map.contains_key(&hit.point0) {return}
-                // self.hit_map.insert(&hit.point0, 0);
-                self.facet_hits[self.facet_index0].push(hit.clone());
-                //self.shapes.push(Shape::Point(hit.point0));
-                //self.shapes.push(Shape::Point(hit.point1));
-            //} 
+            self.facet_hits[self.facet_index0].push(hit.0.clone());
+            self.facet_hits[self.facet_index1].push(hit.1.clone());
         }
     }
 

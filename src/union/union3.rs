@@ -27,7 +27,6 @@ pub struct UnionBasis3 {
     pub facet_index1: usize,
     //pub rng: StdRng,
     pub hit_map: Spatial3,
-    //pub hit_polylines: Vec<Vec<Vec<Vec2>>>,
     pub curves: Vec<CurveShape>,
     pub facets: Vec<FacetShape>,
     pub curve_params: HashMap<usize, CurveParams>, 
@@ -68,7 +67,7 @@ impl UnionBasis3 {
     }
 
     fn add_facet_hit(&mut self, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
-        if let Some(hit) = self.start_hit_curves(uv0, uv1) { // &facet_index0, &facet_index1, 
+        if let Some(hit) = self.try_facet_hit(uv0, uv1) { // &facet_index0, &facet_index1, 
             //if 0.01 < itc.u && itc.u < 0.99 {
                 // if self.hit_map.contains_key(&hit.point0) {return}
                 // self.hit_map.insert(&hit.point0, 0);

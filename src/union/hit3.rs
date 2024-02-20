@@ -22,15 +22,15 @@ pub struct Facet_Hit {
     pub p0: Vec3,
     pub uv1: Vec2,
     pub p1: Vec3,
-    pub dot: f32,
+    //pub dot: f32,
 }
 
 impl UnionBasis3 { 
-    pub fn start_hit_curves(&mut self, start0: Vec2, start1: Vec2) -> Option<Facet_Hit> { // f0: &usize, f1: &usize, 
+    pub fn try_facet_hit(&mut self, start_uv0: Vec2, start_uv1: Vec2) -> Option<Facet_Hit> { // f0: &usize, f1: &usize, 
         let facet0 = &self.facets[self.facet_index0];
         let facet1 = &self.facets[self.facet_index1];
-        let mut uv0 = start0;
-        let mut uv1 = start1;
+        let mut uv0 = start_uv0;
+        let mut uv1 = start_uv1;
         let mut p0 = facet0.get_point_at_uv(uv0);
         let mut p1 = facet1.get_point_at_uv(uv1);
         let center = self.get_center(uv0, uv1, p0, p1);
@@ -44,14 +44,15 @@ impl UnionBasis3 {
                 if self.hit_map.contains_key(&p0) {
                     None
                 } else {
-                    let start = Facet_Hit {uv0, uv1, p0, p1, dot: 0.};
-                    let (curve0, curve1) = self.make_hit_curves(&start); // f0, f1, 
+                    let start = Facet_Hit {uv0, uv1, p0, p1};
+                    let (curve0, curve1, curve2) = self.make_hit_curves(&start); // f0, f1, 
                     //self.hit_polylines[*f0].push(curve0.controls.iter().map(|v| v.truncate()).collect());
                     if curve0.controls.len() > 2 {
                         self.shapes.push(Shape::Point(p0));
                         self.shapes.push(Shape::Point(p1));
-                        self.shapes.push(Shape::Curve(curve0.get_valid()));
-                        self.shapes.push(Shape::Curve(curve1.get_valid()));
+                        //self.shapes.push(Shape::Curve(curve0.get_valid()));
+                        //self.shapes.push(Shape::Curve(curve1.get_valid()));
+                        self.shapes.push(Shape::Curve(curve2.get_valid()));
                     }
                     Some(start)
                 }
@@ -61,26 +62,31 @@ impl UnionBasis3 {
         }
     }
 
-    fn make_hit_curves(&mut self, start: &Facet_Hit) -> (CurveShape, CurveShape) { 
+    fn make_hit_curves(&mut self, start: &Facet_Hit) -> (CurveShape, CurveShape, CurveShape) { 
         let mut curve0 = CurveShape::default();
         let mut curve1 = CurveShape::default();
+        let mut curve2 = CurveShape::default();
         // curve0.nurbs.order = 2;
         // curve1.nurbs.order = 2;
         let facet0 = &self.facets[self.facet_index0];
         let facet1 = &self.facets[self.facet_index1];
-        let mut forward_controls0  = vec![]; // first_hit.p0
+        let mut forward_controls0  = vec![]; 
+        let mut forward_controls1  = vec![]; 
+        let mut forward_controls2  = vec![]; 
         let mut backward_controls0 = vec![];
-        let mut forward_controls1  = vec![]; // first_hit.p1
         let mut backward_controls1 = vec![];
+        let mut backward_controls2 = vec![];
         'dir_loop: for direction in 0..2 {
-            let Facet_Hit {mut uv0, mut p0, mut uv1, mut p1, dot} = start;
+            let Facet_Hit {mut uv0, mut uv1, mut p0, mut p1} = start;
             let mut add_points = |pt0: Vec3, pt1: Vec3| {
                 if direction == 0 {
                     forward_controls0.push(pt0);
                     forward_controls1.push(pt1);
+                    forward_controls2.push((pt0 + pt1) / 2.);
                 }else {
                     backward_controls0.push(pt0);
                     backward_controls1.push(pt1);
+                    backward_controls2.push((pt0 + pt1) / 2.);
                 } 
             };
             for k in 0..10000 {
@@ -118,11 +124,14 @@ impl UnionBasis3 {
         }
         backward_controls0.reverse();
         backward_controls1.reverse();
+        backward_controls2.reverse();
         curve0.controls.extend(backward_controls0);
         curve1.controls.extend(backward_controls1);
+        curve2.controls.extend(backward_controls2);
         curve0.controls.extend(forward_controls0);
         curve1.controls.extend(forward_controls1);
-        (curve0, curve1)
+        curve2.controls.extend(forward_controls2);
+        (curve0, curve1, curve2)
     }
 
     fn get_center(&self, uv0: Vec2, uv1: Vec2, p0: Vec3, p1: Vec3) -> Vec3 { // facet0: FacetShape, facet1: FacetShape, 

@@ -4,7 +4,7 @@ use std::ops::DivAssign;
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::result::Mesh;
-use crate::{Model, Shape, CurveShape, get_curves, log};
+use crate::{get_curves, get_line_intersection, log, CurveShape, Model, Shape};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
@@ -103,8 +103,18 @@ impl FacetShape {
             (pv-p0).normalize().dot(dir.normalize()) * length_ratio_v
         );
         //let pd = self.get_point_at_uv(uv + Vec2::ONE.normalize()*step);
-        let uv1 = (uv + uv_dir).clamp(Vec2::ZERO, Vec2::ONE); // TODO: should be limited by length instead of component wise!!
-        
+        let mut uv1 = uv;
+        if uv_dir.length() > 0.0001 {
+            uv1 = uv + uv_dir; // .clamp(Vec2::ZERO, Vec2::ONE) // TODO: should be limited by length instead of component wise!!
+            //let clamped = uv1.clamp(Vec2::ZERO, Vec2::ONE);
+            if uv1.x > 1. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::X, Vec2::ONE).unwrap();}
+            if uv1.x < 0. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::ZERO, Vec2::Y).unwrap();}
+            if uv1.y > 1. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::Y, Vec2::ONE).unwrap();}
+            if uv1.y < 0. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::ZERO, Vec2::X).unwrap();}
+        }
+        if uv1.x > 1. || uv1.x < 0. || uv1.y < 0. || uv1.x > 1. {
+            console_log!("over bounds! {},{}", uv.x, uv.y);
+        }
         let point = self.get_point_at_uv(uv1);
         (uv1, point)
     }

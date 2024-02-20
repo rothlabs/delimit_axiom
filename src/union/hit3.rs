@@ -117,14 +117,14 @@ impl UnionBasis3 {
                 (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, center - p0);
                 (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, center - p1);
                 //}
-                let mut break_walk = false;
-                if uv0.x < self.tolerance || uv0.x > 1.-self.tolerance || uv0.y < self.tolerance || uv0.y > 1.-self.tolerance {
-                    //(uv1, p1, dir1) = self.get_walked_point(facet1, p0, uv1, p1, dir1, speed1);
-                    break_walk = true;
-                } else if uv1.x < self.tolerance || uv1.x > 1.-self.tolerance || uv1.y < self.tolerance || uv1.y > 1.-self.tolerance {
-                    //(uv0, p0, dir0) = self.get_walked_point(facet0, p1, uv0, p0, dir0, speed0);
-                    break_walk = true;
-                }
+                
+                // if uv0.x < self.tolerance || uv0.x > 1.-self.tolerance || uv0.y < self.tolerance || uv0.y > 1.-self.tolerance {
+                //     //(uv1, p1, dir1) = self.get_walked_point(facet1, p0, uv1, p1, dir1, speed1);
+                //     break_walk = true;
+                // } else if uv1.x < self.tolerance || uv1.x > 1.-self.tolerance || uv1.y < self.tolerance || uv1.y > 1.-self.tolerance {
+                //     //(uv0, p0, dir0) = self.get_walked_point(facet0, p1, uv0, p0, dir0, speed0);
+                //     break_walk = true;
+                // }
                 if direction == 0 {
                     forward_controls0.push(p0);
                     forward_controls1.push(p1);
@@ -132,13 +132,36 @@ impl UnionBasis3 {
                     backward_controls0.push(p0);
                     backward_controls1.push(p1);
                 } 
-                if break_walk {break}
+                
                 let normal0 = facet0.get_normal_at_uv(uv0);
                 let normal1 = facet1.get_normal_at_uv(uv1);
                 let normal_cross = normal0.cross(normal1).normalize();
                 let dir = normal_cross * self.hit_cell_size * (1-direction*2) as f32;
                 (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, dir);
                 (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, dir);
+
+                let mut break_walk = false;
+                if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
+                    if p0.distance(p1) > 0.0001 {
+                        (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, p0 - p1);
+                    }
+                    break_walk = true;
+                } else if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
+                    if p0.distance(p1) > 0.0001 {
+                        (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, p1 - p0);
+                    }
+                    break_walk = true;
+                }
+                if break_walk {
+                    if direction == 0 {
+                        forward_controls0.push(p0);
+                        forward_controls1.push(p1);
+                    }else {
+                        backward_controls0.push(p0);
+                        backward_controls1.push(p1);
+                    } 
+                    break;
+                }
             }
         }
         backward_controls0.reverse();

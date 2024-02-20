@@ -102,19 +102,17 @@ impl FacetShape {
             (pu-p0).normalize().dot(dir.normalize()) * length_ratio_u, 
             (pv-p0).normalize().dot(dir.normalize()) * length_ratio_v
         );
-        //let pd = self.get_point_at_uv(uv + Vec2::ONE.normalize()*step);
         let mut uv1 = uv;
         if uv_dir.length() > 0.0001 {
-            uv1 = uv + uv_dir; // .clamp(Vec2::ZERO, Vec2::ONE) // TODO: should be limited by length instead of component wise!!
-            //let clamped = uv1.clamp(Vec2::ZERO, Vec2::ONE);
+            uv1 = uv + uv_dir; 
             if uv1.x > 1. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::X, Vec2::ONE).unwrap();}
             if uv1.x < 0. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::ZERO, Vec2::Y).unwrap();}
             if uv1.y > 1. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::Y, Vec2::ONE).unwrap();}
             if uv1.y < 0. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::ZERO, Vec2::X).unwrap();}
         }
-        if uv1.x > 1. || uv1.x < 0. || uv1.y < 0. || uv1.x > 1. {
-            console_log!("over bounds! {},{}", uv.x, uv.y);
-        }
+        // if uv1.x > 1. || uv1.x < 0. || uv1.y < 0. || uv1.x > 1. {
+        //     console_log!("over bounds! {},{}", uv.x, uv.y);
+        // }
         let point = self.get_point_at_uv(uv1);
         (uv1, point)
     }
@@ -175,24 +173,24 @@ impl FacetShape {
             let v = vi as f32 / (v_count-1) as f32;
             builder.add_rectangle(&Box2D{min:Point::new(0., v), max:Point::new(1., v)}, Winding::Positive);
         }
-        let mut open_loop = false;
+        let mut loop_open = false;
         let mut start_point = lyon::geom::Point::default();
         for boundary in &facet.boundaries { 
             for p in boundary.get_polyline(query).chunks(3) {
                 let mut y = p[1];
                 if facet.reversed {y = 1.-y;}
                 let point = lyon::geom::Point::new(p[0], y);
-                if open_loop {
-                    if start_point.distance_to(point) > f32::EPSILON { // f32::EPSILON*1000.
+                if loop_open {
+                    if start_point.distance_to(point) > f32::EPSILON { 
                         builder.line_to(point);
                     }else {
                         builder.end(true);
-                        open_loop = false;
+                        loop_open = false;
                     }
                 }else{
                     builder.begin(point);
                     start_point = point;
-                    open_loop = true;
+                    loop_open = true;
                 }
             }
         }

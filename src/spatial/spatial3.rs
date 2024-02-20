@@ -52,12 +52,21 @@ impl Spatial3 {
         self.map.get_mut(&self.get_spatial_key(point))
     }
 
-    pub fn get(&mut self, point: &Vec3) -> Option<&Vec<usize>> {
+    pub fn get(&self, point: &Vec3) -> Option<&Vec<usize>> {
         self.map.get(&self.get_spatial_key(point))
     }
 
-    pub fn contains_key(&mut self, point: &Vec3) -> bool {
-        self.map.contains_key(&self.get_spatial_key(point))
+    pub fn contains_key(&self, point: &Vec3) -> bool {
+        for x in -1..2 {
+            for y in -1..2 {
+                for z in -1..2 {
+                    if self.map.contains_key(&self.get_spatial_key(&(*point + vec3(x as f32, y as f32, z as f32)))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     pub fn get_spatial_key(&self, point: &Vec3) -> String {

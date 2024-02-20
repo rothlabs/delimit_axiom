@@ -24,9 +24,8 @@ pub struct Union {
 
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        //log("Union get shapes");
         let cell_size = 4.;
-        let hit_cell_size = 1.;
+        let hit_step = 1.;
         let (curves, facets) = get_curves_and_facets(&self.parts);
         let mut curve_params: HashMap<usize, CurveParams> = HashMap::new(); 
         for (i, curve) in curves.iter().enumerate() {
@@ -34,7 +33,6 @@ impl Union {
             curve_params.insert(i, CurveParams{i, step, params});
         }
         if facets.is_empty(){
-            //log("try to make UnionBasis2");
             let mut basis = UnionBasis2 {
                 hits: (0..curves.len()).map(|_| vec![]).collect(),
                 curves,
@@ -47,18 +45,19 @@ impl Union {
             };
             basis.get_shapes()
         }else{
-            //log("try to make UnionBasis3");
             let mut facet_params: HashMap<usize, FacetParams> = HashMap::new(); 
             for (i, facet) in facets.iter().enumerate() {
                 let (step, params) = facet.get_param_step_and_samples(1, cell_size);
                 facet_params.insert(i, FacetParams{i, step, params});
             }
-            let seed: [u8; 32] = *b"01234567891234560123456789123456";
+            //let seed: [u8; 32] = *b"01234567891234560123456789123456";
             let mut basis = UnionBasis3 {
-                rng: StdRng::from_seed(seed),
-                hit_map: Spatial2::new(hit_cell_size),
-                hit_polylines: (0..facets.len()).map(|_| vec![]).collect(),
-                hit_cell_size,
+                facet_index0: 0,
+                facet_index1: 0,
+                //rng: StdRng::from_seed(seed),
+                hit_map: Spatial3::new(hit_step),
+                //hit_polylines: (0..facets.len()).map(|_| vec![]).collect(),
+                hit_step,
                 facet_hits: (0..curves.len()).map(|_| vec![]).collect(),
                 curve_hits: (0..curves.len()).map(|_| vec![]).collect(),
                 curves,

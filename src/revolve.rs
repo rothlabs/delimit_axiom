@@ -46,6 +46,7 @@ impl Revolve {
                         controls:   vec![curve.clone()], 
                         boundaries: vec![],
                         reversed:   false,
+                        perimeter:  false,
                     };
                     for &mat4 in &basis.transforms {
                         facet.controls.push(curve.get_transformed(mat4)); 

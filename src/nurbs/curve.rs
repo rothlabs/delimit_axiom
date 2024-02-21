@@ -99,7 +99,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         vec2(p[0], p[1])
     }
 
-    pub fn get_vec3_at_u(&self, u: f32) -> Vec3 {
+    pub fn get_point_at_u(&self, u: f32) -> Vec3 {
         let p = self.get_vector_at_u(u);
         vec3(p[0], p[1], p[2])
     }

@@ -52,6 +52,7 @@ impl UnionBasis3 {
         self.for_spatial_pairs(&spatial, &mut UnionBasis3::add_curve_param, &mut UnionBasis3::add_facet_hit);
         for i in 0..self.facets.len() {
             let mut facet = self.facets[i].clone();
+            facet.perimeter = true;
             // if self.facet_hits.is_empty() {
             //     self.shapes.push(Shape::Facet(self.facets[i].clone()));
             // }else{
@@ -60,6 +61,9 @@ impl UnionBasis3 {
             // }
             facet.boundaries.extend(self.facet_hits[i].clone());
             self.shapes.push(Shape::Facet(facet));
+        }
+        for i in 0..self.curves.len() {
+            self.shapes.push(Shape::Curve(self.curves[i].clone()));
         }
         self.shapes.clone()
     }
@@ -116,7 +120,7 @@ impl UnionBasis3 {
         self.curve_samples.clear();
         for (_, CurveParams {i, params, ..}) in &self.curve_params { 
             for u in params {
-                let point = self.curves[*i].get_vec3_at_u(*u);
+                let point = self.curves[*i].get_point_at_u(*u);
                 self.curve_samples.push(CurveSample {
                     index: *i,
                     point,

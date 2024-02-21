@@ -54,7 +54,7 @@ impl UnionBasis3 {
                         //self.shapes.push(Shape::Curve(curve1.get_valid()));
                         self.shapes.push(Shape::Curve(curve2.get_valid()));
                     }
-                    Some((curve0, curve1))
+                    Some((curve0.get_valid(), curve1.get_valid()))
                 }
             }
         }else{
@@ -122,14 +122,16 @@ impl UnionBasis3 {
                 }
             }
         }
-        backward_controls0.reverse();
-        backward_controls1.reverse();
-        backward_controls2.reverse();
-        curve0.controls.extend(backward_controls0);
-        curve1.controls.extend(backward_controls1);
-        curve2.controls.extend(backward_controls2);
+        forward_controls0.reverse();
         curve0.controls.extend(forward_controls0);
+        curve0.controls.extend(backward_controls0);
+
+        backward_controls1.reverse();
+        curve1.controls.extend(backward_controls1);
         curve1.controls.extend(forward_controls1);
+
+        backward_controls2.reverse();
+        curve2.controls.extend(backward_controls2);
         curve2.controls.extend(forward_controls2);
         (curve0, curve1, curve2)
     }

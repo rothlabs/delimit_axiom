@@ -35,6 +35,7 @@ impl Extrude {
                         controls:   vec![curve.clone()], 
                         boundaries: vec![],
                         reversed:   false,
+                        perimeter:  false,
                     };
                     facet.controls.push(curve.get_transformed(basis.mat4)); 
                     shapes.push(Shape::Facet(facet));

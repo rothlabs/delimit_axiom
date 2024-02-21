@@ -1,4 +1,4 @@
-use std::f32::EPSILON;
+use std::f32::{EPSILON, INFINITY};
 use std::ops::DivAssign;
 
 use crate::nurbs::Nurbs;
@@ -6,10 +6,15 @@ use crate::query::DiscreteQuery;
 use crate::result::Mesh;
 use crate::{get_curves, get_line_intersection, log, CurveShape, Model, Shape};
 use glam::*;
+use lyon::path::path::BuilderImpl;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
 use lyon::geom::{Box2D, Point};
-use lyon::path::Winding;
+use lyon::path::{builder, Winding};
+use lyon::path::builder::{NoAttributes, PathBuilder};
+
+
+use super::curve;
 //use wasm_bindgen_test::console_log;
 
 //use rayon::prelude::*;
@@ -42,6 +47,7 @@ impl Facet {
             controls:   get_curves(&self.controls),
             boundaries: get_curves(&self.boundaries),
             reversed:   self.reversed,
+            perimeter:  false,
         })]
     }
 }
@@ -52,6 +58,7 @@ pub struct FacetShape {
     pub controls:   Vec<CurveShape>,
     pub boundaries: Vec<CurveShape>,
     pub reversed:   bool,
+    pub perimeter: bool,
 }
 
 impl Default for FacetShape {
@@ -61,6 +68,7 @@ impl Default for FacetShape {
             controls: vec![],
             boundaries: vec![],
             reversed: false,
+            perimeter: false,
         }
     }
 }
@@ -88,6 +96,7 @@ impl FacetShape {
             controls: vec![],
             boundaries: self.boundaries.clone(),
             reversed,
+            perimeter: self.perimeter,
         }
     }
 
@@ -162,9 +171,9 @@ impl FacetShape {
         }
         let v_count = facet.nurbs.get_sample_count(query.count);
         let mut builder = lyon::path::Path::builder();
-        //if facet.boundaries.is_empty() {
+        if self.perimeter || facet.boundaries.is_empty() {
             builder.add_rectangle(&Box2D{min:Point::new(0., 0.), max:Point::new(1., 1.)}, Winding::Positive);
-        //}
+        }
         for ui in 0..u_count {
             let u = ui as f32 / (u_count-1) as f32;
             builder.add_rectangle(&Box2D{min:Point::new(u, 0.), max:Point::new(u, 1.)}, Winding::Positive);
@@ -174,23 +183,34 @@ impl FacetShape {
             builder.add_rectangle(&Box2D{min:Point::new(0., v), max:Point::new(1., v)}, Winding::Positive);
         }
         let mut loop_open = false;
-        let mut start_point = lyon::geom::Point::default();
-        for boundary in &facet.boundaries { 
-            for p in boundary.get_polyline(query).chunks(3) {
+        let mut bndry_i = 0;
+        let mut start_bndry_i = bndry_i;
+        let mut used_boundaries = vec![];
+        //let mut perim_factors = [0.1, 0.01, 0.01, 1.];
+        for _ in 0..facet.boundaries.len() {
+            let bndry = &facet.boundaries[bndry_i];
+            for p in bndry.get_polyline(query).chunks(3) {
                 let mut y = p[1];
                 if facet.reversed {y = 1.-y;}
                 let point = lyon::geom::Point::new(p[0], y);
                 if loop_open {
-                    if start_point.distance_to(point) > 0.0001 { // f32::EPSILON 
-                        builder.line_to(point);
-                    }else {
-                        builder.end(true);
-                        loop_open = false;
-                    }
+                    builder.line_to(point);
                 }else{
                     builder.begin(point);
-                    start_point = point;
                     loop_open = true;
+                }
+            }
+            used_boundaries.push(bndry_i);
+            bndry_i = facet.next_boundary(&bndry.get_point_at_u(1.), &mut used_boundaries, &mut builder);
+            if bndry_i == start_bndry_i {
+                builder.end(true);
+                loop_open = false;
+                for i in 0..facet.boundaries.len() {
+                    if !used_boundaries.contains(&i) {
+                        bndry_i = i;
+                        start_bndry_i = i;
+                        break;
+                    }
                 }
             }
         }
@@ -209,6 +229,67 @@ impl FacetShape {
             vector, //:    geometry.vertices.into_iter().flatten().collect(),
             trivec: geometry.indices, 
         }
+    }
+
+    fn next_boundary(&self, point: &Vec3, used_boundaries: &mut Vec<usize>, builder: &mut NoAttributes<BuilderImpl>) -> usize {
+        let mut bndry_i = 0;
+        let mut distance = INFINITY;
+        let mut boundaries_x0 = vec![];
+        let mut boundaries_x1 = vec![];
+        let mut boundaries_y0 = vec![];
+        let mut boundaries_y1 = vec![];
+        for (i, curve) in self.boundaries.iter().enumerate() { 
+            let p1 = curve.get_point_at_u(0.);
+            let dist = point.distance(p1);
+            if distance > dist {
+                distance = dist;
+                bndry_i = i;
+            }
+            if !used_boundaries.contains(&i) {
+                if p1.x <    EPSILON {boundaries_x0.push((i, p1)); } // left
+                if p1.y <    EPSILON {boundaries_y0.push((i, p1)); } // bottom
+                if p1.x > 1.-EPSILON {boundaries_x1.push((i, p1)); } // right
+                if p1.y > 1.-EPSILON {boundaries_y1.push((i, p1)); } // top
+            }
+        }
+        if point.x < EPSILON && point.y > EPSILON && point.y < 1.-EPSILON { // left of boundbox
+            boundaries_x0.sort_by(|a, b| b.1.y.partial_cmp(&a.1.y).unwrap());
+            if let Some(a) = boundaries_x0.iter().filter(|a| a.1.y < point.y).next(){
+                bndry_i = a.0;
+                used_boundaries.push(a.0);
+            }else{
+                builder.line_to(lyon::geom::Point::new(0., 0.));
+                self.next_boundary(&vec3(0., 0., 0.), used_boundaries, builder);
+            }
+        } else if point.y < EPSILON && point.x > EPSILON && point.x < 1.-EPSILON { // bottom of boundbox
+            boundaries_y0.sort_by(|a, b| a.1.x.partial_cmp(&b.1.x).unwrap());
+            if let Some(a) = boundaries_x0.iter().filter(|a| a.1.x > point.x).next(){
+                bndry_i = a.0;
+                used_boundaries.push(a.0);
+            }else{
+                builder.line_to(lyon::geom::Point::new(1., 0.));
+                self.next_boundary(&vec3(1., 0., 0.), used_boundaries, builder);
+            }
+        } else if point.x > 1.-EPSILON && point.y > EPSILON && point.y < 1.-EPSILON { // right of boundbox
+            boundaries_x1.sort_by(|a, b| a.1.y.partial_cmp(&b.1.y).unwrap());
+            if let Some(a) = boundaries_x0.iter().filter(|a| a.1.y > point.y).next(){
+                bndry_i = a.0;
+                used_boundaries.push(a.0);
+            }else{
+                builder.line_to(lyon::geom::Point::new(1., 1.));
+                self.next_boundary(&vec3(1., 1., 0.), used_boundaries, builder);
+            }
+        } else if point.y > 1.-EPSILON && point.x > EPSILON && point.x < 1.-EPSILON { // top of boundbox
+            boundaries_y1.sort_by(|a, b| b.1.x.partial_cmp(&a.1.x).unwrap());
+            if let Some(a) = boundaries_x0.iter().filter(|a| a.1.x < point.x).next(){
+                bndry_i = a.0;
+                used_boundaries.push(a.0);
+            }else{
+                builder.line_to(lyon::geom::Point::new(0., 1.));
+                self.next_boundary(&vec3(0., 1., 0.), used_boundaries, builder);
+            }
+        }
+        bndry_i
     }
 
     pub fn get_vector_at_uv(&self, u: f32, v: f32) -> Vec<f32> {
@@ -231,6 +312,7 @@ impl FacetShape {
             controls: self.controls.iter().map(|c| c.get_valid()).collect(), // self.controls.clone(), //
             boundaries: self.boundaries.clone(),
             reversed: self.reversed,
+            perimeter:  self.perimeter,
         }
     }
 }

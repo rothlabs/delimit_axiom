@@ -47,9 +47,9 @@ impl Area {
                 ));
             }
             boundary.controls = normalized_points;
-            facet.boundaries.push(boundary);
+            facet.boundaries.push(boundary); 
         }
-        shapes.push(Shape::Facet(facet));
+        shapes.push(Shape::Facet(facet.get_valid()));
         shapes
     }
 }

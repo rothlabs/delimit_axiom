@@ -42,7 +42,7 @@ impl Extrude {
                     shapes.push(shape.get_transformed(basis.mat4));
                 },
                 Shape::Facet(facet) => {
-                    shapes.push(Shape::Facet(facet.get_reversed_and_transformed(basis.mat4)));
+                    //shapes.push(Shape::Facet(facet.get_reversed_and_transformed(basis.mat4)));
                 },
             }
         }

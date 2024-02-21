@@ -75,26 +75,32 @@ impl Default for FacetShape {
 
 impl FacetShape { 
     pub fn get_reversed_and_transformed(&self, mat4: Mat4) -> Self {
-        let mut facet = self.clone_with_empty_controls(true);
+        let mut facet = self.clone_with_empty_controls_and_boundaries(true);
         for control in self.controls.iter().rev() {
-            facet.controls.push(control.get_transformed(mat4));
+            facet.controls.push(control.get_transformed(mat4)); //  * Mat4::from_scale(vec3(0., 0., 0.))
+        }
+        for bndry in &self.boundaries {
+            facet.boundaries.push(bndry.get_transformed(
+                Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.))
+            ));
         }
         facet
     }
 
     pub fn get_transformed(&self, mat4: Mat4) -> Self {
-        let mut facet = self.clone_with_empty_controls(false);
+        let mut facet = self.clone_with_empty_controls_and_boundaries(false);
         for control in &self.controls {
             facet.controls.push(control.get_transformed(mat4));
         }
+        facet.boundaries = self.boundaries.clone();
         facet
     }
 
-    fn clone_with_empty_controls(&self, reversed: bool) -> Self {
+    fn clone_with_empty_controls_and_boundaries(&self, reversed: bool) -> Self {
         FacetShape {
             nurbs: self.nurbs.clone(),
             controls: vec![],
-            boundaries: self.boundaries.clone(),
+            boundaries: vec![],//self.boundaries.clone(),
             reversed,
             perimeter: self.perimeter,
         }
@@ -191,7 +197,7 @@ impl FacetShape {
             let bndry = &facet.boundaries[bndry_i];
             for p in bndry.get_polyline(query).chunks(3) {
                 let mut y = p[1];
-                if facet.reversed {y = 1.-y;}
+                //////if facet.reversed {y = 1.-y;}
                 let point = lyon::geom::Point::new(p[0], y);
                 if loop_open {
                     builder.line_to(point);
@@ -200,8 +206,8 @@ impl FacetShape {
                     loop_open = true;
                 }
             }
+            bndry_i = facet.next_boundary(&bndry.get_point_at_u(1.), &mut used_boundaries, &mut builder, 0);
             used_boundaries.push(bndry_i);
-            bndry_i = facet.next_boundary(&bndry.get_point_at_u(1.), &mut used_boundaries, &mut builder);
             if bndry_i == start_bndry_i {
                 builder.end(true);
                 loop_open = false;
@@ -231,7 +237,8 @@ impl FacetShape {
         }
     }
 
-    fn next_boundary(&self, point: &Vec3, used_boundaries: &mut Vec<usize>, builder: &mut NoAttributes<BuilderImpl>) -> usize {
+    fn next_boundary(&self, point: &Vec3, used_boundaries: &mut Vec<usize>, builder: &mut NoAttributes<BuilderImpl>, iteration: usize) -> usize {
+        if iteration > 3 {return 0;}
         let mut bndry_i = 0;
         let mut distance = INFINITY;
         let mut boundaries_x0 = vec![];
@@ -252,41 +259,42 @@ impl FacetShape {
                 if p1.y > 1.-EPSILON {boundaries_y1.push((i, p1)); } // top
             }
         }
-        if point.x < EPSILON && point.y > EPSILON && point.y < 1.-EPSILON { // left of boundbox
+        if point.x < EPSILON && point.y > EPSILON  { // left of boundbox  && point.y < 1.-EPSILON
             boundaries_x0.sort_by(|a, b| b.1.y.partial_cmp(&a.1.y).unwrap());
-            if let Some(a) = boundaries_x0.iter().filter(|a| a.1.y < point.y).next(){
+            if let Some(a) = boundaries_x0.iter().next(){ // .filter(|a| a.1.y < point.y)
                 bndry_i = a.0;
-                used_boundaries.push(a.0);
+                //used_boundaries.push(a.0);
             }else{
                 builder.line_to(lyon::geom::Point::new(0., 0.));
-                self.next_boundary(&vec3(0., 0., 0.), used_boundaries, builder);
+                bndry_i = self.next_boundary(&vec3(0., 0., 0.), used_boundaries, builder, iteration+1);
             }
-        } else if point.y < EPSILON && point.x > EPSILON && point.x < 1.-EPSILON { // bottom of boundbox
+        } else if point.y < EPSILON && point.x < 1.-EPSILON { // bottom of boundbox  point.x > EPSILON && 
             boundaries_y0.sort_by(|a, b| a.1.x.partial_cmp(&b.1.x).unwrap());
-            if let Some(a) = boundaries_x0.iter().filter(|a| a.1.x > point.x).next(){
+            if let Some(a) = boundaries_y0.iter().next(){ // .filter(|a| a.1.x > point.x)
                 bndry_i = a.0;
-                used_boundaries.push(a.0);
+                //used_boundaries.push(a.0);
             }else{
                 builder.line_to(lyon::geom::Point::new(1., 0.));
-                self.next_boundary(&vec3(1., 0., 0.), used_boundaries, builder);
+                bndry_i = self.next_boundary(&vec3(1., 0., 0.), used_boundaries, builder, iteration+1);
             }
-        } else if point.x > 1.-EPSILON && point.y > EPSILON && point.y < 1.-EPSILON { // right of boundbox
+        } else if point.x > 1.-EPSILON && point.y < 1.-EPSILON { // right of boundbox // point.y > EPSILON &&
             boundaries_x1.sort_by(|a, b| a.1.y.partial_cmp(&b.1.y).unwrap());
-            if let Some(a) = boundaries_x0.iter().filter(|a| a.1.y > point.y).next(){
+            if let Some(a) = boundaries_x1.iter().next(){ // .filter(|a| a.1.y > point.y)
                 bndry_i = a.0;
-                used_boundaries.push(a.0);
+                //used_boundaries.push(a.0);
             }else{
                 builder.line_to(lyon::geom::Point::new(1., 1.));
-                self.next_boundary(&vec3(1., 1., 0.), used_boundaries, builder);
+                //used_boundaries.push(bi);
+                bndry_i = self.next_boundary(&vec3(1., 1., 0.), used_boundaries, builder, iteration+1);
             }
-        } else if point.y > 1.-EPSILON && point.x > EPSILON && point.x < 1.-EPSILON { // top of boundbox
+        } else if point.y > 1.-EPSILON && point.x > EPSILON { // top of boundbox  // && point.x < 1.-EPSILON
             boundaries_y1.sort_by(|a, b| b.1.x.partial_cmp(&a.1.x).unwrap());
-            if let Some(a) = boundaries_x0.iter().filter(|a| a.1.x < point.x).next(){
+            if let Some(a) = boundaries_y1.iter().next(){ // .filter(|a| a.1.x < point.x)
                 bndry_i = a.0;
-                used_boundaries.push(a.0);
+                //used_boundaries.push(a.0);
             }else{
                 builder.line_to(lyon::geom::Point::new(0., 1.));
-                self.next_boundary(&vec3(0., 1., 0.), used_boundaries, builder);
+                bndry_i = self.next_boundary(&vec3(0., 1., 0.), used_boundaries, builder, iteration+1);
             }
         }
         bndry_i
@@ -306,7 +314,7 @@ impl FacetShape {
         vector
     }
 
-    fn get_valid(&self) -> FacetShape {
+    pub fn get_valid(&self) -> FacetShape {
         FacetShape {
             nurbs: self.nurbs.get_valid(self.controls.len()),
             controls: self.controls.iter().map(|c| c.get_valid()).collect(), // self.controls.clone(), //

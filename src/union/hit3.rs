@@ -33,28 +33,53 @@ impl UnionBasis3 {
         let mut uv1 = start_uv1;
         let mut p0 = facet0.get_point_at_uv(uv0);
         let mut p1 = facet1.get_point_at_uv(uv1);
-        let center = self.get_center(uv0, uv1, p0, p1);
-        (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, center - p0);
-        (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, center - p1);
+        for _ in 0..10 {
+            // (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, p1 - p0);
+            // (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, p0 - p1);
+            let center = self.get_center(uv0, uv1, p0, p1);
+            let (uv0_t0, p0_t0) = facet0.get_uv_and_point_from_3d_dir(uv0, center - p0);
+            let (uv1_t0, p1_t0) = facet1.get_uv_and_point_from_3d_dir(uv1, center - p1);
+            let center = (p0 + p1) / 2.;
+            let (uv0_t1, p0_t1) = facet0.get_uv_and_point_from_3d_dir(uv0, center - p0);
+            let (uv1_t1, p1_t1) = facet1.get_uv_and_point_from_3d_dir(uv1, center - p1);
+            if p0_t0.distance(p1_t0) < p0_t1.distance(p1_t1) {
+                p0 = p0_t0;
+                p1 = p1_t0;
+                uv0 = uv0_t0;
+                uv1 = uv1_t0;
+            } else {
+                p0 = p0_t1;
+                p1 = p1_t1;
+                uv0 = uv0_t1;
+                uv1 = uv1_t1;
+            }
+            if p0.distance(p1) < self.tolerance * 0.5 {
+                break;
+            }
+        }
         if p0.distance(p1) < self.tolerance {
-            if uv0.x < self.tolerance || uv0.x > 1.-self.tolerance || uv0.y < self.tolerance || uv0.y > 1.-self.tolerance 
-            || uv1.x < self.tolerance || uv1.x > 1.-self.tolerance || uv1.y < self.tolerance || uv1.y > 1.-self.tolerance {
+            if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON
+            && uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
                 None
             }else{
                 if self.hit_map.contains_key(&p0) {
-                    None
+                   None
                 } else {
                     let start = FacetHit {uv0, uv1, p0, p1};
                     let (curve0, curve1, curve2) = self.make_hit_curves(&start); // f0, f1, 
                     //self.hit_polylines[*f0].push(curve0.controls.iter().map(|v| v.truncate()).collect());
-                    if curve0.controls.len() > 2 {
+                    if curve0.controls.len() < 2 {
+                        None
+                    }else {
                         self.shapes.push(Shape::Point(p0));
                         self.shapes.push(Shape::Point(p1));
                         //self.shapes.push(Shape::Curve(curve0.get_valid()));
                         //self.shapes.push(Shape::Curve(curve1.get_valid()));
+                        // self.shapes.push(Shape::Point(*curve2.controls.first().unwrap()));
+                        // self.shapes.push(Shape::Point(*curve2.controls.last().unwrap()));
                         self.shapes.push(Shape::Curve(curve2.get_valid()));
+                        Some((curve0.get_valid(), curve1.get_valid()))
                     }
-                    Some((curve0.get_valid(), curve1.get_valid()))
                 }
             }
         }else{
@@ -107,19 +132,26 @@ impl UnionBasis3 {
                 let dir = normal_cross * (1-direction*2) as f32 * self.hit_step;
                 (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, dir);
                 (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, dir);
-                if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
-                    //if p0.distance(p1) > self.tolerance {
-                        (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, p0 - p1);
-                    //}
-                    add_points(FacetHit{uv0, uv1, p0, p1});
-                    break;
-                } else if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
-                    //if p0.distance(p1) > self.tolerance {
-                        (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, p1 - p0);
-                    //}
-                    add_points(FacetHit{uv0, uv1, p0, p1});
-                    break;
-                }
+                //if k > 14 {
+                    // if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON 
+                    // && uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
+                    //     break;
+                    // }
+                    if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
+                        //if p0.distance(p1) > self.tolerance {
+                            (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, p0 - p1);
+                        //}
+                        add_points(FacetHit{uv0, uv1, p0, p1});
+                        break;
+                    } 
+                    if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
+                        //if p0.distance(p1) > self.tolerance {
+                            (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, p1 - p0);
+                        //}
+                        add_points(FacetHit{uv0, uv1, p0, p1});
+                        break;
+                    }
+                //}
             }
         }
         forward_controls0.reverse();
@@ -133,6 +165,7 @@ impl UnionBasis3 {
         backward_controls2.reverse();
         curve2.controls.extend(backward_controls2);
         curve2.controls.extend(forward_controls2);
+
         (curve0, curve1, curve2)
     }
 

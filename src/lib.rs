@@ -147,6 +147,44 @@ pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetS
     (curves, facets)
 }
 
+pub fn get_grouped_facets(parts: &Vec<Model>) -> Vec<Vec<FacetShape>> {
+    let mut facets = vec![];
+    for part in parts {
+        let mut facet_group = vec![];
+        for shape in part.get_shapes() {
+            match shape {
+                Shape::Facet(s) => facet_group.push(s),
+                _ => (),
+            }
+        }
+        facets.push(facet_group);
+    }
+    facets
+}
+
+pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>, Vec<Vec<CurveShape>>, Vec<Vec<FacetShape>>) {
+    let mut curves = vec![];
+    let mut facets = vec![];
+    let mut grouped_curves = vec![];
+    let mut grouped_facets = vec![];
+    for part in parts {
+        let mut curve_group = vec![];
+        let mut facet_group = vec![];
+        for shape in part.get_shapes() {
+            match shape {
+                Shape::Curve(s) => curve_group.push(s),
+                Shape::Facet(s) => facet_group.push(s),
+                _ => (),
+            }
+        }
+        grouped_curves.push(curve_group.clone());
+        grouped_facets.push(facet_group.clone());
+        curves.extend(curve_group);
+        facets.extend(facet_group);
+    }
+    (curves, facets, grouped_curves, grouped_facets)
+}
+
 pub fn get_transformed_point(point: &Vec3, mat4: Mat4) -> Vec3 { // [f32; 3] {
     mat4.mul_vec4(point.extend(1.)).truncate() //mat4.mul_vec4(Vec3::from_slice(point).extend(1.)).truncate().to_array()
 }

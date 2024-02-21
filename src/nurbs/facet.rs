@@ -107,12 +107,15 @@ impl FacetShape {
     }
 
     pub fn get_uv_and_point_from_3d_dir(&self, uv: Vec2, dir: Vec3) -> (Vec2, Vec3) {
-        let step = 0.0001;
+        let mut step_u = 0.0001;
+        let mut step_v = 0.0001;
+        if uv.x + step_u > 1. {step_u = -step_u;}
+        if uv.y + step_v > 1. {step_v = -step_v;}
         let p0 = self.get_point_at_uv(uv);
-        let pu = self.get_point_at_uv(uv + Vec2::X * step);
-        let pv = self.get_point_at_uv(uv + Vec2::Y * step);
-        let length_ratio_u = dir.length() / p0.distance(pu) * step;
-        let length_ratio_v = dir.length() / p0.distance(pv) * step;
+        let pu = self.get_point_at_uv(uv + Vec2::X * step_u);
+        let pv = self.get_point_at_uv(uv + Vec2::Y * step_v);
+        let length_ratio_u = dir.length() / p0.distance(pu) * step_u;
+        let length_ratio_v = dir.length() / p0.distance(pv) * step_v;
         let uv_dir = vec2(
             (pu-p0).normalize().dot(dir.normalize()) * length_ratio_u, 
             (pv-p0).normalize().dot(dir.normalize()) * length_ratio_v
@@ -125,6 +128,7 @@ impl FacetShape {
             if uv1.y > 1. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::Y, Vec2::ONE).unwrap();}
             if uv1.y < 0. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::ZERO, Vec2::X).unwrap();}
         }
+        uv1 = uv1.clamp(Vec2::ZERO, Vec2::ONE); // TODO: might not be needed
         // if uv1.x > 1. || uv1.x < 0. || uv1.y < 0. || uv1.x > 1. {
         //     console_log!("over bounds! {},{}", uv.x, uv.y);
         // }
@@ -133,11 +137,14 @@ impl FacetShape {
     }
 
     pub fn get_normal_at_uv(&self, uv: Vec2) -> Vec3 {
-        let step = 0.0001;
+        let mut step_u = 0.0001;
+        let mut step_v = 0.0001;
+        if uv.x + step_u > 1. {step_u = -step_u;}
+        if uv.y + step_v > 1. {step_v = -step_v;}
         let p0 = self.get_point_at_uv(uv);
-        let p1 = self.get_point_at_uv(uv + Vec2::X * step);
-        let p2 = self.get_point_at_uv(uv + Vec2::Y * step);
-        (p0 - p1).normalize().cross((p0 - p2).normalize()).normalize() // TODO: remove final normalize after Union3 works!!!!
+        let p1 = self.get_point_at_uv(uv + Vec2::X * step_u);
+        let p2 = self.get_point_at_uv(uv + Vec2::Y * step_v);
+        step_u.signum() * step_v.signum() * (p0 - p1).normalize().cross((p0 - p2).normalize()).normalize() // TODO: remove final normalize after Union3 works!!!!
     }
 
     pub fn get_point_at_uv(&self, uv: Vec2) -> Vec3 {

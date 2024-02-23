@@ -7,6 +7,7 @@ pub struct DiscreteQuery {
     pub model:     Model,
     pub count:     usize,
     pub tolerance: f32,   
+    //pub one_mesh:  bool,
 }
 
 impl DiscreteQuery {
@@ -23,6 +24,7 @@ impl DiscreteQuery {
             model: self.model,
             count,
             tolerance,
+            //one_mesh: self.one_mesh,
         }
     }
 }

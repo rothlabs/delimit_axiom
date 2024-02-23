@@ -37,6 +37,17 @@ impl Spatial2 {
         }
     }
 
+    pub fn contains_key(&self, point: &Vec2) -> bool {
+        for x in -1..2 {
+            for y in -1..2 {
+                if self.map.contains_key(&self.get_spatial_key(&(*point + vec2(x as f32, y as f32)))) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     pub fn insert(&mut self, point: &Vec2, i: usize) {
         if let Some(vec) = self.get_mut(point) {
             vec.push(i);
@@ -45,7 +56,7 @@ impl Spatial2 {
         }
     }
 
-    pub fn get(&mut self, point: &Vec2) -> Option<&Vec<usize>> {
+    pub fn get(&self, point: &Vec2) -> Option<&Vec<usize>> {
         self.map.get(&self.get_spatial_key(point))
     }
 

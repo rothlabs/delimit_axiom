@@ -52,13 +52,13 @@ impl Union {
             // }
             //let seed: [u8; 32] = *b"01234567891234560123456789123456";
             let mut basis = UnionBasis3 {
-                facet0: FacetShape::default(),
-                facet1: FacetShape::default(),
+                // facet0: FacetShape::default(),
+                // facet1: FacetShape::default(),
                 facet_index0: 0,
                 facet_index1: 0,
                 //rng: StdRng::from_seed(seed),
-                hit_map: Spatial3::new(hit_step),
-                //hit_polylines: (0..facets.len()).map(|_| vec![]).collect(),
+                hit_map: (0..facets.len()).map(|_| Spatial3::new(hit_step)).collect(),
+                hit_points: (0..facets.len()).map(|_| vec![]).collect(),
                 hit_step,
                 facet_hits: (0..curves.len()).map(|_| vec![]).collect(),
                 curve_hits: (0..curves.len()).map(|_| vec![]).collect(),

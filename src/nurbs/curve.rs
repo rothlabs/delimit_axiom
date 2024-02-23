@@ -1,6 +1,7 @@
 
-use crate::{Model, Shape, query::DiscreteQuery, get_points, get_transformed_point};
+use crate::{get_points, get_transformed_point, hash_vector, query::DiscreteQuery, scene::Polyline, Model, Shape};
 use glam::*;
+use lyon::path::Polygon;
 use serde::{Deserialize, Serialize};
 
 use super::Nurbs;
@@ -61,16 +62,29 @@ impl Default for CurveShape {
 
 impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     pub fn get_transformed(&self, mat4: Mat4) -> Self {
-        let mut curve = Self {
-            nurbs: self.nurbs.clone(),
-            controls: vec![],
-            min: self.min,
-            max: self.max,
-        };
+        let mut curve = self.clone_with_empty_controls();
         for point in &self.controls {
             curve.controls.push(get_transformed_point(point, mat4));
         }
         curve
+    }
+
+    pub fn get_transformed_and_reversed(&self, mat4: Mat4) -> Self {
+        let mut curve = self.clone_with_empty_controls();
+        curve.nurbs.weights.reverse();
+        for point in self.controls.iter().rev() {
+            curve.controls.push(get_transformed_point(point, mat4));
+        }
+        curve
+    }
+
+    fn clone_with_empty_controls(&self) -> Self {
+        Self {
+            nurbs: self.nurbs.clone(),
+            controls: vec![],
+            min: self.min,
+            max: self.max,
+        }
     }
     
     // pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
@@ -86,7 +100,15 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         (1./(count-1) as f32, (0..count).map(|u| u as f32 / (count-1) as f32).collect())
     }
 
-    pub fn get_polyline(&self, query: &DiscreteQuery) -> Vec<f32> {
+    pub fn get_polyline(&self, query: &DiscreteQuery) -> Polyline {
+        let vector = self.get_polyline_vector(query);
+        Polyline {
+            digest: hash_vector(&vector),
+            vector,
+        }
+    }
+
+    pub fn get_polyline_vector(&self, query: &DiscreteQuery) -> Vec<f32> {
         let curve = self.get_valid();
         let count = curve.nurbs.get_sample_count(query.count);
         (0..count).into_iter()

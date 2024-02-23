@@ -1,7 +1,11 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{get_shapes, get_transformed_point, get_vec3_or, nurbs::Nurbs, CurveShape, FacetShape, Model, Shape};
+use crate::{log, get_shapes, get_transformed_point, get_vec3_or, nurbs::Nurbs, CurveShape, FacetShape, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
+
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Revolve::default")]
@@ -24,7 +28,9 @@ impl Revolve {
         let final_turn = basis.get_transform(self.angle, 1.);
         let mut shapes = vec![];
         for shape in get_shapes(&self.parts) {
-            shapes.push(shape.clone());
+            if self.angle.abs() < PI*2. {
+                shapes.push(shape.clone());
+            }
             match &shape {
                 Shape::Point(point) => {
                     let mut curve = CurveShape {
@@ -38,14 +44,16 @@ impl Revolve {
                     }
                     curve.controls.push(get_transformed_point(point, final_turn)); 
                     shapes.push(Shape::Curve(curve));
-                    shapes.push(shape.get_transformed(final_turn));
+                    if self.angle.abs() < PI*2. {
+                        shapes.push(shape.get_transformed(final_turn));
+                    }
                 },
                 Shape::Curve(curve) => {
                     let mut facet = FacetShape {
                         nurbs: basis.nurbs.clone(),
                         controls:   vec![curve.clone()], 
                         boundaries: vec![],
-                        reversed:   false,
+                        //reversed:   false,
                         perimeter:  false,
                     };
                     for &mat4 in &basis.transforms {
@@ -56,10 +64,11 @@ impl Revolve {
                     shapes.push(shape.get_transformed(final_turn));
                 },
                 Shape::Facet(facet) => {
-                    shapes.push(Shape::Facet(facet.get_reversed_and_transformed(final_turn)));
+                    shapes.push(Shape::Facet(facet.get_transformed_and_reversed(final_turn)));
                 },
             }
         }
+        //console_log!("shape count: {}",shapes.len());
         shapes 
     }
 }

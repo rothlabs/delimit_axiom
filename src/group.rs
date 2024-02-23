@@ -7,6 +7,7 @@ use glam::*;
 #[serde(default = "Group::default")]
 pub struct Group {
     pub parts:    Vec<Model>,
+    pub reverse:  bool,
     pub position: [f32; 3],
     pub rotation: [f32; 3],
     pub scale:    [f32; 3],
@@ -18,8 +19,14 @@ impl Group {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mat4 = self.get_matrix();
         let mut shapes = vec![];
-        for shape in get_shapes(&self.parts) {
-            shapes.push(shape.get_transformed(mat4));
+        if self.reverse {
+            for shape in get_shapes(&self.parts) {
+                shapes.push(shape.get_transformed_and_reversed(mat4));
+            }
+        }else{
+            for shape in get_shapes(&self.parts) {
+                shapes.push(shape.get_transformed(mat4));
+            }
         }
         shapes
     }

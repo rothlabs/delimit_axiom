@@ -58,36 +58,61 @@ impl UnionBasis3 {
             }
         }
         if p0.distance(p1) < self.tolerance {
-            if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON
-            && uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
-                None
-            }else{
-                if self.hit_map.contains_key(&p0) {
-                   None
-                } else {
+            // if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON
+            // && uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
+            //     None
+            // }else{
+                // if self.hit_map[self.facet_index0].contains_key(&p0) && self.hit_map[self.facet_index1].contains_key(&p1) {
+                //     None
+                // } else {
                     let start = FacetHit {uv0, uv1, p0, p1};
-                    let (curve0, curve1, curve2) = self.make_hit_curves(&start); // f0, f1, 
+                    let (curve0, curve1, curve2) = self.get_hit_curves(&start); // f0, f1, 
                     //self.hit_polylines[*f0].push(curve0.controls.iter().map(|v| v.truncate()).collect());
                     if curve0.controls.len() < 2 {
                         None
                     }else {
-                        self.shapes.push(Shape::Point(p0));
-                        self.shapes.push(Shape::Point(p1));
-                        //self.shapes.push(Shape::Curve(curve0.get_valid()));
-                        //self.shapes.push(Shape::Curve(curve1.get_valid()));
-                        // self.shapes.push(Shape::Point(*curve2.controls.first().unwrap()));
-                        // self.shapes.push(Shape::Point(*curve2.controls.last().unwrap()));
-                        self.shapes.push(Shape::Curve(curve2.get_valid()));
-                        Some((curve0.get_valid(), curve1.get_valid()))
+                        let first_point = curve0.controls.first().unwrap();
+                        let last_point = curve0.controls.last().unwrap();
+                        let mut duplicate_curve = false;
+                        self.hit_map[self.facet_index0].for_pairs(&mut |i0: usize, i1: usize| {
+                            if first_point.distance(self.hit_points[self.facet_index0][i0]) < self.tolerance*0.1 {
+                                if last_point.distance(self.hit_points[self.facet_index0][i1]) < self.tolerance*0.1 {
+                                    duplicate_curve = true;
+                                }
+                            }
+                            if last_point.distance(self.hit_points[self.facet_index0][i0]) < self.tolerance*0.1 {
+                                if first_point.distance(self.hit_points[self.facet_index0][i1]) < self.tolerance*0.1 {
+                                    duplicate_curve = true;
+                                }
+                            }
+                        });
+                        if duplicate_curve {
+                            None
+                        } else {
+                            self.hit_map[self.facet_index0].insert(first_point, self.hit_points[self.facet_index0].len());
+                            self.hit_points[self.facet_index0].push(*first_point);
+                            //self.hit_map[self.facet_index1].insert(&curve1.controls.first().unwrap(), 0);
+                            self.hit_map[self.facet_index0].insert(last_point, self.hit_points[self.facet_index0].len());
+                            self.hit_points[self.facet_index0].push(*last_point);
+                            //self.hit_map[self.facet_index1].insert(&curve1.controls.last().unwrap(), 0);
+                            self.shapes.push(Shape::Point(p0));
+                            self.shapes.push(Shape::Point(p1));
+                            //self.shapes.push(Shape::Curve(curve0.get_valid()));
+                            //self.shapes.push(Shape::Curve(curve1.get_valid()));
+                            // self.shapes.push(Shape::Point(*curve2.controls.first().unwrap()));
+                            // self.shapes.push(Shape::Point(*curve2.controls.last().unwrap()));
+                            self.shapes.push(Shape::Curve(curve2.get_valid()));
+                            Some((curve0.get_valid(), curve1.get_valid()))
+                        }
                     }
-                }
-            }
+                //}
+            //}
         }else{
             None
         }
     }
 
-    fn make_hit_curves(&mut self, start: &FacetHit) -> (CurveShape, CurveShape, CurveShape) { 
+    fn get_hit_curves(&self, start: &FacetHit) -> (CurveShape, CurveShape, CurveShape) { 
         let mut curve0 = CurveShape::default();
         let mut curve1 = CurveShape::default();
         let mut curve2 = CurveShape::default();
@@ -114,18 +139,18 @@ impl UnionBasis3 {
                     backward_controls2.push((hit.p0 + hit.p1) / 2.);
                 } 
             };
-            for k in 0..10000 {
+            for k in 0..1000 {
                 let center = self.get_center(uv0, uv1, p0, p1);
                 (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, center - p0);
                 (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, center - p1);
                 if k > 14 {
-                    if p0.distance(start.p0) < self.hit_step * 2. || p1.distance(start.p1) < self.hit_step * 2. {
+                    if p0.distance(start.p0) < self.hit_step || p1.distance(start.p1) < self.hit_step {
                         add_points(start.clone());
                         break 'dir_loop;
                     }
                 }
                 add_points(FacetHit{uv0, uv1, p0, p1});
-                self.hit_map.insert(&p0, 0);
+                
                 let normal0 = facet0.get_normal_at_uv(uv0);
                 let normal1 = facet1.get_normal_at_uv(uv1);
                 let normal_cross = normal0.cross(normal1).normalize();

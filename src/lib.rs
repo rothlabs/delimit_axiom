@@ -1,6 +1,6 @@
 mod utils;
 mod query;
-mod result;
+mod scene;
 mod nurbs;
 mod spatial;
 mod group;
@@ -23,6 +23,9 @@ use union::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use glam::*;
+
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
@@ -78,6 +81,13 @@ impl Shape {
             Shape::Point(s) => Shape::Point(get_transformed_point(s, mat4)),
             Shape::Curve(s) => Shape::Curve(s.get_transformed(mat4)),
             Shape::Facet(s) => Shape::Facet(s.get_transformed(mat4)),
+        }
+    }
+    pub fn get_transformed_and_reversed(&self, mat4: Mat4) -> Self {
+        match self {
+            Shape::Point(s) => Shape::Point(get_transformed_point(s, mat4)),
+            Shape::Curve(s) => Shape::Curve(s.get_transformed_and_reversed(mat4)),
+            Shape::Facet(s) => Shape::Facet(s.get_transformed_and_reversed(mat4)),
         }
     }
 }
@@ -211,6 +221,14 @@ pub fn get_line_intersection(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<V
         return None;
     }
     Some(vec2(x, y))
+}
+
+pub fn hash_vector(vecf32: &Vec<f32>) -> u64 {
+    let veci32: Vec<u64> = vecf32.iter().enumerate().map(|(i, v)| i as u64 * (v * 10000.).floor() as u64).collect();
+    veci32.iter().sum()
+    // let mut hasher = DefaultHasher::new();
+    // veci32.hash(&mut hasher);
+    // hasher.finish()
 }
 
 #[wasm_bindgen]

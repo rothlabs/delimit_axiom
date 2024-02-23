@@ -5,6 +5,8 @@ use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 use glam::*;
 
+use std::time::Instant;
+
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
@@ -23,12 +25,13 @@ pub struct FacetSample {
 
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
-    pub facet0: FacetShape,
-    pub facet1: FacetShape,
+    // pub facet0: FacetShape,
+    // pub facet1: FacetShape,
     pub facet_index0: usize,
     pub facet_index1: usize,
     //pub rng: StdRng,
-    pub hit_map: Spatial3,
+    pub hit_map: Vec<Spatial3>,
+    pub hit_points: Vec<Vec<Vec3>>,
     pub curves: Vec<CurveShape>,
     pub facets: Vec<FacetShape>,
     pub grouped_curves: Vec<Vec<CurveShape>>,
@@ -89,10 +92,12 @@ impl UnionBasis3 {
     }
 
     fn try_facet_pairs(&mut self){
+        //console_log!("try face pairs: {}, {}", self.grouped_facets.len(), self.grouped_facets.len());
+        //let start = Instant::now();
         let mut af0 = 0;
         for fg0 in 0..self.grouped_facets.len() {
             let mut af1 = 0;
-            for fg1 in 0..self.grouped_facets.len() {
+            for fg1 in fg0..self.grouped_facets.len() {
                 if fg0 != fg1 {
                     for f0 in 0..self.grouped_facets[fg0].len() {
                         for f1 in 0..self.grouped_facets[fg1].len() {
@@ -119,6 +124,8 @@ impl UnionBasis3 {
             }
             af0 += self.grouped_facets[fg0].len();
         }
+        //let elapsed = start.elapsed();
+        //console_log!("timed: {:?}", elapsed);
     }
 
     // fn for_spatial_pairs<C, F>(&mut self, spatial: &Spatial3, curve_func: &mut C, facet_func: &mut F) 

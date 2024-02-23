@@ -8,7 +8,7 @@ use glam::*;
 #[serde(default = "Sketch::default")]
 pub struct Sketch {
     pub actions: Vec<Action>,
-    //pub reverse: bool,
+    pub reverse: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -56,7 +56,15 @@ impl Sketch {
                 },
             }
         }
-        shapes
+        if self.reverse {
+            let mut reverse_shapes = vec![];
+            for shape in shapes {
+                reverse_shapes.push(shape.get_transformed_and_reversed(Mat4::IDENTITY));
+            }
+            reverse_shapes
+        }else{
+            shapes
+        }
     }
     fn move_to(&mut self, x: f32, y: f32) {
         self.actions.push(Action::MoveTo([x, y]));
@@ -96,12 +104,14 @@ pub struct Arc {
     pub center: [f32; 2], 
     pub radius: f32,
     pub angle: f32,
+    pub reverse: bool,
 }
 
 impl Arc {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut angle = self.angle;
         if angle == 0. {angle = PI*2.;}
+        if self.reverse {angle = -angle;}
         let revolve = Revolve {
             parts: vec![Model::Point([self.center[0] + self.radius, self.center[1], 0.])],
             center: [self.center[0], self.center[1], 0.],
@@ -118,11 +128,13 @@ pub struct Rectangle {
     pub min:    [f32; 2], 
     pub max:    [f32; 2], 
     pub radius: f32,
+    pub reverse: bool,
 }
 
 impl Rectangle {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut sketch = Sketch::default();
+        sketch.reverse = self.reverse;
         sketch.move_to(self.min[0]+self.radius, self.min[1]);
         sketch.line_to(self.max[0]-self.radius, self.min[1]);
         sketch.turn(FRAC_PI_2, self.radius);

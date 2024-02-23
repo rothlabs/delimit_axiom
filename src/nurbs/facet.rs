@@ -3,18 +3,18 @@ use std::ops::DivAssign;
 
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
-use crate::result::Mesh;
-use crate::{get_curves, get_line_intersection, log, CurveShape, Model, Shape};
+use crate::scene::Mesh;
+use crate::{get_curves, get_line_intersection, hash_vector, log, CurveShape, Model, Shape};
 use glam::*;
 use lyon::path::path::BuilderImpl;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
 use lyon::geom::{Box2D, Point};
-use lyon::path::{builder, Winding};
-use lyon::path::builder::{NoAttributes, PathBuilder};
+use lyon::path::Winding;
+use lyon::path::builder::NoAttributes;
 
 
-use super::curve;
+
 //use wasm_bindgen_test::console_log;
 
 //use rayon::prelude::*;
@@ -33,7 +33,7 @@ pub struct Facet {
     pub order:       usize,       // order = polynomial_degree + 1
     pub knots:       Vec<f32>,    // knot_count = order + control_count
     pub weights:     Vec<f32>,    // weight_count = control_count
-    pub reversed:    bool,
+    //pub reversed:    bool,
 }
 
 impl Facet {
@@ -46,7 +46,7 @@ impl Facet {
             },
             controls:   get_curves(&self.controls),
             boundaries: get_curves(&self.boundaries),
-            reversed:   self.reversed,
+            //reversed:   self.reversed,
             perimeter:  false,
         })]
     }
@@ -57,7 +57,7 @@ pub struct FacetShape {
     pub nurbs:      Nurbs,
     pub controls:   Vec<CurveShape>,
     pub boundaries: Vec<CurveShape>,
-    pub reversed:   bool,
+    //pub reversed:   bool,
     pub perimeter: bool,
 }
 
@@ -67,15 +67,25 @@ impl Default for FacetShape {
             nurbs: Nurbs::default(),
             controls: vec![],
             boundaries: vec![],
-            reversed: false,
+            //reversed: false,
             perimeter: false,
         }
     }
 }
 
 impl FacetShape { 
-    pub fn get_reversed_and_transformed(&self, mat4: Mat4) -> Self {
-        let mut facet = self.clone_with_empty_controls_and_boundaries(true);
+    pub fn get_transformed(&self, mat4: Mat4) -> Self {
+        let mut facet = self.clone_with_empty_controls_and_boundaries();
+        for control in &self.controls {
+            facet.controls.push(control.get_transformed(mat4));
+        }
+        facet.boundaries = self.boundaries.clone();
+        facet
+    }
+
+    pub fn get_transformed_and_reversed(&self, mat4: Mat4) -> Self {
+        let mut facet = self.clone_with_empty_controls_and_boundaries();
+        facet.nurbs.weights.reverse();
         for control in self.controls.iter().rev() {
             facet.controls.push(control.get_transformed(mat4)); //  * Mat4::from_scale(vec3(0., 0., 0.))
         }
@@ -87,21 +97,11 @@ impl FacetShape {
         facet
     }
 
-    pub fn get_transformed(&self, mat4: Mat4) -> Self {
-        let mut facet = self.clone_with_empty_controls_and_boundaries(false);
-        for control in &self.controls {
-            facet.controls.push(control.get_transformed(mat4));
-        }
-        facet.boundaries = self.boundaries.clone();
-        facet
-    }
-
-    fn clone_with_empty_controls_and_boundaries(&self, reversed: bool) -> Self {
+    fn clone_with_empty_controls_and_boundaries(&self) -> Self {
         FacetShape {
             nurbs: self.nurbs.clone(),
             controls: vec![],
-            boundaries: vec![],//self.boundaries.clone(),
-            reversed,
+            boundaries: vec![],
             perimeter: self.perimeter,
         }
     }
@@ -202,7 +202,7 @@ impl FacetShape {
         //let mut perim_factors = [0.1, 0.01, 0.01, 1.];
         for _ in 0..facet.boundaries.len() {
             let bndry = &facet.boundaries[bndry_i];
-            for p in bndry.get_polyline(query).chunks(3) {
+            for p in bndry.get_polyline_vector(query).chunks(3) {
                 let mut y = p[1];
                 //////if facet.reversed {y = 1.-y;}
                 let point = lyon::geom::Point::new(p[0], y);
@@ -239,6 +239,7 @@ impl FacetShape {
             vector.extend(facet.get_vector_at_uv(u, v));
         }
         Mesh {
+            digest: hash_vector(&vector), 
             vector, //:    geometry.vertices.into_iter().flatten().collect(),
             trivec: geometry.indices, 
         }
@@ -326,7 +327,7 @@ impl FacetShape {
             nurbs: self.nurbs.get_valid(self.controls.len()),
             controls: self.controls.iter().map(|c| c.get_valid()).collect(), // self.controls.clone(), //
             boundaries: self.boundaries.clone(),
-            reversed: self.reversed,
+            //reversed: self.reversed,
             perimeter:  self.perimeter,
         }
     }

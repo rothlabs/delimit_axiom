@@ -21,9 +21,9 @@ use lyon::path::builder::NoAttributes;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
+// macro_rules! console_log {
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Facet::default")]
@@ -74,23 +74,23 @@ impl Default for FacetShape {
 }
 
 impl FacetShape { 
-    pub fn get_transformed(&self, mat4: Mat4) -> Self {
+    pub fn get_reshape(&self, mat4: Mat4) -> Self {
         let mut facet = self.clone_with_empty_controls_and_boundaries();
         for control in &self.controls {
-            facet.controls.push(control.get_transformed(mat4));
+            facet.controls.push(control.get_reshape(mat4));
         }
         facet.boundaries = self.boundaries.clone();
         facet
     }
 
-    pub fn get_transformed_and_reversed(&self, mat4: Mat4) -> Self {
+    pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
         let mut facet = self.clone_with_empty_controls_and_boundaries();
         facet.nurbs.weights.reverse();
         for control in self.controls.iter().rev() {
-            facet.controls.push(control.get_transformed(mat4)); //  * Mat4::from_scale(vec3(0., 0., 0.))
+            facet.controls.push(control.get_reshape(mat4)); //  * Mat4::from_scale(vec3(0., 0., 0.))
         }
         for bndry in &self.boundaries {
-            facet.boundaries.push(bndry.get_transformed(
+            facet.boundaries.push(bndry.get_reshape(
                 Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.))
             ));
         }

@@ -4,9 +4,9 @@ mod union3;
 mod hit3;
 
 use std::collections::HashMap;
-use crate::{get_curves, get_curves_and_facets, get_grouped_curves_and_facets, group, log, FacetShape, Model, Shape, Spatial2, Spatial3};
-use rand::SeedableRng;
-use rand::rngs::StdRng; //use rand::rngs::SmallRng;
+use crate::{get_curves, get_curves_and_facets, get_grouped_curves_and_facets, group, log, FacetShape, Group, Model, Shape, Spatial2, Spatial3};
+// use rand::SeedableRng;
+// use rand::rngs::StdRng; //use rand::rngs::SmallRng;
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -20,6 +20,7 @@ use self::{union2::UnionBasis2, union3::UnionBasis3};
 #[serde(default = "Union::default")]
 pub struct Union {
     pub parts: Vec<Model>,
+    pub transform: Group,
 }
 
 impl Union {
@@ -75,7 +76,7 @@ impl Union {
                 facet_samples: vec![],
                 shapes: vec![],
             };
-            basis.get_shapes()
+            self.transform.get_reshapes(basis.get_shapes())
         //}
     }
 }

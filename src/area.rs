@@ -1,5 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{Model, Shape, FacetShape, CurveShape, get_curves, get_points};
+use crate::{get_curves, get_points, CurveShape, FacetShape, Group, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -8,6 +8,7 @@ use glam::*;
 #[serde(default = "Area::default")]
 pub struct Area {
     pub parts: Vec<Model>,
+    pub transform: Group,
 }
 
 impl Area { 
@@ -50,6 +51,6 @@ impl Area {
             facet.boundaries.push(boundary); 
         }
         shapes.push(Shape::Facet(facet.get_valid()));
-        shapes
+        self.transform.get_reshapes(shapes)
     }
 }

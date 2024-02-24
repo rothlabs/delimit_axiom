@@ -9,6 +9,8 @@ mod area;
 mod extrude;
 mod revolve;
 mod union;
+mod pattern;
+mod mirror;
 
 use utils::*;
 use nurbs::{curve::*, facet::*};
@@ -19,6 +21,8 @@ use area::*;
 use extrude::*;
 use revolve::*;
 use union::*;
+use pattern::*;
+use mirror::*;
 
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -38,9 +42,12 @@ pub enum Model {
     Arc(Arc),
     Circle(Arc),
     Rectangle(Rectangle),
+    Slot(Slot),
     Extrude(Extrude),
     Revolve(Revolve),
     Union(Union),
+    Pattern(Pattern),
+    Mirror(Mirror),
 }
 
 impl Model {
@@ -53,11 +60,14 @@ impl Model {
             Model::Arc(m)       => m.get_shapes(),
             Model::Circle(m)    => m.get_shapes(),
             Model::Rectangle(m) => m.get_shapes(),
+            Model::Slot(m)      => m.get_shapes(),
             Model::Group(m)     => m.get_shapes(),
             Model::Area(m)      => m.get_shapes(),
             Model::Extrude(m)   => m.get_shapes(),
             Model::Revolve(m)   => m.get_shapes(),
             Model::Union(m)     => m.get_shapes(),
+            Model::Pattern(m)   => m.get_shapes(),
+            Model::Mirror(m)    => m.get_shapes(),
         }
     }
 }
@@ -76,18 +86,18 @@ pub enum Shape {
 }
 
 impl Shape {
-    pub fn get_transformed(&self, mat4: Mat4) -> Self {
+    pub fn get_reshape(&self, mat4: Mat4) -> Self {
         match self {
-            Shape::Point(s) => Shape::Point(get_transformed_point(s, mat4)),
-            Shape::Curve(s) => Shape::Curve(s.get_transformed(mat4)),
-            Shape::Facet(s) => Shape::Facet(s.get_transformed(mat4)),
+            Shape::Point(s) => Shape::Point(get_reshaped_point(s, mat4)),
+            Shape::Curve(s) => Shape::Curve(s.get_reshape(mat4)),
+            Shape::Facet(s) => Shape::Facet(s.get_reshape(mat4)),
         }
     }
-    pub fn get_transformed_and_reversed(&self, mat4: Mat4) -> Self {
+    pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
         match self {
-            Shape::Point(s) => Shape::Point(get_transformed_point(s, mat4)),
-            Shape::Curve(s) => Shape::Curve(s.get_transformed_and_reversed(mat4)),
-            Shape::Facet(s) => Shape::Facet(s.get_transformed_and_reversed(mat4)),
+            Shape::Point(s) => Shape::Point(get_reshaped_point(s, mat4)),
+            Shape::Curve(s) => Shape::Curve(s.get_reverse_reshape(mat4)),
+            Shape::Facet(s) => Shape::Facet(s.get_reverse_reshape(mat4)),
         }
     }
 }
@@ -102,6 +112,16 @@ pub fn get_shapes(parts: &Vec<Model>) -> Vec<Shape> {
     let mut result = vec![];
     for part in parts {
         result.extend(part.get_shapes());
+    }
+    result
+}
+
+pub fn get_reshapes(parts: &Vec<Model>, mat4: Mat4) -> Vec<Shape> {
+    let mut result = vec![];
+    for part in parts {
+        for shape in part.get_shapes() {
+            result.push(shape.get_reshape(mat4));
+        }
     }
     result
 }
@@ -195,7 +215,7 @@ pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Ve
     (curves, facets, grouped_curves, grouped_facets)
 }
 
-pub fn get_transformed_point(point: &Vec3, mat4: Mat4) -> Vec3 { // [f32; 3] {
+pub fn get_reshaped_point(point: &Vec3, mat4: Mat4) -> Vec3 { // [f32; 3] {
     mat4.mul_vec4(point.extend(1.)).truncate() //mat4.mul_vec4(Vec3::from_slice(point).extend(1.)).truncate().to_array()
 }
 

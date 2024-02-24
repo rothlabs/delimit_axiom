@@ -1,4 +1,4 @@
-use crate::{get_shapes, get_transformed_point, get_vec3_or, nurbs::Nurbs, CurveShape, Facet, FacetShape, Model, Shape};
+use crate::{get_reshaped_point, get_shapes, get_vec3_or, nurbs::Nurbs, CurveShape, FacetShape, Group, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -8,6 +8,7 @@ pub struct Extrude {
     pub parts:  Vec<Model>,
     pub axis:   [f32; 3],
     pub length: f32,
+    pub transform: Group,
 }
 
 impl Extrude {
@@ -17,7 +18,7 @@ impl Extrude {
         let mut shapes = vec![];
         for shape in get_shapes(&self.parts) {
             if let Shape::Facet(facet) = &shape {
-                shapes.push(Shape::Facet(facet.get_transformed_and_reversed(Mat4::IDENTITY)));
+                shapes.push(Shape::Facet(facet.get_reverse_reshape(Mat4::IDENTITY)));
             }else{
                 shapes.push(shape.clone());
             }
@@ -25,32 +26,31 @@ impl Extrude {
                 Shape::Point(point) => {
                     let mut curve = CurveShape {
                         nurbs: basis.nurbs.clone(),
-                        controls: vec![get_transformed_point(point, basis.mat4)], 
+                        controls: vec![get_reshaped_point(point, basis.mat4)], 
                         min: 0.,
                         max: 1.,
                     };
                     curve.controls.push(*point);
                     shapes.push(Shape::Curve(curve));
-                    shapes.push(shape.get_transformed(basis.mat4));
+                    shapes.push(shape.get_reshape(basis.mat4));
                 },
                 Shape::Curve(curve) => {
                     let mut facet = FacetShape {
                         nurbs: basis.nurbs.clone(),
-                        controls:   vec![curve.get_transformed(basis.mat4)], 
+                        controls:   vec![curve.get_reshape(basis.mat4)], 
                         boundaries: vec![],
-                        //reversed:   false,
                         perimeter:  false,
                     };
                     facet.controls.push(curve.clone()); 
                     shapes.push(Shape::Facet(facet));
-                    shapes.push(shape.get_transformed(basis.mat4));
+                    shapes.push(shape.get_reshape(basis.mat4));
                 },
                 Shape::Facet(facet) => {
-                    shapes.push(Shape::Facet(facet.get_transformed(basis.mat4)));
+                    shapes.push(Shape::Facet(facet.get_reshape(basis.mat4)));
                 },
             }
         }
-        shapes 
+        self.transform.get_reshapes(shapes) 
     }
 }
 

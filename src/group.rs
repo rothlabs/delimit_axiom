@@ -17,18 +17,21 @@ pub struct Group {
 
 impl Group {
     pub fn get_shapes(&self) -> Vec<Shape> {
+        self.get_reshapes(get_shapes(&self.parts))
+    }
+    pub fn get_reshapes(&self, shapes: Vec<Shape>) -> Vec<Shape> {
         let mat4 = self.get_matrix();
-        let mut shapes = vec![];
+        let mut result = vec![];
         if self.reverse {
-            for shape in get_shapes(&self.parts) {
-                shapes.push(shape.get_transformed_and_reversed(mat4));
+            for shape in shapes {
+                result.push(shape.get_reverse_reshape(mat4));
             }
         }else{
-            for shape in get_shapes(&self.parts) {
-                shapes.push(shape.get_transformed(mat4));
+            for shape in shapes {
+                result.push(shape.get_reshape(mat4));
             }
         }
-        shapes
+        result
     }
     fn get_matrix(&self) -> Mat4 {
         let mut mat4 = Mat4::IDENTITY;

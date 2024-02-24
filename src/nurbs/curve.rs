@@ -1,5 +1,5 @@
 
-use crate::{get_points, get_transformed_point, hash_vector, query::DiscreteQuery, scene::Polyline, Model, Shape};
+use crate::{get_points, get_reshaped_point, hash_vector, query::DiscreteQuery, scene::Polyline, Model, Shape};
 use glam::*;
 use lyon::path::Polygon;
 use serde::{Deserialize, Serialize};
@@ -61,19 +61,19 @@ impl Default for CurveShape {
 }
 
 impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
-    pub fn get_transformed(&self, mat4: Mat4) -> Self {
+    pub fn get_reshape(&self, mat4: Mat4) -> Self {
         let mut curve = self.clone_with_empty_controls();
         for point in &self.controls {
-            curve.controls.push(get_transformed_point(point, mat4));
+            curve.controls.push(get_reshaped_point(point, mat4));
         }
         curve
     }
 
-    pub fn get_transformed_and_reversed(&self, mat4: Mat4) -> Self {
+    pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
         let mut curve = self.clone_with_empty_controls();
         curve.nurbs.weights.reverse();
         for point in self.controls.iter().rev() {
-            curve.controls.push(get_transformed_point(point, mat4));
+            curve.controls.push(get_reshaped_point(point, mat4));
         }
         curve
     }

@@ -53,4 +53,14 @@ impl Area {
         shapes.push(Shape::Facet(facet.get_valid()));
         self.transform.get_reshapes(shapes)
     }
+    pub fn from_parts(parts: Vec<Model>) -> Self {
+        let mut area = Area::default();
+        area.parts = parts;
+        area
+    }
+    pub fn from_part(part: Model) -> Self {
+        let mut area = Area::default();
+        area.parts = vec![part];
+        area
+    }
 }

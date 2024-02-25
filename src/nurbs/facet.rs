@@ -261,13 +261,13 @@ impl FacetShape {
                 bndry_i = i;
             }
             if !used_boundaries.contains(&i) {
-                if p1.x <    EPSILON {boundaries_x0.push((i, p1)); } // left
-                if p1.y <    EPSILON {boundaries_y0.push((i, p1)); } // bottom
-                if p1.x > 1.-EPSILON {boundaries_x1.push((i, p1)); } // right
-                if p1.y > 1.-EPSILON {boundaries_y1.push((i, p1)); } // top
+                if p1.x <    EPSILON*100. {boundaries_x0.push((i, p1)); } // left
+                if p1.y <    EPSILON*100. {boundaries_y0.push((i, p1)); } // bottom
+                if p1.x > 1.-EPSILON*100. {boundaries_x1.push((i, p1)); } // right
+                if p1.y > 1.-EPSILON*100. {boundaries_y1.push((i, p1)); } // top
             }
         }
-        if point.x < EPSILON && point.y > EPSILON  { // left of boundbox  && point.y < 1.-EPSILON
+        if point.x < EPSILON*100. && point.y > EPSILON*100.  { // left of boundbox  && point.y < 1.-EPSILON
             boundaries_x0.sort_by(|a, b| b.1.y.partial_cmp(&a.1.y).unwrap());
             if let Some(a) = boundaries_x0.iter().next(){ // .filter(|a| a.1.y < point.y)
                 bndry_i = a.0;
@@ -276,7 +276,7 @@ impl FacetShape {
                 builder.line_to(lyon::geom::Point::new(0., 0.));
                 bndry_i = self.next_boundary(&vec3(0., 0., 0.), used_boundaries, builder, iteration+1);
             }
-        } else if point.y < EPSILON && point.x < 1.-EPSILON { // bottom of boundbox  point.x > EPSILON && 
+        } else if point.y < EPSILON*100. && point.x < 1.-EPSILON*100. { // bottom of boundbox  point.x > EPSILON && 
             boundaries_y0.sort_by(|a, b| a.1.x.partial_cmp(&b.1.x).unwrap());
             if let Some(a) = boundaries_y0.iter().next(){ // .filter(|a| a.1.x > point.x)
                 bndry_i = a.0;
@@ -285,7 +285,7 @@ impl FacetShape {
                 builder.line_to(lyon::geom::Point::new(1., 0.));
                 bndry_i = self.next_boundary(&vec3(1., 0., 0.), used_boundaries, builder, iteration+1);
             }
-        } else if point.x > 1.-EPSILON && point.y < 1.-EPSILON { // right of boundbox // point.y > EPSILON &&
+        } else if point.x > 1.-EPSILON*100. && point.y < 1.-EPSILON*100. { // right of boundbox // point.y > EPSILON &&
             boundaries_x1.sort_by(|a, b| a.1.y.partial_cmp(&b.1.y).unwrap());
             if let Some(a) = boundaries_x1.iter().next(){ // .filter(|a| a.1.y > point.y)
                 bndry_i = a.0;
@@ -295,7 +295,7 @@ impl FacetShape {
                 //used_boundaries.push(bi);
                 bndry_i = self.next_boundary(&vec3(1., 1., 0.), used_boundaries, builder, iteration+1);
             }
-        } else if point.y > 1.-EPSILON && point.x > EPSILON { // top of boundbox  // && point.x < 1.-EPSILON
+        } else if point.y > 1.-EPSILON*100. && point.x > EPSILON*100. { // top of boundbox  // && point.x < 1.-EPSILON
             boundaries_y1.sort_by(|a, b| b.1.x.partial_cmp(&a.1.x).unwrap());
             if let Some(a) = boundaries_y1.iter().next(){ // .filter(|a| a.1.x < point.x)
                 bndry_i = a.0;

@@ -75,13 +75,13 @@ impl UnionBasis3 {
                         let last_point = curve0.controls.last().unwrap();
                         let mut duplicate_curve = false;
                         self.hit_map[self.facet_index0].for_pairs(&mut |i0: usize, i1: usize| {
-                            if first_point.distance(self.hit_points[self.facet_index0][i0]) < self.tolerance*0.1 {
-                                if last_point.distance(self.hit_points[self.facet_index0][i1]) < self.tolerance*0.1 {
+                            if first_point.distance(self.hit_points[self.facet_index0][i0]) < self.tolerance {
+                                if last_point.distance(self.hit_points[self.facet_index0][i1]) < self.tolerance {
                                     duplicate_curve = true;
                                 }
                             }
-                            if last_point.distance(self.hit_points[self.facet_index0][i0]) < self.tolerance*0.1 {
-                                if first_point.distance(self.hit_points[self.facet_index0][i1]) < self.tolerance*0.1 {
+                            if last_point.distance(self.hit_points[self.facet_index0][i0]) < self.tolerance {
+                                if first_point.distance(self.hit_points[self.facet_index0][i1]) < self.tolerance {
                                     duplicate_curve = true;
                                 }
                             }

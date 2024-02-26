@@ -4,7 +4,7 @@ use std::ops::DivAssign;
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::scene::Mesh;
-use crate::{get_curves, get_line_intersection, hash_vector, log, CurveShape, Model, Shape};
+use crate::{get_curves, get_line_intersection2, hash_vector, log, CurveShape, Model, Shape};
 use glam::*;
 use lyon::path::path::BuilderImpl;
 use serde::{Deserialize, Serialize};
@@ -57,7 +57,6 @@ pub struct FacetShape {
     pub nurbs:      Nurbs,
     pub controls:   Vec<CurveShape>,
     pub boundaries: Vec<CurveShape>,
-    //pub reversed:   bool,
     pub perimeter: bool,
 }
 
@@ -106,7 +105,7 @@ impl FacetShape {
         }
     }
 
-    pub fn get_uv_and_point_from_3d_dir(&self, uv: Vec2, dir: Vec3) -> (Vec2, Vec3) {
+    pub fn get_uv_and_point_from_target(&self, uv: Vec2, target: Vec3) -> (Vec2, Vec3) {
         let mut step_u = 0.0001;
         let mut step_v = 0.0001;
         if uv.x + step_u > 1. {step_u = -step_u;}
@@ -114,19 +113,19 @@ impl FacetShape {
         let p0 = self.get_point_at_uv(uv);
         let pu = self.get_point_at_uv(uv + Vec2::X * step_u);
         let pv = self.get_point_at_uv(uv + Vec2::Y * step_v);
-        let length_ratio_u = dir.length() / p0.distance(pu) * step_u;
-        let length_ratio_v = dir.length() / p0.distance(pv) * step_v;
+        let length_ratio_u = target.length() / p0.distance(pu) * step_u;
+        let length_ratio_v = target.length() / p0.distance(pv) * step_v;
         let uv_dir = vec2(
-            (pu-p0).normalize().dot(dir.normalize()) * length_ratio_u, 
-            (pv-p0).normalize().dot(dir.normalize()) * length_ratio_v
+            (pu-p0).normalize().dot(target.normalize()) * length_ratio_u, 
+            (pv-p0).normalize().dot(target.normalize()) * length_ratio_v
         );
         let mut uv1 = uv;
         if uv_dir.length() > 0.0001 {
             uv1 = uv + uv_dir; 
-            if uv1.x > 1. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::X, Vec2::ONE).unwrap();}
-            if uv1.x < 0. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::ZERO, Vec2::Y).unwrap();}
-            if uv1.y > 1. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::Y, Vec2::ONE).unwrap();}
-            if uv1.y < 0. {uv1 = get_line_intersection(uv, uv + uv_dir*1000., Vec2::ZERO, Vec2::X).unwrap();}
+            if uv1.x > 1. {uv1 = get_line_intersection2(uv, uv + uv_dir*1000., Vec2::X, Vec2::ONE).unwrap();}
+            if uv1.x < 0. {uv1 = get_line_intersection2(uv, uv + uv_dir*1000., Vec2::ZERO, Vec2::Y).unwrap();}
+            if uv1.y > 1. {uv1 = get_line_intersection2(uv, uv + uv_dir*1000., Vec2::Y, Vec2::ONE).unwrap();}
+            if uv1.y < 0. {uv1 = get_line_intersection2(uv, uv + uv_dir*1000., Vec2::ZERO, Vec2::X).unwrap();}
         }
         uv1 = uv1.clamp(Vec2::ZERO, Vec2::ONE); // TODO: might not be needed
         // if uv1.x > 1. || uv1.x < 0. || uv1.y < 0. || uv1.x > 1. {

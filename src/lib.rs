@@ -3,24 +3,26 @@ mod query;
 mod scene;
 mod nurbs;
 mod spatial;
+mod hit;
+mod union;
 mod group;
 mod sketch;
 mod area;
 mod extrude;
 mod revolve;
-mod union;
 mod pattern;
 mod mirror;
 
 use utils::*;
 use nurbs::{curve::*, facet::*};
 use spatial::{spatial2::*, spatial3::*};
+use hit::{hit2::*, hit3::*};
+use union::*;
 use group::*;
 use sketch::*;
 use area::*;
 use extrude::*;
 use revolve::*;
-use union::*;
 use pattern::*;
 use mirror::*;
 
@@ -232,7 +234,7 @@ pub fn get_vec3_or(slice: &[f32; 3], alt: Vec3) -> Vec3 {
     }
 }
 
-pub fn get_line_intersection(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<Vec2> {
+pub fn get_line_intersection2(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<Vec2> {
     // let t = ((p1.x - p3.x)*(p3.y - p4.y) - (p1.y - p3.y)*(p3.x - p4.x)) 
     //     / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
     // let x = p1.x + t*(p2.x - p1.x);
@@ -245,6 +247,24 @@ pub fn get_line_intersection(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<V
         return None;
     }
     Some(vec2(x, y))
+}
+
+fn get_line_intersection3(p1: Vec3, d1: Vec3, p2: Vec3, d2: Vec3) -> Vec3 {
+    let v = p1 - p2;
+    let a = d1.dot(d1);
+    let b = d1.dot(d2);
+    let c = d2.dot(d2);
+    let d = d1.dot(v);
+    let e = d2.dot(v);
+
+    let denom = a * c - b * b;
+    let t = (b * e - c * d) / denom;
+    let s = (a * e - b * d) / denom;
+
+    let p_closest = p1 + t * d1;
+    let q_closest = p2 + s * d2;
+
+    (p_closest + q_closest) / 2.//(p_closest, q_closest)
 }
 
 pub fn hash_vector(vecf32: &Vec<f32>) -> u64 {

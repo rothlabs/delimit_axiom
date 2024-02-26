@@ -1,7 +1,7 @@
 use std::{f32::{consts::PI, EPSILON}, hash::Hash};
-use crate::{log, nurbs::curve, CurveShape, FacetShape, Shape};
+use crate::{get_line_intersection3, log, nurbs::curve, CurveShape, FacetShape, Shape, Spatial3};
 
-use super::union3::UnionBasis3;
+//use super::union3::UnionBasis3;
 use rand::Rng;
 use glam::*;
 
@@ -25,8 +25,28 @@ pub struct FacetHit {
     //pub dot: f32,
 }
 
-impl UnionBasis3 { 
-    pub fn try_facet_hit(&mut self, start_uv0: Vec2, start_uv1: Vec2) -> Option<(CurveShape,CurveShape)> { // f0: &usize, f1: &usize, 
+//#[derive(Clone)]
+pub struct HitTester3 {
+    pub curves:       Vec<CurveShape>,
+    pub facets:       Vec<FacetShape>,
+    pub facet_index0: usize,
+    pub facet_index1: usize,
+    pub hit_map:      Vec<Spatial3>,
+    pub hit_points:   Vec<Vec<Vec3>>,
+    pub hit_step:     f32,
+    pub tolerance:    f32,
+}
+
+pub struct Hit3 {
+    pub curve0:       CurveShape,
+    pub curve1:       CurveShape,
+    pub center_curve: CurveShape,
+    pub start_point0: Vec3,
+    pub start_point1: Vec3,
+}
+
+impl HitTester3 { 
+    pub fn test(&mut self, start_uv0: Vec2, start_uv1: Vec2) -> Option<Hit3> { 
         let facet0 = &self.facets[self.facet_index0];
         let facet1 = &self.facets[self.facet_index1];
         let mut uv0 = start_uv0;
@@ -37,11 +57,11 @@ impl UnionBasis3 {
             // (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, p1 - p0);
             // (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, p0 - p1);
             let center = self.get_center(uv0, uv1, p0, p1);
-            let (uv0_t0, p0_t0) = facet0.get_uv_and_point_from_3d_dir(uv0, center - p0);
-            let (uv1_t0, p1_t0) = facet1.get_uv_and_point_from_3d_dir(uv1, center - p1);
+            let (uv0_t0, p0_t0) = facet0.get_uv_and_point_from_target(uv0, center - p0);
+            let (uv1_t0, p1_t0) = facet1.get_uv_and_point_from_target(uv1, center - p1);
             let center = (p0 + p1) / 2.;
-            let (uv0_t1, p0_t1) = facet0.get_uv_and_point_from_3d_dir(uv0, center - p0);
-            let (uv1_t1, p1_t1) = facet1.get_uv_and_point_from_3d_dir(uv1, center - p1);
+            let (uv0_t1, p0_t1) = facet0.get_uv_and_point_from_target(uv0, center - p0);
+            let (uv1_t1, p1_t1) = facet1.get_uv_and_point_from_target(uv1, center - p1);
             if p0_t0.distance(p1_t0) < p0_t1.distance(p1_t1) {
                 p0 = p0_t0;
                 p1 = p1_t0;
@@ -95,14 +115,20 @@ impl UnionBasis3 {
                             self.hit_map[self.facet_index0].insert(last_point, self.hit_points[self.facet_index0].len());
                             self.hit_points[self.facet_index0].push(*last_point);
                             //self.hit_map[self.facet_index1].insert(&curve1.controls.last().unwrap(), 0);
-                            self.shapes.push(Shape::Point(p0));
-                            self.shapes.push(Shape::Point(p1));
+                            
                             //self.shapes.push(Shape::Curve(curve0.get_valid()));
                             //self.shapes.push(Shape::Curve(curve1.get_valid()));
                             // self.shapes.push(Shape::Point(*curve2.controls.first().unwrap()));
                             // self.shapes.push(Shape::Point(*curve2.controls.last().unwrap()));
-                            self.shapes.push(Shape::Curve(curve2.get_valid()));
-                            Some((curve0.get_valid(), curve1.get_valid()))
+                            //self.shapes.push(Shape::Curve(curve2.get_valid()));
+                            //Some((curve0.get_valid(), curve1.get_valid(), curve2.get_valid()))
+                            Some(Hit3{
+                                curve0: curve0.get_valid(),
+                                curve1: curve1.get_valid(),
+                                center_curve: curve2.get_valid(),
+                                start_point0: p0,
+                                start_point1: p1,
+                            })
                         }
                     }
                 //}
@@ -141,8 +167,8 @@ impl UnionBasis3 {
             };
             for k in 0..1000 {
                 let center = self.get_center(uv0, uv1, p0, p1);
-                (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, center - p0);
-                (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, center - p1);
+                (uv0, p0) = facet0.get_uv_and_point_from_target(uv0, center - p0);
+                (uv1, p1) = facet1.get_uv_and_point_from_target(uv1, center - p1);
                 if k > 14 {
                     if p0.distance(start.p0) < self.hit_step || p1.distance(start.p1) < self.hit_step {
                         add_points(start.clone());
@@ -155,8 +181,8 @@ impl UnionBasis3 {
                 let normal1 = facet1.get_normal_at_uv(uv1);
                 let normal_cross = normal0.cross(normal1).normalize();
                 let dir = normal_cross * (1-direction*2) as f32 * self.hit_step;
-                (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, dir);
-                (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, dir);
+                (uv0, p0) = facet0.get_uv_and_point_from_target(uv0, dir);
+                (uv1, p1) = facet1.get_uv_and_point_from_target(uv1, dir);
                 //if k > 14 {
                     // if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON 
                     // && uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
@@ -164,14 +190,14 @@ impl UnionBasis3 {
                     // }
                     if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
                         //if p0.distance(p1) > self.tolerance {
-                            (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, p0 - p1);
+                            (uv1, p1) = facet1.get_uv_and_point_from_target(uv1, p0 - p1);
                         //}
                         add_points(FacetHit{uv0, uv1, p0, p1});
                         break;
                     } 
                     if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
                         //if p0.distance(p1) > self.tolerance {
-                            (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, p1 - p0);
+                            (uv0, p0) = facet0.get_uv_and_point_from_target(uv0, p1 - p0);
                         //}
                         add_points(FacetHit{uv0, uv1, p0, p1});
                         break;
@@ -200,30 +226,11 @@ impl UnionBasis3 {
         let normal_cross = normal0.cross(normal1).normalize();
         let cross0 = normal0.cross(normal_cross).normalize();
         let cross1 = normal1.cross(normal_cross).normalize();
-        get_center_of_lines(p0, cross0, p1, cross1)
+        get_line_intersection3(p0, cross0, p1, cross1)
     }
 }
 
-fn get_center_of_lines(
-    p1: Vec3, d1: Vec3, 
-    p2: Vec3, d2: Vec3,
-) -> Vec3 {
-    let v = p1 - p2;
-    let a = d1.dot(d1);
-    let b = d1.dot(d2);
-    let c = d2.dot(d2);
-    let d = d1.dot(v);
-    let e = d2.dot(v);
 
-    let denom = a * c - b * b;
-    let t = (b * e - c * d) / denom;
-    let s = (a * e - b * d) / denom;
-
-    let p_closest = p1 + t * d1;
-    let q_closest = p2 + s * d2;
-
-    (p_closest + q_closest) / 2.//(p_closest, q_closest)
-}
 
 
 // if p0.distance(p1) > self.tolerance {

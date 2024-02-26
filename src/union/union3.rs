@@ -1,52 +1,50 @@
-use std::{collections::HashMap, f32::EPSILON};
-use crate::{log, CurveShape, FacetShape, Shape, Spatial2, Spatial3};
-use super::{hit3::{CurveHit, FacetHit}, CurveParams, FacetParams};
-use rand::{Rng, SeedableRng};
-use rand::rngs::StdRng;
+//use std::{collections::HashMap, f32::EPSILON};
+use crate::{log, CurveShape, FacetShape, HitTester3, Shape};
 use glam::*;
 
-use std::time::Instant;
+//use std::time::Instant;
+// use rand::{Rng, SeedableRng};
+// use rand::rngs::StdRng;
 
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-pub struct CurveSample {
-    index: usize,
-    point: Vec3,
-    u: f32,
-}
+// pub struct CurveSample {
+//     index: usize,
+//     point: Vec3,
+//     u: f32,
+// }
 
-pub struct FacetSample {
-    index: usize,
-    point: Vec3,
-    uv:    Vec2,
-}
+// pub struct FacetSample {
+//     index: usize,
+//     point: Vec3,
+//     uv:    Vec2,
+// }
 
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
-    // pub facet0: FacetShape,
-    // pub facet1: FacetShape,
-    pub facet_index0: usize,
-    pub facet_index1: usize,
+    pub hit3: HitTester3,
+    //pub facet_index0: usize,
+    //pub facet_index1: usize,
     //pub rng: StdRng,
-    pub hit_map: Vec<Spatial3>,
-    pub hit_points: Vec<Vec<Vec3>>,
+    // pub hit_map: Vec<Spatial3>,
+    // pub hit_points: Vec<Vec<Vec3>>,
     pub curves: Vec<CurveShape>,
     pub facets: Vec<FacetShape>,
     pub grouped_curves: Vec<Vec<CurveShape>>,
     pub grouped_facets: Vec<Vec<FacetShape>>,
-    pub curve_params: HashMap<usize, CurveParams>, 
-    pub facet_params: HashMap<usize, FacetParams>, 
-    pub cell_size: f32,
-    pub hit_step: f32,
+    //pub curve_params: HashMap<usize, CurveParams>, 
+    //pub facet_params: HashMap<usize, FacetParams>, 
+    //pub cell_size: f32,
+    //pub hit_step: f32,
     pub shapes: Vec<Shape>,
-    pub facet_hits: Vec<Vec<CurveShape>>,
-    pub curve_hits: Vec<Vec<CurveHit>>,
-    pub tolerance: f32,
+    pub facet_hits: Vec<Vec<CurveShape>>, 
+    //pub curve_hits: Vec<Vec<CurveHit>>,
+    //pub tolerance: f32,
     pub max_walk_iterations: usize,
-    pub curve_samples: Vec<CurveSample>,
-    pub facet_samples: Vec<FacetSample>,
+    //pub curve_samples: Vec<CurveSample>,
+    //pub facet_samples: Vec<FacetSample>,
 }
 
 impl UnionBasis3 { 
@@ -85,9 +83,12 @@ impl UnionBasis3 {
     // }
 
     fn add_facet_hit(&mut self, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
-        if let Some(hit) = self.try_facet_hit(uv0, uv1) { // &facet_index0, &facet_index1, 
-            self.facet_hits[self.facet_index0].push(hit.0.clone());
-            self.facet_hits[self.facet_index1].push(hit.1.clone());
+        if let Some(hit) = self.hit3.test(uv0, uv1) { // &facet_index0, &facet_index1, 
+            self.facet_hits[self.hit3.facet_index0].push(hit.curve0.clone());
+            self.facet_hits[self.hit3.facet_index1].push(hit.curve1.clone());
+            self.shapes.push(Shape::Point(hit.start_point0));
+            self.shapes.push(Shape::Point(hit.start_point1));
+            self.shapes.push(Shape::Curve(hit.center_curve));
         }
     }
 
@@ -101,9 +102,9 @@ impl UnionBasis3 {
                 if fg0 != fg1 {
                     for f0 in 0..self.grouped_facets[fg0].len() {
                         for f1 in 0..self.grouped_facets[fg1].len() {
-                            self.facet_index0 = af0 + f0;
-                            self.facet_index1 = af1 + f1;
-                            if self.facet_index0 == self.facet_index1 {
+                            self.hit3.facet_index0 = af0 + f0;
+                            self.hit3.facet_index1 = af1 + f1;
+                            if self.hit3.facet_index0 == self.hit3.facet_index1 {
                                 log("tried to use same facet indecies!!!");
                                 continue;
                             }

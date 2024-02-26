@@ -86,6 +86,30 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
             max: self.max,
         }
     }
+
+    pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
+        let mut step = 0.0001;
+        if u + step > 1. {step = -step;}
+        let p0 = self.get_point_at_u(u);
+        let p1 = self.get_point_at_u(u + step);
+        (p0 - p1).normalize() * step.signum()
+    }
+
+    pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
+        let mut step = 0.0001;
+        if u + step > 1. {step = -step;}
+        let p0 = self.get_point_at_u(u);
+        let p1 = self.get_point_at_u(u + step);
+        let length_ratio = target.length() / p0.distance(p1) * step;
+        let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
+        let mut u1 = u;
+        if u_dir.abs() > 0.0001 {
+            u1 = u + u_dir; 
+        }
+        u1 = u1.clamp(0., 1.); 
+        let point = self.get_point_at_u(u1);
+        (u1, point)
+    }
     
     // pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
     //     1. / self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &self.controls) as f32 // self.nurbs.get_param_step(min_count, max_distance, &self.controls)
@@ -116,10 +140,10 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
             .flatten().collect()
     }
 
-    pub fn get_vec2_at_u(&self, u: f32) -> Vec2 {
-        let p = self.get_vector_at_u(u);
-        vec2(p[0], p[1])
-    }
+    // pub fn get_vec2_at_u(&self, u: f32) -> Vec2 {
+    //     let p = self.get_vector_at_u(u);
+    //     vec2(p[0], p[1])
+    // }
 
     pub fn get_point_at_u(&self, u: f32) -> Vec3 {
         let p = self.get_vector_at_u(u);

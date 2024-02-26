@@ -39,7 +39,7 @@ impl Union {
                 hits: (0..curves.len()).map(|_| vec![]).collect(),
                 miss: (0..curves.len()).map(|_| vec![]).collect(),
                 curves,
-                grouped: grouped_curves,
+                groups: grouped_curves,
                 shapes: vec![],
             };
             basis.get_shapes()

@@ -9,7 +9,7 @@ macro_rules! console_log {
 pub struct UnionBasis2 {
     pub tester:  HitTester2,
     pub curves:  Vec<CurveShape>,
-    pub grouped: Vec<Vec<CurveShape>>,
+    pub groups:  Vec<Vec<CurveShape>>,
     pub hits:    Vec<Vec<CurveHit>>, 
     pub miss:    Vec<Vec<CurveMiss>>, 
     pub shapes:  Vec<Shape>,
@@ -48,12 +48,12 @@ impl UnionBasis2 {
 
     fn test_pairs(&mut self){
         let mut ac0 = 0;
-        for cg0 in 0..self.grouped.len() {
+        for cg0 in 0..self.groups.len() {
             let mut ac1 = ac0;
-            for cg1 in cg0..self.grouped.len() {
+            for cg1 in cg0..self.groups.len() {
                 if cg0 != cg1 { 
-                    for c0 in 0..self.grouped[cg0].len() {
-                        for c1 in 0..self.grouped[cg1].len() {
+                    for c0 in 0..self.groups[cg0].len() {
+                        for c1 in 0..self.groups[cg1].len() {
                             self.tester.index0 = ac0 + c0;
                             self.tester.index1 = ac1 + c1;
                             if self.tester.index0 == self.tester.index1 {
@@ -68,9 +68,9 @@ impl UnionBasis2 {
                         }
                     }
                 }
-                ac1 += self.grouped[cg1].len();
+                ac1 += self.groups[cg1].len();
             }
-            ac0 += self.grouped[cg0].len();
+            ac0 += self.groups[cg0].len();
         }
     }
 

@@ -1,8 +1,7 @@
 mod union2;
 mod union3;
 
-use std::collections::HashMap;
-use crate::{get_curves, get_curves_and_facets, get_grouped_curves_and_facets, group, log, FacetShape, Group, Hit3, HitTester3, Model, Shape, Spatial3};
+use crate::{get_grouped_curves_and_facets, Group, HitTester2, HitTester3, Model, Shape, Spatial3};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -21,38 +20,32 @@ pub struct Union {
 
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        let cell_size = 4.;
+        let tolerance = 0.005;
+        let duplication_tolerance = tolerance * 10.;
         let hit_step = 2.;
         let (curves, facets, grouped_curves, grouped_facets) = get_grouped_curves_and_facets(&self.parts);
-        //let mut curve_params: HashMap<usize, CurveParams> = HashMap::new(); 
-        // for (i, curve) in curves.iter().enumerate() {
-        //     let (step, params) = curve.get_param_step_and_samples(1, cell_size);
-        //     curve_params.insert(i, CurveParams{i, step, params});
-        // }
         if facets.is_empty(){
             let mut basis = UnionBasis2 {
-                curve_index0: 0,
-                curve_index1: 0,
+                tester: HitTester2 {
+                    curves: curves.clone(),
+                    index0: 0,
+                    index1: 0,
+                    spatial: Spatial3::new(duplication_tolerance), // (0..curves.len()).map(|_| Spatial3::new(duplication_tolerance)).collect(),
+                    points:  vec![], //(0..curves.len()).map(|_| vec![]).collect(),
+                    normal: Vec3::Z,
+                    tolerance,
+                    duplication_tolerance,
+                },
                 hits: (0..curves.len()).map(|_| vec![]).collect(),
+                miss: (0..curves.len()).map(|_| vec![]).collect(),
                 curves,
-                grouped_curves,
-                //curve_params,
-                cell_size,
-                tolerance: 0.05,
-                max_walk_iterations: 1000,
-                //samples: vec![],
+                grouped: grouped_curves,
                 shapes: vec![],
             };
             basis.get_shapes()
         }else{
-            //let mut facet_params: HashMap<usize, FacetParams> = HashMap::new(); 
-            // for (i, facet) in facets.iter().enumerate() {
-            //     let (step, params) = facet.get_param_step_and_samples(1, cell_size);
-            //     facet_params.insert(i, FacetParams{i, step, params});
-            // }
-            //let seed: [u8; 32] = *b"01234567891234560123456789123456";
             let mut basis = UnionBasis3 {
-                hit3: HitTester3 {
+                tester: HitTester3 {
                     curves: curves.clone(),
                     facets: facets.clone(),
                     facet_index0: 0,
@@ -62,21 +55,35 @@ impl Union {
                     hit_points: (0..facets.len()).map(|_| vec![]).collect(),
                     tolerance: 0.05,
                 },
-                //rng: StdRng::from_seed(seed),
                 facet_hits: (0..curves.len()).map(|_| vec![]).collect(),
                 //curve_hits: (0..curves.len()).map(|_| vec![]).collect(),
                 curves,
                 facets,
                 grouped_curves,
                 grouped_facets,
-                //tolerance: 0.05,
-                max_walk_iterations: 800,
                 shapes: vec![],
             };
             self.transform.get_reshapes(basis.get_shapes())
         }
     }
 }
+
+
+//let seed: [u8; 32] = *b"01234567891234560123456789123456";
+//rng: StdRng::from_seed(seed),
+
+
+//let mut curve_params: HashMap<usize, CurveParams> = HashMap::new(); 
+        // for (i, curve) in curves.iter().enumerate() {
+        //     let (step, params) = curve.get_param_step_and_samples(1, cell_size);
+        //     curve_params.insert(i, CurveParams{i, step, params});
+        // }
+
+        //let mut facet_params: HashMap<usize, FacetParams> = HashMap::new(); 
+            // for (i, facet) in facets.iter().enumerate() {
+            //     let (step, params) = facet.get_param_step_and_samples(1, cell_size);
+            //     facet_params.insert(i, FacetParams{i, step, params});
+            // }
 
 // #[derive(Clone)]
 // struct CurveParams {

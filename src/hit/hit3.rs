@@ -9,12 +9,12 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-#[derive(Clone)]
-pub struct CurveHit {
-    pub u: f32,
-    pub point: Vec3,
-    pub dot: f32,
-}
+// #[derive(Clone)]
+// pub struct CurveHit {
+//     pub u: f32,
+//     pub point: Vec3,
+//     pub dot: f32,
+// }
 
 #[derive(Clone)]
 pub struct FacetHit {

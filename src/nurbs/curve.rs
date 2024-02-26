@@ -1,4 +1,6 @@
 
+use std::f32::EPSILON;
+
 use crate::{get_points, get_reshaped_point, hash_vector, query::DiscreteQuery, scene::Polyline, Model, Shape};
 use glam::*;
 use lyon::path::Polygon;
@@ -87,8 +89,17 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         }
     }
 
+    pub fn get_normalized_knots(&self) -> Vec<f32> {
+        let mut knots = vec![];
+        let last_knot = self.nurbs.knots.last().unwrap();
+        for i in 0..self.controls.len() {
+            knots.push(self.nurbs.knots[self.nurbs.order - 1 + i] / last_knot);
+        }
+        knots
+    }
+
     pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
-        let mut step = 0.0001;
+        let mut step = 0.00001;
         if u + step > 1. {step = -step;}
         let p0 = self.get_point_at_u(u);
         let p1 = self.get_point_at_u(u + step);
@@ -96,32 +107,19 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     }
 
     pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
-        let mut step = 0.0001;
+        let mut step = 0.00001;
         if u + step > 1. {step = -step;}
         let p0 = self.get_point_at_u(u);
         let p1 = self.get_point_at_u(u + step);
         let length_ratio = target.length() / p0.distance(p1) * step;
         let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
         let mut u1 = u;
-        if u_dir.abs() > 0.0001 {
+        if u_dir.abs() > step.abs() {
             u1 = u + u_dir; 
         }
         u1 = u1.clamp(0., 1.); 
         let point = self.get_point_at_u(u1);
         (u1, point)
-    }
-    
-    // pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
-    //     1. / self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &self.controls) as f32 // self.nurbs.get_param_step(min_count, max_distance, &self.controls)
-    // }
-
-    // pub fn get_param_samples(&self, min_count: usize, max_distance: f32) -> Vec<f32> {
-    //     self.nurbs.get_param_samples(min_count, max_distance, &self.controls)
-    // }
-
-    pub fn get_param_step_and_samples(&self, min_count: usize, max_distance: f32) -> (f32, Vec<f32>) {
-        let count = self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &self.controls);
-        (1./(count-1) as f32, (0..count).map(|u| u as f32 / (count-1) as f32).collect())
     }
 
     pub fn get_polyline(&self, query: &DiscreteQuery) -> Polyline {
@@ -139,11 +137,6 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
             .map(|u| curve.get_vector_at_u(u as f32 / (count-1) as f32)) 
             .flatten().collect()
     }
-
-    // pub fn get_vec2_at_u(&self, u: f32) -> Vec2 {
-    //     let p = self.get_vector_at_u(u);
-    //     vec2(p[0], p[1])
-    // }
 
     pub fn get_point_at_u(&self, u: f32) -> Vec3 {
         let p = self.get_vector_at_u(u);
@@ -176,6 +169,22 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
 }
 
 
+
+
+// pub fn get_param_step(&self, min_count: usize, max_distance: f32) -> f32 {
+    //     1. / self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &self.controls) as f32 // self.nurbs.get_param_step(min_count, max_distance, &self.controls)
+    // }
+    // pub fn get_param_samples(&self, min_count: usize, max_distance: f32) -> Vec<f32> {
+    //     self.nurbs.get_param_samples(min_count, max_distance, &self.controls)
+    // }
+    // pub fn get_param_step_and_samples(&self, min_count: usize, max_distance: f32) -> (f32, Vec<f32>) {
+    //     let count = self.nurbs.get_sample_count_with_max_distance(min_count, max_distance, &self.controls);
+    //     (1./(count-1) as f32, (0..count).map(|u| u as f32 / (count-1) as f32).collect())
+    // }
+        // pub fn get_vec2_at_u(&self, u: f32) -> Vec2 {
+    //     let p = self.get_vector_at_u(u);
+    //     vec2(p[0], p[1])
+    // }
 
 
 

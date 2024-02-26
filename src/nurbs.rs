@@ -16,20 +16,6 @@ impl Nurbs {
         self.weights.len() + count * (self.order - 2) * mul
     }
 
-    pub fn get_sample_count_with_max_distance(&self, min_count: usize, max_distance: f32, controls: &Vec<Vec3>) -> usize {
-        //let curve = self.get_valid(controls.len());
-        let mut distance = 0.;
-        for c in controls.windows(2) {
-            let dist = c[0].distance(c[1]);
-            if distance < dist {distance = dist;}
-        }
-        let distance_based_count = (distance / max_distance).floor() as usize;
-        let mut count = min_count;
-        if distance_based_count > min_count {count = distance_based_count; }
-        count = count*(controls.len()-1) + controls.len();
-        count
-    }
-
     fn get_valid(&self, control_count: usize) -> Self {
         let order = self.order.min(control_count).max(2);
         Nurbs {
@@ -118,6 +104,22 @@ impl Default for Nurbs {
         }
     }
 }
+
+
+
+// pub fn get_sample_count_with_max_distance(&self, min_count: usize, max_distance: f32, controls: &Vec<Vec3>) -> usize {
+//     //let curve = self.get_valid(controls.len());
+//     let mut distance = 0.;
+//     for c in controls.windows(2) {
+//         let dist = c[0].distance(c[1]);
+//         if distance < dist {distance = dist;}
+//     }
+//     let distance_based_count = (distance / max_distance).floor() as usize;
+//     let mut count = min_count;
+//     if distance_based_count > min_count {count = distance_based_count; }
+//     count = count*(controls.len()-1) + controls.len();
+//     count
+// }
 
 
 

@@ -1,121 +1,107 @@
 //use std::{collections::HashMap, f32::EPSILON};
-use crate::{nurbs::curve, CurveShape, Shape, Hit2, log};
+use crate::{log, nurbs::curve, CurveHit, CurveMiss, CurveShape, Hit2, HitTester2, Shape};
 use glam::*;
 
-
-// pub struct Sample2 {
-//     index: usize,
-//     point: Vec2,
-//     u: f32,
-// }
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 pub struct UnionBasis2 {
-    pub curve_index0: usize,
-    pub curve_index1: usize,
-    pub curves: Vec<CurveShape>,
-    pub grouped_curves: Vec<Vec<CurveShape>>,
-    //pub curve_params: HashMap<usize, CurveParams>, 
-    pub cell_size: f32,
-    pub shapes: Vec<Shape>,
-    pub hits: Vec<Vec<Hit2>>,
-    pub tolerance: f32,
-    pub max_walk_iterations: usize,
-    //pub samples: Vec<Sample2>,
+    pub tester:  HitTester2,
+    pub curves:  Vec<CurveShape>,
+    pub grouped: Vec<Vec<CurveShape>>,
+    pub hits:    Vec<Vec<CurveHit>>, 
+    pub miss:    Vec<Vec<CurveMiss>>, 
+    pub shapes:  Vec<Shape>,
 }
 
 impl UnionBasis2 { 
     pub fn get_shapes(&mut self) -> Vec<Shape> {
-        self.try_curve_pairs();
-        // for i in 0..self.curves.len() {
-        //     self.hits[i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
-        //     if self.hits[i].is_empty() {
-        //         self.shapes.push(Shape::Curve(self.curves[i].clone()));
-        //         continue;
-        //     }
-        //     self.add_split_curves(i);
-        // }
+        self.test_pairs();
+        for i in 0..self.curves.len() {
+            if self.hits[i].is_empty() {
+                self.miss[i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+                if self.miss[i].first().unwrap().dot > 0.1 {
+                    self.shapes.push(Shape::Curve(self.curves[i].clone()));
+                }
+                continue;
+            }
+            self.hits[i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
+            self.add_split_curves(i);
+        }
         self.shapes.clone()
     }
 
-    // fn add_hit(&mut self, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
-    //     if let Some(hit) = self.try_curve_hit(uv0, uv1) { // &facet_index0, &facet_index1, 
-    //         self.hits[self.curve_index0].push(hit.0.clone());
-    //         self.hits[self.curve_index1].push(hit.1.clone());
-    //     }
-    // }
+    fn test_hit(&mut self, u0: f32, u1: f32) { 
+        match self.tester.test(u0, u1) {
+            Ok(hit) => {
+                self.hits[self.tester.index0].push(hit.hit0);
+                self.hits[self.tester.index1].push(hit.hit1);
+                self.shapes.push(Shape::Point(hit.center));
+            },
+            Err(hit) => {
+                self.miss[self.tester.index0].push(hit.miss0);
+                self.miss[self.tester.index1].push(hit.miss1);
+            }
+        }
+    }
 
-    fn try_curve_pairs(&mut self){
-        //console_log!("try face pairs: {}, {}", self.grouped_facets.len(), self.grouped_facets.len());
-        //let start = Instant::now();
+    fn test_pairs(&mut self){
         let mut ac0 = 0;
-        for cg0 in 0..self.grouped_curves.len() {
-            let mut ac1 = 0;
-            for cg1 in cg0..self.grouped_curves.len() {
-                if cg0 != cg1 {
-                    for f0 in 0..self.grouped_curves[cg0].len() {
-                        for f1 in 0..self.grouped_curves[cg1].len() {
-                            self.curve_index0 = ac0 + f0;
-                            self.curve_index1 = ac1 + f1;
-                            if self.curve_index0 == self.curve_index1 {
+        for cg0 in 0..self.grouped.len() {
+            let mut ac1 = ac0;
+            for cg1 in cg0..self.grouped.len() {
+                if cg0 != cg1 { 
+                    for c0 in 0..self.grouped[cg0].len() {
+                        for c1 in 0..self.grouped[cg1].len() {
+                            self.tester.index0 = ac0 + c0;
+                            self.tester.index1 = ac1 + c1;
+                            if self.tester.index0 == self.tester.index1 {
                                 log("tried to use same curve indecies!!!");
                                 continue;
                             }
-                            //self.add_curve_hit(0.5, 0.5);
-                            for u0 in 0..2 {
-                                for u1 in 0..2 {
-                                    //self.add_hit(u0, u1);
+                            for u0 in self.curves[self.tester.index0].get_normalized_knots() {
+                                for u1 in self.curves[self.tester.index1].get_normalized_knots() {
+                                    self.test_hit(u0, u1);
                                 }
                             }
                         }
                     }
                 }
-                ac1 += self.grouped_curves[cg1].len();
+                ac1 += self.grouped[cg1].len();
             }
-            ac0 += self.grouped_curves[cg0].len();
+            ac0 += self.grouped[cg0].len();
         }
-        //let elapsed = start.elapsed();
-        //console_log!("timed: {:?}", elapsed);
     }
 
-    // fn add_split_curves(&mut self, i: usize) {
-    //     let first = self.hits[i].first().unwrap();
-    //     let mut set_min = false;
-    //     if first.angle > 0. {set_min = true;}
-    //     let mut curve = self.curves[i].clone();
-    //     for itc in self.get_merged_hits(i, first) { 
-    //         self.shapes.push(Shape::Point(vec3(itc.point.x, itc.point.y, 0.)));
-    //         if set_min {
-    //             curve.min = itc.u;
-    //         }else{
-    //             curve.max = itc.u;
-    //             self.shapes.push(Shape::Curve(curve));
-    //             curve = self.curves[i].clone();
-    //         }
-    //         set_min = !set_min;
-    //     }
-    //     if !set_min {
-    //         self.shapes.push(Shape::Curve(curve));
-    //     }
-    // }
-
-    // fn get_merged_hits(&self, i: usize, first: &Hit2) -> Vec<Hit2> {
-    //     let mut point = first.point;
-    //     let mut intersections = vec![first.clone()];
-    //     for itc in &self.hits[i] {
-    //         if itc.point.distance(point) > self.cell_size {
-    //             intersections.push(itc.clone());
-    //         }
-    //         point = itc.point;
-    //     }
-    //     intersections
-    // }
-
+    fn add_split_curves(&mut self, i: usize) {
+        let first = self.hits[i].first().unwrap();
+        let mut set_min = false;
+        if first.dot > 0. {set_min = true;}
+        let mut curve = self.curves[i].clone();
+        for curve_hit in &self.hits[i] { 
+            if set_min {
+                curve.min = curve_hit.u;
+            }else{
+                curve.max = curve_hit.u;
+                self.shapes.push(Shape::Curve(curve));
+                curve = self.curves[i].clone();
+            }
+            set_min = !set_min;
+        }
+        if !set_min {
+            self.shapes.push(Shape::Curve(curve));
+        }
+    }
 }
 
 
 
 
-
+        //console_log!("try face pairs: {}, {}", self.grouped_facets.len(), self.grouped_facets.len());
+        //let start = Instant::now();
+                //let elapsed = start.elapsed();
+        //console_log!("timed: {:?}", elapsed);
 
 
 

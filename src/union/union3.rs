@@ -24,27 +24,14 @@ macro_rules! console_log {
 
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
-    pub hit3: HitTester3,
-    //pub facet_index0: usize,
-    //pub facet_index1: usize,
-    //pub rng: StdRng,
-    // pub hit_map: Vec<Spatial3>,
-    // pub hit_points: Vec<Vec<Vec3>>,
+    pub tester: HitTester3,
     pub curves: Vec<CurveShape>,
     pub facets: Vec<FacetShape>,
     pub grouped_curves: Vec<Vec<CurveShape>>,
     pub grouped_facets: Vec<Vec<FacetShape>>,
-    //pub curve_params: HashMap<usize, CurveParams>, 
-    //pub facet_params: HashMap<usize, FacetParams>, 
-    //pub cell_size: f32,
-    //pub hit_step: f32,
     pub shapes: Vec<Shape>,
     pub facet_hits: Vec<Vec<CurveShape>>, 
     //pub curve_hits: Vec<Vec<CurveHit>>,
-    //pub tolerance: f32,
-    pub max_walk_iterations: usize,
-    //pub curve_samples: Vec<CurveSample>,
-    //pub facet_samples: Vec<FacetSample>,
 }
 
 impl UnionBasis3 { 
@@ -83,9 +70,9 @@ impl UnionBasis3 {
     // }
 
     fn add_facet_hit(&mut self, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
-        if let Some(hit) = self.hit3.test(uv0, uv1) { // &facet_index0, &facet_index1, 
-            self.facet_hits[self.hit3.facet_index0].push(hit.curve0.clone());
-            self.facet_hits[self.hit3.facet_index1].push(hit.curve1.clone());
+        if let Some(hit) = self.tester.test(uv0, uv1) { // &facet_index0, &facet_index1, 
+            self.facet_hits[self.tester.facet_index0].push(hit.curve0.clone());
+            self.facet_hits[self.tester.facet_index1].push(hit.curve1.clone());
             self.shapes.push(Shape::Point(hit.start_point0));
             self.shapes.push(Shape::Point(hit.start_point1));
             self.shapes.push(Shape::Curve(hit.center_curve));
@@ -102,9 +89,9 @@ impl UnionBasis3 {
                 if fg0 != fg1 {
                     for f0 in 0..self.grouped_facets[fg0].len() {
                         for f1 in 0..self.grouped_facets[fg1].len() {
-                            self.hit3.facet_index0 = af0 + f0;
-                            self.hit3.facet_index1 = af1 + f1;
-                            if self.hit3.facet_index0 == self.hit3.facet_index1 {
+                            self.tester.facet_index0 = af0 + f0;
+                            self.tester.facet_index1 = af1 + f1;
+                            if self.tester.facet_index0 == self.tester.facet_index1 {
                                 log("tried to use same facet indecies!!!");
                                 continue;
                             }

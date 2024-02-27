@@ -200,6 +200,16 @@ impl Rectangle {
             .turn(FRAC_PI_2, self.radius)
             .get_shapes()
     }
+    pub fn unit() -> Vec<CurveShape> {
+        let mut curves = vec![];
+        let mut rect = Rectangle::default();
+        rect.point_a = [0., 0.];
+        rect.point_b = [1., 1.];
+        for shape in rect.get_shapes() {
+            if let Shape::Curve(c) = shape {curves.push(c);}
+        }
+        curves
+    }
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]

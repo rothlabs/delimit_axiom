@@ -5,6 +5,7 @@ use glam::*;
 
 #[derive(Clone)]
 pub struct Nurbs {
+    pub sign:     f32,
     pub order:    usize,       // order = polynomial_degree + 1
     pub knots:    Vec<f32>,    // knot_count = order + control_count
     pub weights:  Vec<f32>,    // weight_count = control_count
@@ -18,7 +19,10 @@ impl Nurbs {
 
     fn get_valid(&self, control_count: usize) -> Self {
         let order = self.order.min(control_count).max(2);
+        let mut sign = self.sign;
+        if sign.abs() < 1. {sign = 1.;}
         Nurbs {
+            sign,
             order,//:   self.get_valid_order(control_count),
             knots:   self.get_valid_knots(control_count, order),
             weights: self.get_valid_weights(control_count),
@@ -98,6 +102,7 @@ impl Nurbs {
 impl Default for Nurbs {
     fn default() -> Self {
         Nurbs {
+            sign: 1.,
             order:   2,
             knots:   vec![],
             weights: vec![],    

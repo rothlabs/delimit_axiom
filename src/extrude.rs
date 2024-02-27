@@ -51,8 +51,7 @@ impl Extrude {
                     let mut facet = FacetShape {
                         nurbs: basis.nurbs.clone(),
                         controls:   vec![curve.get_reshape(basis.mat4), curve.clone()], 
-                        boundaries: vec![],
-                        perimeter:  false,
+                        boundaries: Rectangle::unit(),
                     };
                     if self.length < 0. {
                         facet.controls.reverse();
@@ -96,6 +95,7 @@ impl ExtrudeBasis {
     fn new(translation: Vec3) -> Self {
         Self {
             nurbs: Nurbs {
+                sign:    1.,
                 order:   2,
                 knots:   vec![0., 0., 1., 1.],
                 weights: vec![1., 1.],

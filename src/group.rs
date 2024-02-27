@@ -7,6 +7,7 @@ use glam::*;
 #[serde(default = "Group::default")]
 pub struct Group {
     pub parts:    Vec<Model>,
+    pub negate:   bool,
     pub reverse:  bool,
     pub position: [f32; 3],
     pub rotation: [f32; 3],

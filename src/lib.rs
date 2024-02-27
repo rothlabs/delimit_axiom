@@ -183,17 +183,32 @@ pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetS
     (curves, facets)
 }
 
-pub fn get_grouped_facets(parts: &Vec<Model>) -> Vec<Vec<FacetShape>> {
-    let mut facets = vec![];
+pub fn get_grouped_curves(parts: &Vec<Model>) -> Vec<Vec<CurveShape>> {
+    let mut curves = vec![];
     for part in parts {
-        let mut facet_group = vec![];
+        let mut group = vec![];
         for shape in part.get_shapes() {
             match shape {
-                Shape::Facet(s) => facet_group.push(s),
+                Shape::Curve(s) => group.push(s),
                 _ => (),
             }
         }
-        facets.push(facet_group);
+        curves.push(group);
+    }
+    curves
+}
+
+pub fn get_grouped_facets(parts: &Vec<Model>) -> Vec<Vec<FacetShape>> {
+    let mut facets = vec![];
+    for part in parts {
+        let mut group = vec![];
+        for shape in part.get_shapes() {
+            match shape {
+                Shape::Facet(s) => group.push(s),
+                _ => (),
+            }
+        }
+        facets.push(group);
     }
     facets
 }
@@ -201,8 +216,8 @@ pub fn get_grouped_facets(parts: &Vec<Model>) -> Vec<Vec<FacetShape>> {
 pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>, Vec<Vec<CurveShape>>, Vec<Vec<FacetShape>>) {
     let mut curves = vec![];
     let mut facets = vec![];
-    let mut grouped_curves = vec![];
-    let mut grouped_facets = vec![];
+    let mut curve_groups = vec![];
+    let mut facet_groups = vec![];
     for part in parts {
         let mut curve_group = vec![];
         let mut facet_group = vec![];
@@ -213,12 +228,12 @@ pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Ve
                 _ => (),
             }
         }
-        grouped_curves.push(curve_group.clone());
-        grouped_facets.push(facet_group.clone());
+        curve_groups.push(curve_group.clone());
+        facet_groups.push(facet_group.clone());
         curves.extend(curve_group);
         facets.extend(facet_group);
     }
-    (curves, facets, grouped_curves, grouped_facets)
+    (curves, facets, curve_groups, facet_groups)
 }
 
 pub fn get_reshaped_point(point: &Vec3, mat4: Mat4) -> Vec3 { // [f32; 3] {

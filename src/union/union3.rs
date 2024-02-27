@@ -45,9 +45,9 @@ impl UnionBasis3 {
         self.try_facet_pairs();
         for i in 0..self.facets.len() {
             let mut facet = self.facets[i].clone();
-            if facet.boundaries.is_empty() {
-                facet.perimeter = true;
-            }
+            // if facet.boundaries.is_empty() {
+            //     facet.perimeter = true;
+            // }
             facet.boundaries.extend(self.facet_hits[i].clone());
             self.shapes.push(Shape::Facet(facet));
         }

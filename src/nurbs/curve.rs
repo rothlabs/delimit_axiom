@@ -32,6 +32,7 @@ impl Curve {
     pub fn get_shapes(&self) -> Vec<Shape> {
         vec![Shape::Curve(CurveShape{
             nurbs: Nurbs {
+                sign: 1.,
                 order:   self.order,
                 knots:   self.knots.clone(),
                 weights: self.weights.clone(),
@@ -63,6 +64,25 @@ impl Default for CurveShape {
 }
 
 impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
+    pub fn negate(&mut self) -> &mut Self {
+        self.nurbs.sign = -self.nurbs.sign;
+        self
+    }
+
+    pub fn reverse(&mut self) -> &mut Self{
+        let max_knot = *self.nurbs.knots.last().unwrap(); 
+        self.controls.reverse();
+        self.nurbs.weights.reverse();
+        self.nurbs.knots.reverse();
+        for i in 0..self.nurbs.knots.len() {
+            self.nurbs.knots[i] = max_knot - self.nurbs.knots[i];
+        }
+        let min_basis = self.min;
+        self.min = 1.-self.max;
+        self.max = 1.-min_basis;
+        self
+    }
+
     pub fn get_reshape(&self, mat4: Mat4) -> Self {
         let mut curve = self.clone_with_empty_controls();
         for point in &self.controls {
@@ -90,11 +110,15 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     }
 
     pub fn get_normalized_knots(&self) -> Vec<f32> {
-        let mut knots = vec![];
+        let mut knots = vec![0.];
         let last_knot = self.nurbs.knots.last().unwrap();
-        for i in 0..self.controls.len() {
-            knots.push(self.nurbs.knots[self.nurbs.order - 1 + i] / last_knot);
+        for i in 0..self.controls.len()-2 {
+            let knot = self.nurbs.knots[self.nurbs.order + i] / last_knot;
+            if knot > self.min && knot < self.max {
+                knots.push(knot);
+            }
         }
+        knots.push(1.);
         knots
     }
 
@@ -156,6 +180,14 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
             }
         }
         vector
+    }
+
+    pub fn set_min(&mut self, u: f32) {
+        self.min = self.min*(1.-u) + self.max*u;
+    }
+
+    pub fn set_max(&mut self, min_basis: f32, u: f32) {
+        self.max = min_basis*(1.-u) + self.max*u;
     }
 
     pub fn get_valid(&self) -> CurveShape {

@@ -1,96 +1,86 @@
-//use std::{collections::HashMap, f32::EPSILON};
-use crate::{log, nurbs::curve, CurveHit, CurveMiss, CurveShape, Hit2, HitTester2, Shape};
+use crate::{nurbs::{self, curve}, CurveHit, CurveMiss, CurveShape, HitTester2, Shape};
 use glam::*;
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
-
 pub struct UnionBasis2 {
-    pub tester:  HitTester2,
-    pub curves:  Vec<CurveShape>,
-    pub groups:  Vec<Vec<CurveShape>>,
-    pub hits:    Vec<Vec<CurveHit>>, 
-    pub miss:    Vec<Vec<CurveMiss>>, 
-    pub shapes:  Vec<Shape>,
+    pub tester: HitTester2,
+    pub curve_groups: [Vec<CurveShape>; 2],
+    pub hits:   [Vec<Vec<CurveHit>>; 2], 
+    pub miss:   [Vec<Vec<CurveMiss>>; 2], 
+    pub curves: Vec<CurveShape>,
+    pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis2 { 
-    pub fn get_shapes(&mut self) -> Vec<Shape> {
-        self.test_pairs();
-        for i in 0..self.curves.len() {
-            if self.hits[i].is_empty() {
-                self.miss[i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                if self.miss[i].first().unwrap().dot > 0.1 {
-                    self.shapes.push(Shape::Curve(self.curves[i].clone()));
+    pub fn build(&mut self) -> Vec<CurveShape> {
+        self.test_groups();
+        for g in 0..2 {
+            for i in 0..self.curve_groups[g].len() {
+                if self.hits[g][i].is_empty() {
+                    self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+                    if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 {
+                        self.curves.push(self.curve_groups[g][i].clone());
+                    }
+                }else{
+                    self.hits[g][i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
+                    self.add_bounded_curves(g, i);   
                 }
-                continue;
-            }
-            self.hits[i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
-            self.add_split_curves(i);
-        }
-        self.shapes.clone()
-    }
-
-    fn test_hit(&mut self, u0: f32, u1: f32) { 
-        match self.tester.test(u0, u1) {
-            Ok(hit) => {
-                self.hits[self.tester.index0].push(hit.hit0);
-                self.hits[self.tester.index1].push(hit.hit1);
-                self.shapes.push(Shape::Point(hit.center));
-            },
-            Err(hit) => {
-                self.miss[self.tester.index0].push(hit.miss0);
-                self.miss[self.tester.index1].push(hit.miss1);
             }
         }
+        let mut curves = vec![]; 
+        for curve in &self.curves {
+            let mut crv = curve.clone();
+            if crv.nurbs.sign < 0. {crv.reverse().negate();}
+            curves.push(crv);
+        }
+        curves
     }
 
-    fn test_pairs(&mut self){
-        let mut ac0 = 0;
-        for cg0 in 0..self.groups.len() {
-            let mut ac1 = ac0;
-            for cg1 in cg0..self.groups.len() {
-                if cg0 != cg1 { 
-                    for c0 in 0..self.groups[cg0].len() {
-                        for c1 in 0..self.groups[cg1].len() {
-                            self.tester.index0 = ac0 + c0;
-                            self.tester.index1 = ac1 + c1;
-                            if self.tester.index0 == self.tester.index1 {
-                                log("tried to use same curve indecies!!!");
-                                continue;
-                            }
-                            for u0 in self.curves[self.tester.index0].get_normalized_knots() {
-                                for u1 in self.curves[self.tester.index1].get_normalized_knots() {
-                                    self.test_hit(u0, u1);
-                                }
-                            }
-                        }
+    fn test_groups(&mut self){
+        for i0 in 0..self.curve_groups[0].len() {
+            for i1 in 0..self.curve_groups[1].len() {
+                self.tester.index.0 = i0;
+                self.tester.index.1 = i1;
+                for u0 in self.curve_groups[0][i0].get_normalized_knots() {
+                    for u1 in self.curve_groups[1][i1].get_normalized_knots() {
+                        self.test_curves(u0, u1);
                     }
                 }
-                ac1 += self.groups[cg1].len();
             }
-            ac0 += self.groups[cg0].len();
         }
     }
 
-    fn add_split_curves(&mut self, i: usize) {
-        let first = self.hits[i].first().unwrap();
+    fn test_curves(&mut self, u0: f32, u1: f32) { 
+        match self.tester.test(u0, u1) {
+            Ok(hit) => {
+                self.hits[0][self.tester.index.0].push(hit.hit.0);
+                self.hits[1][self.tester.index.1].push(hit.hit.1);
+                self.shapes.push(Shape::Point(hit.center));
+            },
+            Err(miss) => {
+                self.miss[0][self.tester.index.0].push(miss.miss.0);
+                self.miss[1][self.tester.index.1].push(miss.miss.1);
+            }
+        }
+    }
+
+    fn add_bounded_curves(&mut self, g: usize, i: usize) {
+        let mut curve = self.curve_groups[g][i].clone();
+        let min_basis = curve.min;
+        let first = self.hits[g][i].first().unwrap();
         let mut set_min = false;
-        if first.dot > 0. {set_min = true;}
-        let mut curve = self.curves[i].clone();
-        for curve_hit in &self.hits[i] { 
+        if first.dot > 0. {set_min = true;} //  * curve.nurbs.sign
+        for curve_hit in &self.hits[g][i] { 
             if set_min {
-                curve.min = curve_hit.u;
+                curve.set_min(curve_hit.u);
             }else{
-                curve.max = curve_hit.u;
-                self.shapes.push(Shape::Curve(curve));
-                curve = self.curves[i].clone();
+                curve.set_max(min_basis, curve_hit.u);
+                self.curves.push(curve);
+                curve = self.curve_groups[g][i].clone();
             }
             set_min = !set_min;
         }
         if !set_min {
-            self.shapes.push(Shape::Curve(curve));
+            self.curves.push(curve);
         }
     }
 }

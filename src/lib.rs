@@ -282,7 +282,7 @@ fn get_line_intersection3(p1: Vec3, d1: Vec3, p2: Vec3, d2: Vec3) -> Vec3 {
     (p_closest + q_closest) / 2.//(p_closest, q_closest)
 }
 
-pub fn hash_vector(vecf32: &Vec<f32>) -> u64 {
+pub fn get_vector_hash(vecf32: &Vec<f32>) -> u64 {
     let veci32: Vec<u64> = vecf32.iter().enumerate().map(|(i, v)| i as u64 * (v * 10000.).floor() as u64).collect();
     veci32.iter().sum()
     // let mut hasher = DefaultHasher::new();

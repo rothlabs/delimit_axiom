@@ -1,4 +1,4 @@
-use crate::{get_facets, hash_vector, query::{self, DiscreteQuery}, Shape};
+use crate::{get_facets, get_vector_hash, query::{self, DiscreteQuery}, Shape};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -64,6 +64,6 @@ pub fn get_facet_scene(val: JsValue) -> Result<JsValue, JsValue> {
         mesh.trivec.extend(facet_mesh.trivec.iter().map(|v| v + offset));
         offset += facet_mesh.vector.len() / 3;
     }
-    mesh.digest = hash_vector(&mesh.vector);
+    mesh.digest = get_vector_hash(&mesh.vector);
     Ok(serde_wasm_bindgen::to_value(&mesh)?)
 }

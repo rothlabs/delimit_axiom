@@ -1,7 +1,7 @@
 
 use std::f32::EPSILON;
 
-use crate::{get_points, get_reshaped_point, hash_vector, query::DiscreteQuery, scene::Polyline, Model, Shape};
+use crate::{get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, scene::Polyline, Model, Shape};
 use glam::*;
 use lyon::path::Polygon;
 use serde::{Deserialize, Serialize};
@@ -40,7 +40,7 @@ impl Curve {
             controls: get_points(&self.controls),//.iter().map(|p| vec3(p[0], p[1], p[2])).collect(),
             min: 0., //self.min,
             max: 1., //self.max,
-        })]
+        }.get_valid())]
     }
 }
 
@@ -149,7 +149,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     pub fn get_polyline(&self, query: &DiscreteQuery) -> Polyline {
         let vector = self.get_polyline_vector(query);
         Polyline {
-            digest: hash_vector(&vector),
+            digest: get_vector_hash(&vector),
             vector,
         }
     }

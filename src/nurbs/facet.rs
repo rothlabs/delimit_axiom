@@ -4,7 +4,7 @@ use std::ops::DivAssign;
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::scene::Mesh;
-use crate::{get_curves, get_line_intersection2, hash_vector, log, CurveShape, Model, Shape};
+use crate::{get_curves, get_line_intersection2, get_vector_hash, log, CurveShape, Model, Rectangle, Shape};
 use glam::*;
 use lyon::path::path::BuilderImpl;
 use serde::{Deserialize, Serialize};
@@ -37,6 +37,10 @@ pub struct Facet {
 
 impl Facet {
     pub fn get_shapes(&self) -> Vec<Shape> {
+        let mut boundaries = get_curves(&self.boundaries); 
+        if boundaries.is_empty() {
+            boundaries = Rectangle::unit();
+        }
         vec![Shape::Facet(FacetShape{
             nurbs: Nurbs {
                 sign:    1.,
@@ -45,7 +49,7 @@ impl Facet {
                 weights: self.weights.clone(),
             },
             controls:   get_curves(&self.controls),
-            boundaries: get_curves(&self.boundaries),
+            boundaries,
         })]
     }
 }
@@ -68,6 +72,11 @@ impl Default for FacetShape {
 }
 
 impl FacetShape { 
+    pub fn negate(&mut self) -> &mut Self {
+        self.nurbs.sign = -self.nurbs.sign;
+        self
+    }
+
     pub fn get_reshape(&self, mat4: Mat4) -> Self {
         let mut facet = self.clone_with_empty_controls_and_boundaries();
         for control in &self.controls {
@@ -182,7 +191,7 @@ impl FacetShape {
                     loop_open = true;
                 }
             }
-            bndry_i = facet.next_boundary(&bndry.get_point_at_u(1.), &mut used_boundaries);
+            bndry_i = facet.get_next_boundary_index(&bndry.get_point_at_u(1.), &mut used_boundaries);
             used_boundaries.push(bndry_i);
             if bndry_i == start_bndry_i {
                 builder.end(true);
@@ -198,7 +207,7 @@ impl FacetShape {
         }
         builder.end(true);
         let path = builder.build();
-        let options = FillOptions::default(); //tolerance(query.tolerance);
+        let options = FillOptions::default().with_tolerance(0.0001); //tolerance(query.tolerance);
         let mut geometry: VertexBuffers<[f32; 2], usize> = VertexBuffers::new();
         let mut buffer_builder = BuffersBuilder::new(&mut geometry, |vertex: FillVertex| vertex.position().to_array());
         let mut tessellator = FillTessellator::new();
@@ -217,13 +226,13 @@ impl FacetShape {
             }
         }
         Mesh {
-            digest: hash_vector(&vector), 
+            digest: get_vector_hash(&vector), 
             vector, 
             trivec, 
         }
     }
     
-    fn next_boundary(&self, point: &Vec3, used_boundaries: &mut Vec<usize>) -> usize {
+    fn get_next_boundary_index(&self, point: &Vec3, used_boundaries: &mut Vec<usize>) -> usize {
         let mut bndry_i = 0;
         let mut distance = INFINITY;
         for (i, curve) in self.boundaries.iter().enumerate() { 
@@ -240,7 +249,7 @@ impl FacetShape {
     pub fn get_vector_at_uv(&self, u: f32, v: f32) -> Vec<f32> {
         let basis = self.nurbs.get_rational_basis_at_u(v);
         let mut vector = vec![];
-        if ! self.controls.is_empty() {
+        if !self.controls.is_empty() {
             for component_index in 0..3 { 
                 vector.push(
                     (0..self.controls.len())

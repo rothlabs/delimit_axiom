@@ -12,6 +12,11 @@ pub struct Nurbs {
 }
 
 impl Nurbs {
+    // pub fn negate(&mut self) -> &mut Self {
+    //     self.sign = -self.sign;
+    //     self
+    // }
+
     pub fn get_sample_count(&self, count: usize) -> usize { 
         let mul = self.weights.len()-1;
         self.weights.len() + count * (self.order - 2) * mul

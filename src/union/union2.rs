@@ -1,11 +1,11 @@
-use crate::{nurbs::{self, curve}, CurveHit, CurveMiss, CurveShape, HitTester2, Shape};
+use crate::{hit::Miss, CurveHit, CurveShape, HitTester2, Shape};
 use glam::*;
 
 pub struct UnionBasis2 {
     pub tester: HitTester2,
-    pub curve_groups: [Vec<CurveShape>; 2],
+    pub groups: [Vec<CurveShape>; 2],
     pub hits:   [Vec<Vec<CurveHit>>; 2], 
-    pub miss:   [Vec<Vec<CurveMiss>>; 2], 
+    pub miss:   [Vec<Vec<Miss>>; 2], 
     pub curves: Vec<CurveShape>,
     pub shapes: Vec<Shape>,
 }
@@ -14,11 +14,11 @@ impl UnionBasis2 {
     pub fn build(&mut self) -> Vec<CurveShape> {
         self.test_groups();
         for g in 0..2 {
-            for i in 0..self.curve_groups[g].len() {
+            for i in 0..self.groups[g].len() {
                 if self.hits[g][i].is_empty() {
                     self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
                     if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 {
-                        self.curves.push(self.curve_groups[g][i].clone());
+                        self.curves.push(self.groups[g][i].clone());
                     }
                 }else{
                     self.hits[g][i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
@@ -36,12 +36,12 @@ impl UnionBasis2 {
     }
 
     fn test_groups(&mut self){
-        for i0 in 0..self.curve_groups[0].len() {
-            for i1 in 0..self.curve_groups[1].len() {
+        for i0 in 0..self.groups[0].len() {
+            for i1 in 0..self.groups[1].len() {
                 self.tester.index.0 = i0;
                 self.tester.index.1 = i1;
-                for u0 in self.curve_groups[0][i0].get_normalized_knots() {
-                    for u1 in self.curve_groups[1][i1].get_normalized_knots() {
+                for u0 in self.groups[0][i0].get_normalized_knots() {
+                    for u1 in self.groups[1][i1].get_normalized_knots() {
                         self.test_curves(u0, u1);
                     }
                 }
@@ -57,14 +57,14 @@ impl UnionBasis2 {
                 self.shapes.push(Shape::Point(hit.center));
             },
             Err(miss) => {
-                self.miss[0][self.tester.index.0].push(miss.miss.0);
-                self.miss[1][self.tester.index.1].push(miss.miss.1);
+                self.miss[0][self.tester.index.0].push(miss.0);
+                self.miss[1][self.tester.index.1].push(miss.1);
             }
         }
     }
 
     fn add_bounded_curves(&mut self, g: usize, i: usize) {
-        let mut curve = self.curve_groups[g][i].clone();
+        let mut curve = self.groups[g][i].clone();
         let min_basis = curve.min;
         let first = self.hits[g][i].first().unwrap();
         let mut set_min = false;
@@ -75,7 +75,7 @@ impl UnionBasis2 {
             }else{
                 curve.set_max(min_basis, curve_hit.u);
                 self.curves.push(curve);
-                curve = self.curve_groups[g][i].clone();
+                curve = self.groups[g][i].clone();
             }
             set_min = !set_min;
         }

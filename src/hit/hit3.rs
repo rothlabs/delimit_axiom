@@ -27,35 +27,36 @@ pub struct FacetHit {
 
 //#[derive(Clone)]
 pub struct HitTester3 {
-    pub curves:       Vec<CurveShape>,
-    pub facets:       Vec<FacetShape>,
-    pub facet_index0: usize,
-    pub facet_index1: usize,
-    pub hit_map:      Vec<Spatial3>,
-    pub hit_points:   Vec<Vec<Vec3>>,
-    pub hit_step:     f32,
+    pub curve_groups: (Vec<CurveShape>, Vec<CurveShape>),
+    pub facet_groups: (Vec<FacetShape>, Vec<FacetShape>),
+    pub curve_index: (usize, usize),
+    pub facet_index: (usize, usize),
+    pub spatial:      Vec<Spatial3>,
+    pub points:   Vec<Vec<Vec3>>,
+    pub step:     f32,
     pub tolerance:    f32,
 }
 
 pub struct Hit3 {
-    pub curve0:       CurveShape,
-    pub curve1:       CurveShape,
-    pub center_curve: CurveShape,
-    pub start_point0: Vec3,
-    pub start_point1: Vec3,
+    pub hit:    (CurveShape, CurveShape),
+    pub center: CurveShape,
+    pub start:  Vec3,
+}
+
+pub struct FacetMiss {
+    pub distance: f32,
+    pub dot: f32,
 }
 
 impl HitTester3 { 
-    pub fn test(&mut self, start_uv0: Vec2, start_uv1: Vec2) -> Option<Hit3> { 
-        let facet0 = &self.facets[self.facet_index0];
-        let facet1 = &self.facets[self.facet_index1];
+    pub fn test(&mut self, start_uv0: Vec2, start_uv1: Vec2) -> Result<Hit3, Miss3> { 
+        let facet0 = &self.facet_groups.0[self.facet_index.0];
+        let facet1 = &self.facet_groups.1[self.facet_index.1];
         let mut uv0 = start_uv0;
         let mut uv1 = start_uv1;
         let mut p0 = facet0.get_point_at_uv(uv0);
         let mut p1 = facet1.get_point_at_uv(uv1);
         for _ in 0..10 {
-            // (uv0, p0) = facet0.get_uv_and_point_from_3d_dir(uv0, p1 - p0);
-            // (uv1, p1) = facet1.get_uv_and_point_from_3d_dir(uv1, p0 - p1);
             let center = self.get_center(uv0, uv1, p0, p1);
             let (uv0_t0, p0_t0) = facet0.get_uv_and_point_from_target(uv0, center - p0);
             let (uv1_t0, p1_t0) = facet1.get_uv_and_point_from_target(uv1, center - p1);
@@ -94,14 +95,14 @@ impl HitTester3 {
                         let first_point = curve0.controls.first().unwrap();
                         let last_point = curve0.controls.last().unwrap();
                         let mut duplicate_curve = false;
-                        self.hit_map[self.facet_index0].for_pairs(&mut |i0: usize, i1: usize| {
-                            if first_point.distance(self.hit_points[self.facet_index0][i0]) < self.tolerance {
-                                if last_point.distance(self.hit_points[self.facet_index0][i1]) < self.tolerance {
+                        self.spatial[self.facet_index.0].for_pairs(&mut |i0: usize, i1: usize| {
+                            if first_point.distance(self.points[self.facet_index.0][i0]) < self.tolerance {
+                                if last_point.distance(self.points[self.facet_index.0][i1]) < self.tolerance {
                                     duplicate_curve = true;
                                 }
                             }
-                            if last_point.distance(self.hit_points[self.facet_index0][i0]) < self.tolerance {
-                                if first_point.distance(self.hit_points[self.facet_index0][i1]) < self.tolerance {
+                            if last_point.distance(self.points[self.facet_index.0][i0]) < self.tolerance {
+                                if first_point.distance(self.points[self.facet_index.0][i1]) < self.tolerance {
                                     duplicate_curve = true;
                                 }
                             }
@@ -109,11 +110,11 @@ impl HitTester3 {
                         if duplicate_curve {
                             None
                         } else {
-                            self.hit_map[self.facet_index0].insert(first_point, self.hit_points[self.facet_index0].len());
-                            self.hit_points[self.facet_index0].push(*first_point);
+                            self.spatial[self.facet_index.0].insert(first_point, self.points[self.facet_index.0].len());
+                            self.points[self.facet_index.0].push(*first_point);
                             //self.hit_map[self.facet_index1].insert(&curve1.controls.first().unwrap(), 0);
-                            self.hit_map[self.facet_index0].insert(last_point, self.hit_points[self.facet_index0].len());
-                            self.hit_points[self.facet_index0].push(*last_point);
+                            self.spatial[self.facet_index.0].insert(last_point, self.points[self.facet_index.0].len());
+                            self.points[self.facet_index.0].push(*last_point);
                             //self.hit_map[self.facet_index1].insert(&curve1.controls.last().unwrap(), 0);
                             
                             //self.shapes.push(Shape::Curve(curve0.get_valid()));
@@ -144,8 +145,8 @@ impl HitTester3 {
         let mut curve2 = CurveShape::default();
         // curve0.nurbs.order = 2;
         // curve1.nurbs.order = 2;
-        let facet0 = &self.facets[self.facet_index0];
-        let facet1 = &self.facets[self.facet_index1];
+        let facet0 = &self.facet_groups.0[self.facet_index.0];
+        let facet1 = &self.facet_groups.1[self.facet_index.1];
         let mut forward_controls0  = vec![]; 
         let mut forward_controls1  = vec![]; 
         let mut forward_controls2  = vec![]; 
@@ -170,7 +171,7 @@ impl HitTester3 {
                 (uv0, p0) = facet0.get_uv_and_point_from_target(uv0, center - p0);
                 (uv1, p1) = facet1.get_uv_and_point_from_target(uv1, center - p1);
                 if k > 14 {
-                    if p0.distance(start.p0) < self.hit_step || p1.distance(start.p1) < self.hit_step {
+                    if p0.distance(start.p0) < self.step || p1.distance(start.p1) < self.step {
                         add_points(start.clone());
                         break 'dir_loop;
                     }
@@ -180,7 +181,7 @@ impl HitTester3 {
                 let normal0 = facet0.get_normal_at_uv(uv0);
                 let normal1 = facet1.get_normal_at_uv(uv1);
                 let normal_cross = normal0.cross(normal1).normalize();
-                let dir = normal_cross * (1-direction*2) as f32 * self.hit_step;
+                let dir = normal_cross * (1-direction*2) as f32 * self.step;
                 (uv0, p0) = facet0.get_uv_and_point_from_target(uv0, dir);
                 (uv1, p1) = facet1.get_uv_and_point_from_target(uv1, dir);
                 //if k > 14 {
@@ -221,8 +222,8 @@ impl HitTester3 {
     }
 
     fn get_center(&self, uv0: Vec2, uv1: Vec2, p0: Vec3, p1: Vec3) -> Vec3 { // facet0: FacetShape, facet1: FacetShape, 
-        let normal0 = self.facets[self.facet_index0].get_normal_at_uv(uv0);
-        let normal1 = self.facets[self.facet_index1].get_normal_at_uv(uv1);
+        let normal0 = self.facet_groups.0[self.facet_index.0].get_normal_at_uv(uv0);
+        let normal1 = self.facet_groups.1[self.facet_index.1].get_normal_at_uv(uv1);
         let normal_cross = normal0.cross(normal1).normalize();
         let cross0 = normal0.cross(normal_cross).normalize();
         let cross1 = normal1.cross(normal_cross).normalize();

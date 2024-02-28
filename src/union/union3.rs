@@ -71,8 +71,8 @@ impl UnionBasis3 {
 
     fn add_facet_hit(&mut self, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
         if let Some(hit) = self.tester.test(uv0, uv1) { // &facet_index0, &facet_index1, 
-            self.facet_hits[self.tester.facet_index0].push(hit.curve0.clone());
-            self.facet_hits[self.tester.facet_index1].push(hit.curve1.clone());
+            self.facet_hits[self.tester.facet_index.0].push(hit.curve0.clone());
+            self.facet_hits[self.tester.facet_index.1].push(hit.curve1.clone());
             self.shapes.push(Shape::Point(hit.start_point0));
             self.shapes.push(Shape::Point(hit.start_point1));
             self.shapes.push(Shape::Curve(hit.center_curve));
@@ -89,9 +89,9 @@ impl UnionBasis3 {
                 if fg0 != fg1 {
                     for f0 in 0..self.grouped_facets[fg0].len() {
                         for f1 in 0..self.grouped_facets[fg1].len() {
-                            self.tester.facet_index0 = af0 + f0;
-                            self.tester.facet_index1 = af1 + f1;
-                            if self.tester.facet_index0 == self.tester.facet_index1 {
+                            self.tester.facet_index.0 = af0 + f0;
+                            self.tester.facet_index.1 = af1 + f1;
+                            if self.tester.facet_index.0 == self.tester.facet_index.1 {
                                 log("tried to use same facet indecies!!!");
                                 continue;
                             }

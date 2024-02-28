@@ -3,13 +3,15 @@ use std::f32::INFINITY;
 use crate::{log, get_line_intersection3, CurveShape, Spatial2, Spatial3};
 use glam::*;
 
+use super::Miss;
+
 // macro_rules! console_log {
 //     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 // }
 
 //#[derive(Clone)]
 pub struct HitTester2 {
-    pub curve_groups: (Vec<CurveShape>, Vec<CurveShape>),
+    pub groups: (Vec<CurveShape>, Vec<CurveShape>),
     pub index:        (usize, usize),
     pub spatial:      Spatial3,
     pub points:       Vec<Vec3>,
@@ -20,7 +22,6 @@ pub struct HitTester2 {
 //#[derive(Clone)]
 pub struct Hit2 {
     pub hit: (CurveHit, CurveHit),
-    //pub hit1: CurveHit,
     pub center: Vec3,
 }
 
@@ -29,19 +30,10 @@ pub struct CurveHit {
     pub dot: f32,
 }
 
-pub struct Miss2 {
-    pub miss: (CurveMiss, CurveMiss),
-}
-
-pub struct CurveMiss {
-    pub distance: f32,
-    pub dot: f32,
-}
-
 impl HitTester2 { 
-    pub fn test(&mut self, start_u0: f32, start_u1: f32) -> Result<Hit2, Miss2> { 
-        let curve0 = &self.curve_groups.0[self.index.0];
-        let curve1 = &self.curve_groups.1[self.index.1];
+    pub fn test(&mut self, start_u0: f32, start_u1: f32) -> Result<Hit2, (Miss, Miss)> { 
+        let curve0 = &self.groups.0[self.index.0];
+        let curve1 = &self.groups.1[self.index.1];
         let mut u0 = start_u0;
         let mut u1 = start_u1;
         let mut p0 = curve0.get_point_at_u(u0);
@@ -106,15 +98,15 @@ impl HitTester2 {
         let tangent1 = curve1.get_tangent_at_u(u1);
         let cross0 = Vec3::Z.cross((p1 - p0).normalize()).normalize() * curve0.nurbs.sign;
         let cross1 = Vec3::Z.cross((p0 - p1).normalize()).normalize() * curve1.nurbs.sign;
-        Err(Miss2{
-            miss: (CurveMiss{dot:cross0.dot(tangent1), distance},
-                   CurveMiss{dot:cross1.dot(tangent0), distance}),
-        })
+        Err((
+            Miss{dot:cross0.dot(tangent1), distance}, 
+            Miss{dot:cross1.dot(tangent0), distance},
+        ))
     }
 
     pub fn get_tangent_hit(&self, u0: f32, u1: f32, p0: Vec3, p1: Vec3) -> Vec3 {
-        let curve0 = &self.curve_groups.0[self.index.0];
-        let curve1 = &self.curve_groups.1[self.index.1];
+        let curve0 = &self.groups.0[self.index.0];
+        let curve1 = &self.groups.1[self.index.1];
         let tangent0 = curve0.get_tangent_at_u(u0);
         let tangent1 = curve1.get_tangent_at_u(u1);
         get_line_intersection3(p0, tangent0, p1, tangent1) // get_line_intersection(p0, tangent0, p1, tangent1)

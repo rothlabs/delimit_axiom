@@ -24,9 +24,8 @@ impl Union {
         let mut shapes = vec![];
         let tolerance = 0.005;
         let duplication_tolerance = tolerance * 10.;
-        let step = 2.;
-        let (curves, facets, curve_groups_basis, facet_groups_basis) = get_grouped_curves_and_facets(&self.parts);
-        let (neg_curves, neg_facets, neg_curve_groups, neg_facet_groups) = get_grouped_curves_and_facets(&self.negated_parts);
+        let (_, facets, curve_groups_basis, facet_groups_basis) = get_grouped_curves_and_facets(&self.parts);
+        let (_, neg_facets, neg_curve_groups, neg_facet_groups) = get_grouped_curves_and_facets(&self.negated_parts);
         if facets.is_empty() && neg_facets.is_empty() {
             let mut groups = curve_groups_basis;
             for neg_group in neg_curve_groups {
@@ -48,8 +47,8 @@ impl Union {
                         tolerance,
                         duplication_tolerance,
                     },
-                    hits: [(0..curves0.len()).map(|_| vec![]).collect(), (0..curves1.len()).map(|_| vec![]).collect()],
-                    miss: [(0..curves0.len()).map(|_| vec![]).collect(), (0..curves1.len()).map(|_| vec![]).collect()],
+                    hits: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
+                    miss: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
                     groups: [curves0, curves1.clone()],
                     curves: vec![],
                     shapes: vec![],
@@ -58,73 +57,56 @@ impl Union {
                 shapes.extend(basis.shapes);
             }
             shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
-            shapes
         }else{
-            // let mut curve_groups = curve_groups_basis;
-            // let mut facet_groups = facet_groups_basis;
-            // for i in 0..neg_curve_groups.len() {
-            //     let mut curve_group = vec![];
-            //     let mut facet_group = vec![];
-            //     for mut curve in neg_curve_groups[i] {
-            //         curve.negate();
-            //         curve_group.push(curve);
-            //     }
-            //     for mut facet in neg_facet_groups[i] {
-            //         facet.negate();
-            //         facet_group.push(facet);
-            //     }
-            //     curve_groups.push(curve_group);
-            //     facet_groups.push(facet_group);
-            // }
-            // let mut curves0 = curve_groups.first().unwrap_or(&vec![]).clone();
-            // let mut facets0 = facet_groups.first().unwrap_or(&vec![]).clone();
-            // for i in 0..curve_groups.len() {
-            //     let curves1 = curve_groups[i];
-            //     let facets1 = facet_groups[i];
-            //     let mut basis = UnionBasis3 {
-            //         tester: HitTester3 {
-            //             curve_groups: (curves0.clone(), curves1.clone()),
-            //             facet_groups: (facets0.clone(), facets1.clone()),
-            //             curve_index: (0, 0),
-            //             facet_index: (0, 0),
-            //             step,
-            //             spatial:    (0..facets.len()).map(|_| Spatial3::new(step)).collect(),
-            //             points: (0..facets.len()).map(|_| vec![]).collect(),
-            //             tolerance: 0.05,
-            //         },
-            //         facet_hits: (0..curves.len()).map(|_| vec![]).collect(),
-            //         //curve_hits: (0..curves.len()).map(|_| vec![]).collect(),
-            //         curves,
-            //         facets,
-            //         grouped_curves: curve_groups_basis,
-            //         grouped_facets: facet_groups,
-            //         shapes: vec![],
-            //     };
-            // }
-            // self.transform.get_reshapes(basis.get_shapes())
-            vec![]
+            let step = 2.;
+            let mut curve_groups = curve_groups_basis;
+            let mut facet_groups = facet_groups_basis;
+            for i in 0..neg_curve_groups.len() {
+                let mut curve_group = vec![];
+                let mut facet_group = vec![];
+                for mut curve in neg_curve_groups[i].clone() {
+                    curve.negate();
+                    curve_group.push(curve);
+                }
+                for mut facet in neg_facet_groups[i].clone() {
+                    facet.negate();
+                    facet_group.push(facet);
+                }
+                curve_groups.push(curve_group);
+                facet_groups.push(facet_group);
+            }
+            let mut curves0 = curve_groups.first().unwrap_or(&vec![]).clone();
+            let mut facets0 = facet_groups.first().unwrap_or(&vec![]).clone();
+            for i in 1..curve_groups.len() {
+                let curves1 = curve_groups[i].clone();
+                let facets1 = facet_groups[i].clone();
+                let mut basis = UnionBasis3 {
+                    tester: HitTester3 {
+                        curve_groups: (curves0.clone(), curves1.clone()),
+                        facet_groups: (facets0.clone(), facets1.clone()),
+                        curve_index: (0, 0),
+                        facet_index: (0, 0),
+                        spatial: (0..facets.len()).map(|_| Spatial3::new(step)).collect(), // Spatial3::new(step), //
+                        points:  vec![vec![]; facets.len()], // vec![], //
+                        tolerance: 0.05,
+                        step,
+                    },
+                    facet_hits: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]], 
+                    facet_miss: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]],
+                    curve_groups: [curves0, curves1],
+                    facet_groups: [facets0, facets1],
+                    curves: vec![],
+                    facets: vec![],
+                    shapes: vec![],
+                };
+                (curves0, facets0) = basis.build();
+                shapes.extend(basis.shapes);
+            }
+            shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
+            shapes.extend(facets0.iter().map(|f| Shape::Facet(f.clone())));
         }
+        shapes
     }
-
-    // fn get_shapes_from_union2(&self){
-    //     let mut basis = UnionBasis2 {
-    //         tester: HitTester2 {
-    //             curve_groups: (curves0.clone(), curves1.clone()),
-    //             index:  (0, 0),
-    //             spatial: Spatial3::new(duplication_tolerance), 
-    //             points:  vec![],
-    //             tolerance,
-    //             duplication_tolerance,
-    //         },
-    //         hits: [(0..curves0.len()).map(|_| vec![]).collect(), (0..curves1.len()).map(|_| vec![]).collect()],
-    //         miss: [(0..curves0.len()).map(|_| vec![]).collect(), (0..curves1.len()).map(|_| vec![]).collect()],
-    //         curve_groups: [curves0, curves1.clone()],
-    //         curves: vec![],
-    //         shapes: vec![],
-    //     };
-    //     curves0 = basis.build();
-    //     shapes.extend(basis.shapes);
-    // }
 }
 
 

@@ -113,9 +113,9 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         let mut knots = vec![0.];
         let last_knot = self.nurbs.knots.last().unwrap();
         for i in 0..self.controls.len()-2 {
-            let knot = self.nurbs.knots[self.nurbs.order + i] / last_knot;
-            if knot > self.min && knot < self.max {
-                knots.push(knot);
+            let u = self.nurbs.knots[self.nurbs.order + i] / last_knot;
+            if u > self.min && u < self.max {
+                knots.push(u);
             }
         }
         knots.push(1.);

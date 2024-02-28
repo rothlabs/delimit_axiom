@@ -1,5 +1,5 @@
 //use std::{collections::HashMap, f32::EPSILON};
-use crate::{log, CurveShape, FacetShape, HitTester3, Shape};
+use crate::{hit::Miss, log, CurveShape, FacetShape, HitTester3, Shape};
 use glam::*;
 
 //use std::time::Instant;
@@ -25,96 +25,115 @@ macro_rules! console_log {
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
     pub tester: HitTester3,
+    pub curve_groups: [Vec<CurveShape>; 2],
+    pub facet_groups: [Vec<FacetShape>; 2],
+    pub facet_hits: [Vec<Vec<CurveShape>>; 2], 
+    pub facet_miss: [Vec<Vec<Miss>>; 2], 
     pub curves: Vec<CurveShape>,
     pub facets: Vec<FacetShape>,
-    pub grouped_curves: Vec<Vec<CurveShape>>,
-    pub grouped_facets: Vec<Vec<FacetShape>>,
     pub shapes: Vec<Shape>,
-    pub facet_hits: Vec<Vec<CurveShape>>, 
     //pub curve_hits: Vec<Vec<CurveHit>>,
 }
 
 impl UnionBasis3 { 
-    pub fn get_shapes(&mut self) -> Vec<Shape> {
-        //let seed: [u8; 32] = *b"seed_value_0123456789seed_value_";
-        //self.rng = SmallRng::from_seed(seed);
+    pub fn build(&mut self) -> (Vec<CurveShape>, Vec<FacetShape>) {
+        self.test_groups();
+        self.curves.extend(self.curve_groups[0].clone());
+        self.curves.extend(self.curve_groups[1].clone());
+        self.facets.extend(self.facet_groups[0].clone());
+        self.facets.extend(self.facet_groups[1].clone());
+        (self.curves.clone(), self.facets.clone())
+        //let mut shapes = (vec![], vec![]); 
+        // for i in 0..self.facets.len() {
+        //     let mut facet = self.facets[i].clone();
+        //     // if facet.boundaries.is_empty() {
+        //     //     facet.perimeter = true;
+        //     // }
+        //     facet.boundaries.extend(self.facet_hits[i].clone());
+        //     self.shapes.push(Shape::Facet(facet));
+        // }
+        // for i in 0..self.curves.len() {
+        //     self.shapes.push(Shape::Curve(self.curves[i].clone()));
+        // }
+    }
+
+    fn test_facets(&mut self, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
+        match self.tester.test(uv0, uv1) {
+            Ok(hit) => {
+                self.facet_hits[0][self.tester.facet_index.0].extend(hit.hits.0);
+                self.facet_hits[1][self.tester.facet_index.1].extend(hit.hits.1);
+                self.shapes.extend(hit.center_curves.iter().map(|c| Shape::Curve(c.clone())));
+                self.shapes.push(Shape::Point(hit.start_point));
+            },
+            Err(miss) => {
+                self.facet_miss[0][self.tester.facet_index.0].push(miss.0);
+                self.facet_miss[1][self.tester.facet_index.1].push(miss.1);
+            }
+        }
+    }
+
+    fn test_groups(&mut self){
+        for i0 in 0..self.facet_groups[0].len() {
+            for i1 in 0..self.facet_groups[1].len() {
+                self.tester.facet_index.0 = i0;
+                self.tester.facet_index.1 = i1;
+                for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
+                    for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
+                        self.test_facets(uv0, uv1);
+                    }
+                }
+            }
+        }        
+    }
+}
+
+//let seed: [u8; 32] = *b"seed_value_0123456789seed_value_";
+//self.rng = SmallRng::from_seed(seed);
+
+//console_log!("try face pairs: {}, {}", self.grouped_facets.len(), self.grouped_facets.len());
+//let start = Instant::now();
+//let elapsed = start.elapsed();
+//console_log!("timed: {:?}", elapsed);
+
+
+
+
+// let mut af0 = 0;
+        // for fg0 in 0..self.facet_groups.len() {
+        //     let mut af1 = 0;
+        //     for fg1 in fg0..self.facet_groups.len() {
+        //         if fg0 != fg1 {
+        //             for f0 in 0..self.facet_groups[fg0].len() {
+        //                 for f1 in 0..self.facet_groups[fg1].len() {
+        //                     self.tester.facet_index.0 = af0 + f0;
+        //                     self.tester.facet_index.1 = af1 + f1;
+        //                     if self.tester.facet_index.0 == self.tester.facet_index.1 {
+        //                         log("tried to use same facet indecies!!!");
+        //                         continue;
+        //                     }
+        //                     self.test_facets(Vec2::ONE*0.5, Vec2::ONE*0.5);
+        //                     for x in 0..2 {
+        //                         for y in 0..2 {
+        //                             for x1 in 0..2 {
+        //                                 for y1 in 0..2 {
+        //                                     self.test_facets(vec2(x as f32, y as f32), vec2(x1 as f32, y1 as f32));
+        //                                 }
+        //                             }
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         af1 += self.facet_groups[fg1].len();
+        //     }
+        //     af0 += self.facet_groups[fg0].len();
+        // }
+
+
         // //console_log!("UnionBasis3 get_shapes");
         // let spatial = self.set_samples_and_get_spatial();
         // self.clear_params();
         // self.for_spatial_pairs(&spatial, &mut UnionBasis3::add_curve_param, &mut UnionBasis3::add_facet_hit);
-        self.try_facet_pairs();
-        for i in 0..self.facets.len() {
-            let mut facet = self.facets[i].clone();
-            // if facet.boundaries.is_empty() {
-            //     facet.perimeter = true;
-            // }
-            facet.boundaries.extend(self.facet_hits[i].clone());
-            self.shapes.push(Shape::Facet(facet));
-        }
-        for i in 0..self.curves.len() {
-            self.shapes.push(Shape::Curve(self.curves[i].clone()));
-        }
-        self.shapes.clone()
-    }
-
-    // fn add_curve_param(&mut self, curve_index0: usize, _f1: usize, u0: f32, _uv1: Vec2) {
-    //     if let Some(cr) = self.curve_params.get_mut(&curve_index0) {
-    //         cr.params.push(u0);
-    //     }
-    // }
-
-    // fn add_facet_param(&mut self, facet_index0: usize, _f1: usize, uv0: Vec2, _uv1: Vec2) {
-    //     if let Some(cr) = self.facet_params.get_mut(&facet_index0) {
-    //         cr.params.push(uv0);
-    //     }
-    // }
-
-    fn add_facet_hit(&mut self, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
-        if let Some(hit) = self.tester.test(uv0, uv1) { // &facet_index0, &facet_index1, 
-            self.facet_hits[self.tester.facet_index.0].push(hit.curve0.clone());
-            self.facet_hits[self.tester.facet_index.1].push(hit.curve1.clone());
-            self.shapes.push(Shape::Point(hit.start_point0));
-            self.shapes.push(Shape::Point(hit.start_point1));
-            self.shapes.push(Shape::Curve(hit.center_curve));
-        }
-    }
-
-    fn try_facet_pairs(&mut self){
-        //console_log!("try face pairs: {}, {}", self.grouped_facets.len(), self.grouped_facets.len());
-        //let start = Instant::now();
-        let mut af0 = 0;
-        for fg0 in 0..self.grouped_facets.len() {
-            let mut af1 = 0;
-            for fg1 in fg0..self.grouped_facets.len() {
-                if fg0 != fg1 {
-                    for f0 in 0..self.grouped_facets[fg0].len() {
-                        for f1 in 0..self.grouped_facets[fg1].len() {
-                            self.tester.facet_index.0 = af0 + f0;
-                            self.tester.facet_index.1 = af1 + f1;
-                            if self.tester.facet_index.0 == self.tester.facet_index.1 {
-                                log("tried to use same facet indecies!!!");
-                                continue;
-                            }
-                            self.add_facet_hit(Vec2::ONE*0.5, Vec2::ONE*0.5);
-                            for x in 0..2 {
-                                for y in 0..2 {
-                                    for x1 in 0..2 {
-                                        for y1 in 0..2 {
-                                            self.add_facet_hit(vec2(x as f32, y as f32), vec2(x1 as f32, y1 as f32));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                af1 += self.grouped_facets[fg1].len();
-            }
-            af0 += self.grouped_facets[fg0].len();
-        }
-        //let elapsed = start.elapsed();
-        //console_log!("timed: {:?}", elapsed);
-    }
 
     // fn for_spatial_pairs<C, F>(&mut self, spatial: &Spatial3, curve_func: &mut C, facet_func: &mut F) 
     // where C: FnMut(&mut UnionBasis3, usize, usize, f32, Vec2), 
@@ -185,7 +204,7 @@ impl UnionBasis3 {
     //         }
     //     }
     // }
-}
+
 
 
 // fn try_facet_pairs(&mut self){

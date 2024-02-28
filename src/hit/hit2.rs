@@ -19,12 +19,13 @@ pub struct HitTester2 {
     pub duplication_tolerance: f32,
 }
 
-//#[derive(Clone)]
+#[derive(Clone)]
 pub struct Hit2 {
     pub hit: (CurveHit, CurveHit),
     pub center: Vec3,
 }
 
+#[derive(Clone)]
 pub struct CurveHit {
     pub u: f32,
     pub dot: f32,
@@ -42,9 +43,9 @@ impl HitTester2 {
         let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
         for _ in 0..20 {
-            let tangent_hit = self.get_tangent_hit(u0, u1, p0, p1);
-            let (u0_t0, p0_t0) = curve0.get_u_and_point_from_target(u0, tangent_hit - p0);
-            let (u1_t0, p1_t0) = curve1.get_u_and_point_from_target(u1, tangent_hit - p1);
+            let target = self.get_tangent_intersection(u0, u1, p0, p1);
+            let (u0_t0, p0_t0) = curve0.get_u_and_point_from_target(u0, target - p0);
+            let (u1_t0, p1_t0) = curve1.get_u_and_point_from_target(u1, target - p1);
             center = (p0 + p1) / 2.;
             let (u0_t1, p0_t1) = curve0.get_u_and_point_from_target(u0, center - p0);
             let (u1_t1, p1_t1) = curve1.get_u_and_point_from_target(u1, center - p1);
@@ -104,7 +105,7 @@ impl HitTester2 {
         ))
     }
 
-    pub fn get_tangent_hit(&self, u0: f32, u1: f32, p0: Vec3, p1: Vec3) -> Vec3 {
+    pub fn get_tangent_intersection(&self, u0: f32, u1: f32, p0: Vec3, p1: Vec3) -> Vec3 {
         let curve0 = &self.groups.0[self.index.0];
         let curve1 = &self.groups.1[self.index.1];
         let tangent0 = curve0.get_tangent_at_u(u0);

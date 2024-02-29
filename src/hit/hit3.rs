@@ -104,6 +104,9 @@ impl HitTester3 {
         let start_point = (start.p0 + start.p1) / 2.;
         let facet0 = &self.facet_groups.0[self.facet_index.0];
         let facet1 = &self.facet_groups.1[self.facet_index.1];
+
+        //let bdry_u0 = (0..facet0.boundaries.len()).map(||)
+
         let mut curves0 = vec![];
         let mut curves1 = vec![];
         let mut curves2 = vec![];
@@ -113,36 +116,24 @@ impl HitTester3 {
         //let mut center = Vec3::ZERO;
         'direction_loop: for direction in 0..2 {
             let HitPointUV {mut uv0, mut uv1, mut p0, mut p1} = start;
-            let mut out_of_rect = false;
-            let mut total_steps = 0;
-            'curve_loop: for _ in 0..100 {
+            //let mut out_of_rect = false;
+            //let mut total_steps = 0;
+            //'curve_loop: for _ in 0..100 {
                 let mut curve0 = CurveShape::default();
                 let mut curve1 = CurveShape::default();
                 let mut curve2 = CurveShape::default();
-                let mut forward_controls0  = vec![]; 
-                let mut forward_controls1  = vec![]; 
-                let mut forward_controls2  = vec![]; 
-                let mut backward_controls0 = vec![];
-                let mut backward_controls1 = vec![];
-                let mut backward_controls2 = vec![];
                 let mut add_points = |hit: HitPointUV| -> Vec3 {
                     let center = (hit.p0 + hit.p1) / 2.;
-                    if direction == 0 {
-                        forward_controls0.push(hit.uv0.extend(0.));
-                        forward_controls1.push(hit.uv1.extend(0.));
-                        forward_controls2.push(center);
-                    }else{
-                        backward_controls0.push(hit.uv0.extend(0.));
-                        backward_controls1.push(hit.uv1.extend(0.));
-                        backward_controls2.push(center);
-                    } 
+                    curve0.controls.push(hit.uv0.extend(0.));
+                    curve1.controls.push(hit.uv1.extend(0.));
+                    curve2.controls.push(center);
                     center
                 };
                 'step_loop: for k in 0..1000 {
                     let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
                     (uv0, p0) = facet0.get_uv_and_point_from_target(uv0, target - p0);
                     (uv1, p1) = facet1.get_uv_and_point_from_target(uv1, target - p1);
-                    if total_steps > 10 {
+                    if k > 10 {//if total_steps > 10 {
                         if p0.distance(start.p0) < self.step || p1.distance(start.p1) < self.step {
                             add_points(start.clone());
                             looped = true;
@@ -172,34 +163,31 @@ impl HitTester3 {
                     if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
                         (uv1, p1) = facet1.get_uv_and_point_from_target(uv1, p0 - p1);
                         add_points(HitPointUV{uv0, uv1, p0, p1});
-                        out_of_rect = true;
+                        //out_of_rect = true;
                         break 'step_loop
                     } 
                     if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
                         (uv0, p0) = facet0.get_uv_and_point_from_target(uv0, p1 - p0);
                         add_points(HitPointUV{uv0, uv1, p0, p1});
-                        out_of_rect = true;
+                        //out_of_rect = true;
                         break 'step_loop
                     }
-                    total_steps += 1;
+
+                    //total_steps += 1;
                 }
-                if forward_controls0.len() > 1 || backward_controls0.len() > 1 {
-                    forward_controls0.reverse();
-                    curve0.controls.extend(forward_controls0);
-                    curve0.controls.extend(backward_controls0);
+                if curve0.controls.len() > 1 {
+                    if direction == 0 {
+                        curve0.controls.reverse();
+                    }else{
+                        curve1.controls.reverse();
+                    }
                     curves0.push(curve0.get_valid());
-                    backward_controls1.reverse();
-                    curve1.controls.extend(backward_controls1);
-                    curve1.controls.extend(forward_controls1);
                     curves1.push(curve1.get_valid());
-                    backward_controls2.reverse();
-                    curve2.controls.extend(backward_controls2);
-                    curve2.controls.extend(forward_controls2);
                     curves2.push(curve2.get_valid());
                 }
-                if out_of_rect {break 'curve_loop}
+                //if out_of_rect {break 'curve_loop}
                 if looped      {break 'direction_loop}
-            }
+            //}
         }
         if curves0.is_empty() {
             return None

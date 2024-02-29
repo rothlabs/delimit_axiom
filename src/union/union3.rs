@@ -1,26 +1,10 @@
-//use std::{collections::HashMap, f32::EPSILON};
-use crate::{hit::Miss, log, CurveShape, FacetShape, HitTester3, Shape};
+use crate::{hit::Miss, log, CurveShape, FacetShape, HitTester3, Shape, Spatial3};
 use glam::*;
-
-//use std::time::Instant;
-// use rand::{Rng, SeedableRng};
-// use rand::rngs::StdRng;
 
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-// pub struct CurveSample {
-//     index: usize,
-//     point: Vec3,
-//     u: f32,
-// }
-
-// pub struct FacetSample {
-//     index: usize,
-//     point: Vec3,
-//     uv:    Vec2,
-// }
 
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
@@ -57,17 +41,17 @@ impl UnionBasis3 {
         // }
     }
 
-    fn test_facets(&mut self, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
+    fn test_facets(&mut self, i0: usize, i1: usize, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 
         match self.tester.test(uv0, uv1) {
             Ok(hit) => {
-                self.facet_hits[0][self.tester.facet_index.0].extend(hit.hits.0);
-                self.facet_hits[1][self.tester.facet_index.1].extend(hit.hits.1);
-                self.shapes.extend(hit.center_curves.iter().map(|c| Shape::Curve(c.clone())));
+                self.facet_hits[0][i0].push(hit.hits.0);
+                self.facet_hits[1][i1].push(hit.hits.1);
+                self.shapes.push(Shape::Curve(hit.center_curve));
                 self.shapes.push(Shape::Point(hit.start_point));
             },
             Err(miss) => {
-                self.facet_miss[0][self.tester.facet_index.0].push(miss.0);
-                self.facet_miss[1][self.tester.facet_index.1].push(miss.1);
+                self.facet_miss[0][i0].push(miss.0);
+                self.facet_miss[1][i1].push(miss.1);
             }
         }
     }
@@ -75,11 +59,13 @@ impl UnionBasis3 {
     fn test_groups(&mut self){
         for i0 in 0..self.facet_groups[0].len() {
             for i1 in 0..self.facet_groups[1].len() {
-                self.tester.facet_index.0 = i0;
-                self.tester.facet_index.1 = i1;
+                self.tester.facets.0 = self.facet_groups[0][i0].clone();
+                self.tester.facets.1 = self.facet_groups[1][i1].clone();
+                self.tester.points = vec![];
+                self.tester.spatial = Spatial3::new(self.tester.step);
                 for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
                     for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
-                        self.test_facets(uv0, uv1);
+                        self.test_facets(i0, i1, uv0, uv1);
                     }
                 }
             }
@@ -87,6 +73,9 @@ impl UnionBasis3 {
     }
 }
 
+//use std::time::Instant;
+// use rand::{Rng, SeedableRng};
+// use rand::rngs::StdRng;
 //let seed: [u8; 32] = *b"seed_value_0123456789seed_value_";
 //self.rng = SmallRng::from_seed(seed);
 
@@ -94,6 +83,8 @@ impl UnionBasis3 {
 //let start = Instant::now();
 //let elapsed = start.elapsed();
 //console_log!("timed: {:?}", elapsed);
+
+
 
 
 

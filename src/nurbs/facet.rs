@@ -113,7 +113,7 @@ impl FacetShape {
         let last_knot = self.nurbs.knots.last().unwrap();
         for i in 0..self.controls.len() {
             let v = self.nurbs.knots[self.nurbs.order + i - 1] / last_knot;
-            for u in self.controls[i].get_normalized_knots(){
+            for u in self.controls[i].get_inflection_params(){
                 knots.push(vec2(u, v));
             }
         }

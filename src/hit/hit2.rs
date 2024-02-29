@@ -1,6 +1,6 @@
 use std::f32::INFINITY;
 
-use crate::{log, get_line_intersection3, CurveShape, Spatial2, Spatial3};
+use crate::{log, get_line_intersection3, CurveShape, Spatial3};
 use glam::*;
 
 use super::Miss;
@@ -11,8 +11,7 @@ use super::Miss;
 
 //#[derive(Clone)]
 pub struct HitTester2 {
-    pub groups: (Vec<CurveShape>, Vec<CurveShape>),
-    pub index:        (usize, usize),
+    pub curves: (CurveShape, CurveShape),
     pub spatial:      Spatial3,
     pub points:       Vec<Vec3>,
     pub tolerance:    f32,
@@ -33,22 +32,22 @@ pub struct CurveHit {
 
 impl HitTester2 { 
     pub fn test(&mut self, start_u0: f32, start_u1: f32) -> Result<Hit2, (Miss, Miss)> { 
-        let curve0 = &self.groups.0[self.index.0];
-        let curve1 = &self.groups.1[self.index.1];
+        //let curve0 = self.curves.0.clone(); //&self.groups.0[self.index.0];
+        //let curve1 = self.curves.1.clone(); //&self.groups.1[self.index.1];
         let mut u0 = start_u0;
         let mut u1 = start_u1;
-        let mut p0 = curve0.get_point_at_u(u0);
-        let mut p1 = curve1.get_point_at_u(u1);
+        let mut p0 = self.curves.0.get_point_at_u(u0);
+        let mut p1 = self.curves.1.get_point_at_u(u1);
         let mut center = Vec3::ZERO;
         let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
         for _ in 0..20 {
             let target = self.get_tangent_intersection(u0, u1, p0, p1);
-            let (u0_t0, p0_t0) = curve0.get_u_and_point_from_target(u0, target - p0);
-            let (u1_t0, p1_t0) = curve1.get_u_and_point_from_target(u1, target - p1);
+            let (u0_t0, p0_t0) = self.curves.0.get_u_and_point_from_target(u0, target - p0);
+            let (u1_t0, p1_t0) = self.curves.1.get_u_and_point_from_target(u1, target - p1);
             center = (p0 + p1) / 2.;
-            let (u0_t1, p0_t1) = curve0.get_u_and_point_from_target(u0, center - p0);
-            let (u1_t1, p1_t1) = curve1.get_u_and_point_from_target(u1, center - p1);
+            let (u0_t1, p0_t1) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
+            let (u1_t1, p1_t1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
             if p0_t0.distance(p1_t0) < p0_t1.distance(p1_t1) {
                 p0 = p0_t0;
                 p1 = p1_t0;
@@ -63,8 +62,8 @@ impl HitTester2 {
             distance = p0.distance(p1);
             if distance < self.tolerance  {
                 center = (p0 + p1) / 2.;
-                (u0, p0) = curve0.get_u_and_point_from_target(u0, center - p0);
-                (u1, p1) = curve1.get_u_and_point_from_target(u1, center - p1);
+                (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
+                (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
                 center = (p0 + p1) / 2.;
                 let mut duplicate = false;
                     for i in self.spatial.get(&center) {
@@ -77,10 +76,10 @@ impl HitTester2 {
                 if !duplicate {
                     self.spatial.insert(&center, self.points.len());
                     self.points.push(center);
-                    let tangent0 = curve0.get_tangent_at_u(u0);
-                    let tangent1 = curve1.get_tangent_at_u(u1);
-                    let cross0 = Vec3::Z.cross(tangent0).normalize() * curve0.nurbs.sign;
-                    let cross1 = Vec3::Z.cross(tangent1).normalize() * curve1.nurbs.sign;
+                    let tangent0 = self.curves.0.get_tangent_at_u(u0);
+                    let tangent1 = self.curves.1.get_tangent_at_u(u1);
+                    let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
+                    let cross1 = Vec3::Z.cross(tangent1).normalize() * self.curves.1.nurbs.sign;
                     return Ok(Hit2{
                         hit: (CurveHit {u:u0, dot:cross0.dot(tangent1)}, 
                               CurveHit {u:u1, dot:cross1.dot(tangent0)}),
@@ -95,10 +94,10 @@ impl HitTester2 {
             }
             distance_basis = distance;
         }
-        let tangent0 = curve0.get_tangent_at_u(u0);
-        let tangent1 = curve1.get_tangent_at_u(u1);
-        let cross0 = Vec3::Z.cross((p1 - p0).normalize()).normalize() * curve0.nurbs.sign;
-        let cross1 = Vec3::Z.cross((p0 - p1).normalize()).normalize() * curve1.nurbs.sign;
+        let tangent0 = self.curves.0.get_tangent_at_u(u0);
+        let tangent1 = self.curves.1.get_tangent_at_u(u1);
+        let cross0 = Vec3::Z.cross((p1 - p0).normalize()).normalize() * self.curves.0.nurbs.sign;
+        let cross1 = Vec3::Z.cross((p0 - p1).normalize()).normalize() * self.curves.1.nurbs.sign;
         Err((
             Miss{dot:cross0.dot(tangent1), distance}, 
             Miss{dot:cross1.dot(tangent0), distance},
@@ -106,10 +105,10 @@ impl HitTester2 {
     }
 
     pub fn get_tangent_intersection(&self, u0: f32, u1: f32, p0: Vec3, p1: Vec3) -> Vec3 {
-        let curve0 = &self.groups.0[self.index.0];
-        let curve1 = &self.groups.1[self.index.1];
-        let tangent0 = curve0.get_tangent_at_u(u0);
-        let tangent1 = curve1.get_tangent_at_u(u1);
+        //let curve0 = self.curves.0.clone(); //&self.groups.0[self.index.0];
+        //let curve1 = self.curves.1.clone(); //&self.groups.1[self.index.1];
+        let tangent0 = self.curves.0.get_tangent_at_u(u0);
+        let tangent1 = self.curves.1.get_tangent_at_u(u1);
         get_line_intersection3(p0, tangent0, p1, tangent1) // get_line_intersection(p0, tangent0, p1, tangent1)
     }
 }

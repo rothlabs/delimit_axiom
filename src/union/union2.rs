@@ -38,27 +38,27 @@ impl UnionBasis2 {
     fn test_groups(&mut self){
         for i0 in 0..self.groups[0].len() {
             for i1 in 0..self.groups[1].len() {
-                self.tester.index.0 = i0;
-                self.tester.index.1 = i1;
-                for u0 in self.groups[0][i0].get_normalized_knots() {
-                    for u1 in self.groups[1][i1].get_normalized_knots() {
-                        self.test_curves(u0, u1);
+                self.tester.curves.0 = self.groups[0][i0].clone();
+                self.tester.curves.1 = self.groups[1][i1].clone();
+                for u0 in self.groups[0][i0].get_inflection_params() {
+                    for u1 in self.groups[1][i1].get_inflection_params() {
+                        self.test_curves(i0, i1, u0, u1);
                     }
                 }
             }
         }
     }
 
-    fn test_curves(&mut self, u0: f32, u1: f32) { 
+    fn test_curves(&mut self, i0: usize, i1: usize, u0: f32, u1: f32) { 
         match self.tester.test(u0, u1) {
             Ok(hit) => {
-                self.hits[0][self.tester.index.0].push(hit.hit.0);
-                self.hits[1][self.tester.index.1].push(hit.hit.1);
+                self.hits[0][i0].push(hit.hit.0);
+                self.hits[1][i1].push(hit.hit.1);
                 self.shapes.push(Shape::Point(hit.center));
             },
             Err(miss) => {
-                self.miss[0][self.tester.index.0].push(miss.0);
-                self.miss[1][self.tester.index.1].push(miss.1);
+                self.miss[0][i0].push(miss.0);
+                self.miss[1][i1].push(miss.1);
             }
         }
     }

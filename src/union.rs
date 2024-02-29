@@ -1,7 +1,7 @@
 mod union2;
 mod union3;
 
-use crate::{get_grouped_curves_and_facets, nurbs::curve, Group, HitTester2, HitTester3, Model, Shape, Spatial3};
+use crate::{get_grouped_curves_and_facets, nurbs::curve, CurveShape, FacetShape, Group, HitTester2, HitTester3, Model, Shape, Spatial3};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -18,6 +18,12 @@ pub struct Union {
     pub negated_parts: Vec<Model>,
     pub transform:     Group,
 }
+
+// pub struct UnionBasis {
+//     pub parts:         Vec<Model>,
+//     pub negated_parts: Vec<Model>,
+//     pub transform:     Group,
+// }
 
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
@@ -40,8 +46,7 @@ impl Union {
             for curves1 in groups.iter().skip(1) {
                 let mut basis = UnionBasis2 {
                     tester: HitTester2 {
-                        groups: (curves0.clone(), curves1.clone()),
-                        index:  (0, 0),
+                        curves: (CurveShape::default(), CurveShape::default()),
                         spatial: Spatial3::new(duplication_tolerance), 
                         points:  vec![],
                         tolerance,
@@ -82,12 +87,10 @@ impl Union {
                 let facets1 = facet_groups[i].clone();
                 let mut basis = UnionBasis3 {
                     tester: HitTester3 {
-                        curve_groups: (curves0.clone(), curves1.clone()),
-                        facet_groups: (facets0.clone(), facets1.clone()),
-                        curve_index: (0, 0),
-                        facet_index: (0, 0),
-                        spatial: (0..facets.len()).map(|_| Spatial3::new(step)).collect(), // Spatial3::new(step), //
-                        points:  vec![vec![]; facets.len()], // vec![], //
+                        curves: (CurveShape::default(), CurveShape::default()),
+                        facets: (FacetShape::default(), FacetShape::default()),
+                        spatial: Spatial3::new(step), // (0..facets.len()).map(|_| Spatial3::new(step)).collect(), // 
+                        points:  vec![],
                         tolerance: 0.05,
                         step,
                     },

@@ -41,7 +41,7 @@ impl HitTester2 {
         let mut center = Vec3::ZERO;
         let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
-        for _ in 0..20 {
+        for _ in 0..40 {
             let target = self.get_tangent_intersection(u0, u1, p0, p1);
             let (u0_t0, p0_t0) = self.curves.0.get_u_and_point_from_target(u0, target - p0);
             let (u1_t0, p1_t0) = self.curves.1.get_u_and_point_from_target(u1, target - p1);

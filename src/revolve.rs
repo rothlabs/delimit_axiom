@@ -46,6 +46,7 @@ impl Revolve {
                         curve.controls.push(get_reshaped_point(point, mat4)); 
                     }
                     curve.controls.push(get_reshaped_point(point, final_turn)); 
+                    //curve.controls.reverse();
                     shapes.push(Shape::Curve(curve));
                     if angle.abs() < PI*2. {
                         shapes.push(shape.get_reshape(final_turn));
@@ -61,6 +62,7 @@ impl Revolve {
                         facet.controls.push(curve.get_reshape(mat4)); 
                     }
                     facet.controls.push(curve.get_reshape(final_turn)); 
+                    facet.controls.reverse();
                     shapes.push(Shape::Facet(facet));
                     if angle.abs() < PI*2. {
                         shapes.push(shape.get_reshape(final_turn));

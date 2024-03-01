@@ -1,5 +1,7 @@
-use crate::{hit::Miss, log, CurveShape, FacetShape, HitTester3, Shape, Spatial3};
+use crate::{hit::Miss, log, nurbs::curve, CurveShape, FacetShape, HitTester3, Shape, Spatial3};
 use glam::*;
+
+use super::union2::UnionBasis2;
 
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
@@ -24,8 +26,24 @@ impl UnionBasis3 {
         self.test_groups();
         self.curves.extend(self.curve_groups[0].clone());
         self.curves.extend(self.curve_groups[1].clone());
-        self.facets.extend(self.facet_groups[0].clone());
-        self.facets.extend(self.facet_groups[1].clone());
+        //self.facets.extend(self.facet_groups[0].clone());
+        //self.facets.extend(self.facet_groups[1].clone());
+
+        for g in 0..2 {
+            //console_log!("facet group count: {}", self.facet_groups[g].len());
+            for i in 0..self.facet_groups[g].len() {
+                if self.facet_hits[g][i].is_empty() {
+                    //self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+                    //if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 {
+                        self.facets.push(self.facet_groups[g][i].clone());
+                    //}
+                }else{
+                    // self.facet_hits[g][i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
+                    self.add_bounded_facet(g, i);  
+                }
+            }
+        }
+
         (self.curves.clone(), self.facets.clone())
         //let mut shapes = (vec![], vec![]); 
         // for i in 0..self.facets.len() {
@@ -39,6 +57,43 @@ impl UnionBasis3 {
         // for i in 0..self.curves.len() {
         //     self.shapes.push(Shape::Curve(self.curves[i].clone()));
         // }
+    }
+
+    fn add_bounded_facet(&mut self, g: usize, i: usize) {
+        let mut facet = self.facet_groups[g][i].clone();
+        //console_log!("facet normal {}", facet.get_normal_at_uv(vec2(0.5, 0.5)));
+        //let wow = facet.boundaries.iter().map(|c| Shape::Curve(c.clone()));
+        //console_log!("face boundary count: {}", wow.len());
+        //self.shapes.extend(wow);
+
+        // let mut curves0 = vec![self.facet_hits[g][i][0].clone()];
+        // for curves1 in self.facet_hits[g][i].iter().skip(1){
+        //     let mut union = UnionBasis2::new(curves0.clone(), vec![curves1.clone()], 0.001);
+        //     curves0 = union.build();
+        // }
+        let mut union = UnionBasis2::new(self.facet_hits[g][i].clone(), self.facet_hits[g][i].clone(), 0.001, true);
+        let curves0 = union.build();
+        // let mut curves0 = vec![];
+        // for mut curve in union.build() {
+        //     //curve.negate();
+        //     curves0.push(curve);
+        // }
+
+        let mut union = UnionBasis2::new(facet.boundaries.clone(), curves0.clone(), 0.001, false); // self.facet_hits[g][i].clone()
+        facet.boundaries = union.build();
+        for mut boundary in facet.boundaries.clone() {
+            for k in 0..boundary.controls.len() {
+                //console_log!("facet i {}", i);
+                boundary.controls[k] += vec3(100., g as f32 * 2., 0.);
+                boundary.controls[k] += vec3(i as f32 * 2., 0., 0.);
+                //boundary.controls[i] += Vec3::Y * g as f32 * 2.;
+            }
+            self.shapes.push(Shape::Curve(boundary));
+        }
+
+        //self.shapes.extend(facet.boundaries.iter().map(|c| Shape::Curve(c.clone())));
+        //self.shapes.extend(union.shapes);
+        self.facets.push(facet);
     }
 
     fn test_facets(&mut self, i0: usize, i1: usize, uv0: Vec2, uv1: Vec2) { // facet_index0: usize, facet_index1: usize, 

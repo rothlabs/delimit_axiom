@@ -1,15 +1,15 @@
 mod union2;
 mod union3;
 
-use crate::{get_grouped_curves_and_facets, nurbs::curve, CurveShape, FacetShape, Group, HitTester2, HitTester3, Model, Shape, Spatial3};
+use crate::{log, get_grouped_curves_and_facets, CurveShape, FacetShape, Group, HitTester3, Model, Shape, Spatial3};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
 use self::{union2::UnionBasis2, union3::UnionBasis3};
 
-// macro_rules! console_log {
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Union::default")]
@@ -44,20 +44,7 @@ impl Union {
             }
             let mut curves0 = groups.first().unwrap_or(&vec![]).clone();
             for curves1 in groups.iter().skip(1) {
-                let mut basis = UnionBasis2 {
-                    tester: HitTester2 {
-                        curves: (CurveShape::default(), CurveShape::default()),
-                        spatial: Spatial3::new(duplication_tolerance), 
-                        points:  vec![],
-                        tolerance,
-                        duplication_tolerance,
-                    },
-                    hits: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
-                    miss: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
-                    groups: [curves0, curves1.clone()],
-                    curves: vec![],
-                    shapes: vec![],
-                };
+                let mut basis = UnionBasis2::new(curves0, curves1.clone(), tolerance, false);
                 curves0 = basis.build();
                 shapes.extend(basis.shapes);
             }
@@ -116,6 +103,22 @@ impl Union {
 //let seed: [u8; 32] = *b"01234567891234560123456789123456";
 //rng: StdRng::from_seed(seed),
 
+
+
+// let mut basis = UnionBasis2 {
+                //     tester: HitTester2 {
+                //         curves: (CurveShape::default(), CurveShape::default()),
+                //         spatial: Spatial3::new(duplication_tolerance), 
+                //         points:  vec![],
+                //         tolerance,
+                //         duplication_tolerance,
+                //     },
+                //     hits: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
+                //     miss: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
+                //     groups: [curves0, curves1.clone()],
+                //     curves: vec![],
+                //     shapes: vec![],
+                // };
 
 //let mut curve_params: HashMap<usize, CurveParams> = HashMap::new(); 
         // for (i, curve) in curves.iter().enumerate() {

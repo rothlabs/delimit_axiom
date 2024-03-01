@@ -20,7 +20,7 @@ impl Extrude {
         for shape in get_shapes(&self.parts) {
             if let Shape::Facet(facet) = &shape { 
                 if self.length > 0. {
-                    shapes.push(Shape::Facet(facet.get_reverse_reshape(Mat4::IDENTITY)));
+                    shapes.push(Shape::Facet(facet.negated())); // facet.get_reverse_reshape(Mat4::IDENTITY))
                 }else{
                     shapes.push(shape.clone());
                 }
@@ -31,7 +31,7 @@ impl Extrude {
                 Shape::Point(point) => {
                     let mut curve = CurveShape {
                         nurbs: basis.nurbs.clone(),
-                        controls: vec![get_reshaped_point(point, basis.mat4), *point], 
+                        controls: vec![*point, get_reshaped_point(point, basis.mat4)], 
                         min: 0.,
                         max: 1.,
                     };
@@ -50,7 +50,7 @@ impl Extrude {
                 Shape::Curve(curve) => {
                     let mut facet = FacetShape {
                         nurbs: basis.nurbs.clone(),
-                        controls:   vec![curve.get_reshape(basis.mat4), curve.clone()], 
+                        controls:   vec![curve.clone(), curve.get_reshape(basis.mat4)], 
                         boundaries: Rectangle::unit(),
                     };
                     if self.length < 0. {
@@ -70,7 +70,7 @@ impl Extrude {
                         //shapes.push(shape.clone());
                         shapes.push(Shape::Facet(facet.get_reshape(basis.mat4)));
                     }else{
-                        shapes.push(shape.get_reverse_reshape(basis.mat4));
+                        shapes.push(Shape::Facet(facet.get_negated_reshape(basis.mat4))); // shapes.push(shape.get_reverse_reshape(basis.mat4));
                     }
                 },
             }

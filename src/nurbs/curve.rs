@@ -116,14 +116,14 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         for i in 1..self.controls.len()-1 {
             let dir = (self.controls[i+1].truncate() - self.controls[i].truncate()).normalize();
             let turn = direction_basis.angle_between(dir);
-            if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
-                let u0 = self.nurbs.knots[self.nurbs.order + i - 2] / last_knot;
-                let u1 = self.nurbs.knots[self.nurbs.order + i - 1] / last_knot;
-                let u = (u0 + u1) / 2.;
+            //if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
+                //let u0 = self.nurbs.knots[self.nurbs.order + i - 2] / last_knot;
+                let u = self.nurbs.knots[self.nurbs.order + i - 1] / last_knot;
+                //let u = (u0 + u1) / 2.;
                 if u >= self.min && u <= self.max {
                     knots.push(u);
                 }
-            }
+            //}
             direction_basis = dir;
             turn_basis = turn;
         }
@@ -149,7 +149,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         let length_ratio = target.length() / p0.distance(p1) * step;
         let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
         let mut u1 = u;
-        if u_dir.abs() > step.abs() {
+        if u_dir.abs() > EPSILON {// step.abs() {
             u1 = u + u_dir; 
         }
         u1 = u1.clamp(0., 1.); 

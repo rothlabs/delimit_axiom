@@ -1,4 +1,4 @@
-use crate::{hit::Miss, CurveHit, CurveShape, HitTester2, Shape};
+use crate::{hit::Miss, CurveHit, CurveShape, HitTester2, Shape, Spatial3};
 use glam::*;
 
 pub struct UnionBasis2 {
@@ -8,16 +8,40 @@ pub struct UnionBasis2 {
     pub miss:   [Vec<Vec<Miss>>; 2], 
     pub curves: Vec<CurveShape>,
     pub shapes: Vec<Shape>,
+    pub same_groups: bool,
 }
 
 impl UnionBasis2 { 
+    pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>, tolerance: f32, same_groups: bool) -> Self {
+        let mut duplication_tolerance = tolerance * 10.; 
+        UnionBasis2 {
+            tester: HitTester2 {
+                curves: (CurveShape::default(), CurveShape::default()),
+                spatial: Spatial3::new(duplication_tolerance), 
+                points:  vec![],
+                tolerance,
+                duplication_tolerance,
+            },
+            hits: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
+            miss: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
+            groups: [curves0, curves1],
+            curves: vec![],
+            shapes: vec![],
+            same_groups,
+        }
+    }
+
     pub fn build(&mut self) -> Vec<CurveShape> {
         self.test_groups();
-        for g in 0..2 {
+        let mut group_start = 0;
+        if self.same_groups {
+            group_start = 1;
+        }
+        for g in group_start..2 {
             for i in 0..self.groups[g].len() {
                 if self.hits[g][i].is_empty() {
                     self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                    if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 {
+                    if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 || self.same_groups {
                         self.curves.push(self.groups[g][i].clone());
                     }
                 }else{
@@ -29,15 +53,57 @@ impl UnionBasis2 {
         let mut curves = vec![]; 
         for curve in &self.curves {
             let mut crv = curve.clone();
-            if crv.nurbs.sign < 0. {crv.reverse().negate();}
+            if !self.same_groups {
+                if crv.nurbs.sign < 0. {crv.reverse().negate();}
+            }
             curves.push(crv);
         }
         curves
     }
 
+    fn add_bounded_curves(&mut self, g: usize, i: usize) {
+        let mut curve = self.groups[g][i].clone();
+        let min_basis = curve.min;
+        let mut start_k = 0;
+        let mut set_min = false;
+        let mut use_hits = false;
+        for k in 0..self.hits[g][i].len() {
+            if self.hits[g][i][k].u > 0.001 && self.hits[g][i][k].u < 0.999 {
+                start_k = k;
+                use_hits = true;
+                break;
+            }
+        }
+        if use_hits {
+            //let first = &self.hits[g][i][start_k];//.first().unwrap();
+            if self.hits[g][i][start_k].dot > 0. {set_min = true;} //  * curve.nurbs.sign
+            for curve_hit in self.hits[g][i].iter().skip(start_k) { //for curve_hit in &self.hits[g][i] { 
+                if curve_hit.u < 0.999 {
+                    if set_min {
+                        curve.set_min(curve_hit.u);
+                    }else{
+                        curve.set_max(min_basis, curve_hit.u);
+                        self.curves.push(curve);
+                        curve = self.groups[g][i].clone();
+                    }
+                    set_min = !set_min;
+                }
+            }
+        }
+        if !set_min {
+            self.curves.push(curve);
+        }
+    }
+
     fn test_groups(&mut self){
         for i0 in 0..self.groups[0].len() {
+            //let mut start_i1 = 0;
+            //if self.same_groups {start_i1 = i0+1;}
+            //if start_i1 < self.groups[1].len() {
             for i1 in 0..self.groups[1].len() {
+                if self.same_groups && i0 == i1 {
+                    continue;
+                }
                 self.tester.curves.0 = self.groups[0][i0].clone();
                 self.tester.curves.1 = self.groups[1][i1].clone();
                 for u0 in self.groups[0][i0].get_inflection_params() {
@@ -62,28 +128,30 @@ impl UnionBasis2 {
             }
         }
     }
-
-    fn add_bounded_curves(&mut self, g: usize, i: usize) {
-        let mut curve = self.groups[g][i].clone();
-        let min_basis = curve.min;
-        let first = self.hits[g][i].first().unwrap();
-        let mut set_min = false;
-        if first.dot > 0. {set_min = true;} //  * curve.nurbs.sign
-        for curve_hit in &self.hits[g][i] { 
-            if set_min {
-                curve.set_min(curve_hit.u);
-            }else{
-                curve.set_max(min_basis, curve_hit.u);
-                self.curves.push(curve);
-                curve = self.groups[g][i].clone();
-            }
-            set_min = !set_min;
-        }
-        if !set_min {
-            self.curves.push(curve);
-        }
-    }
 }
+
+
+
+// fn add_bounded_curves(&mut self, g: usize, i: usize) {
+//     let mut curve = self.groups[g][i].clone();
+//     let min_basis = curve.min;
+//     let first = self.hits[g][i].first().unwrap();
+//     let mut set_min = false;
+//     if first.dot > 0. {set_min = true;} //  * curve.nurbs.sign
+//     for curve_hit in &self.hits[g][i] { 
+//         if set_min {
+//             curve.set_min(curve_hit.u);
+//         }else{
+//             curve.set_max(min_basis, curve_hit.u);
+//             self.curves.push(curve);
+//             curve = self.groups[g][i].clone();
+//         }
+//         set_min = !set_min;
+//     }
+//     if !set_min {
+//         self.curves.push(curve);
+//     }
+// }
 
 
 

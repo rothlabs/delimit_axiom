@@ -97,7 +97,9 @@ impl HitTester3 {
     fn trace(&self, start: &HitPointUV) -> Option<Hit3> { 
         let start_point = (start.p0 + start.p1) / 2.;
         let mut curve0 = CurveShape::default();
+        curve0.negate();
         let mut curve1 = CurveShape::default();
+        curve1.negate();
         let mut center_curve = CurveShape::default();
         let mut looped = false;
         let mut potential_duplicates = vec![];
@@ -131,7 +133,7 @@ impl HitTester3 {
                 let dir = normal_cross * (1-direction*2) as f32;
                 for i in self.spatial.get(&center) {
                     let dist = self.points[i].distance(center);
-                    if dist > self.step*0.01 && dist < self.step {
+                    if dist > self.step*0.001 && dist < self.step*1.5 {
                         if (self.points[i]-center).normalize().dot(dir) > 0. {
                             potential_duplicates.push(i);
                         } 
@@ -156,7 +158,7 @@ impl HitTester3 {
                 }
             }
             if center_controls.len() > 1 {
-                if direction == 0 {
+                if direction < 1 {
                     curve0.controls.extend(controls0);
                     controls1.reverse();
                     curve1.controls.splice(0..0, controls1);

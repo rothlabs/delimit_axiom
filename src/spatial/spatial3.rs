@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use glam::*;
 
+#[derive(Default)]
 pub struct Spatial3 {
     pub map: HashMap<String, Vec<usize>>,
     cell_size: f32,

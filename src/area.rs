@@ -1,8 +1,11 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{get_curves, get_points, CurveShape, FacetShape, Group, Model, Shape};
+use crate::{log, get_curves, get_points, CurveShape, FacetShape, Group, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Area::default")]
@@ -31,10 +34,10 @@ impl Area {
         let mut curve0 = CurveShape::default();
         let mut curve1 = CurveShape::default();
 
-        curve0.controls.push(vec3(min.x, max.y, 0.));
-        curve0.controls.push(vec3(max.x, max.y, 0.));
-        curve1.controls.push(vec3(min.x, min.y, 0.));
-        curve1.controls.push(vec3(max.x, min.y, 0.));
+        curve0.controls.push(vec3(min.x, min.y, 0.));
+        curve0.controls.push(vec3(max.x, min.y, 0.));
+        curve1.controls.push(vec3(min.x, max.y, 0.));
+        curve1.controls.push(vec3(max.x, max.y, 0.));
         
         facet.controls.extend([curve0, curve1]);
         for curve in &curves {
@@ -43,14 +46,16 @@ impl Area {
             for p in boundary.controls {
                 normalized_points.push(vec3(
                     (p.x - min.x) / (max.x - min.x), 
-                    1. - (p.y - min.y) / (max.y - min.y), 
+                    (p.y - min.y) / (max.y - min.y), //1. - (p.y - min.y) / (max.y - min.y), 
                     0.
                 ));
             }
             boundary.controls = normalized_points;
             facet.boundaries.push(boundary); 
         }
-        shapes.push(Shape::Facet(facet.get_valid()));
+        let valid_facet = facet.get_valid();
+        //console_log!("face boundary count: {}", valid_facet.boundaries.len());
+        shapes.push(Shape::Facet(valid_facet));
         self.transform.get_reshapes(shapes)
     }
     pub fn from_parts(parts: Vec<Model>) -> Self {

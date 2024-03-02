@@ -57,6 +57,7 @@ impl Revolve {
                         nurbs: basis.nurbs.clone(),
                         controls:   vec![curve.clone()], 
                         boundaries: Rectangle::unit(),
+                        sign: 1.,
                     };
                     for &mat4 in &basis.transforms {
                         facet.controls.push(curve.get_reshape(mat4)); 

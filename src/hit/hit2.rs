@@ -1,4 +1,4 @@
-use std::f32::INFINITY;
+use std::f32::{EPSILON, INFINITY};
 
 use crate::{log, get_line_intersection3, CurveShape, Spatial3};
 use glam::*;
@@ -62,9 +62,9 @@ impl HitTester2 {
             distance = p0.distance(p1);
             if distance < self.tolerance  {
                 center = (p0 + p1) / 2.;
-                (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
-                (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
-                center = (p0 + p1) / 2.;
+                // (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
+                // (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
+                // center = (p0 + p1) / 2.;
                 let mut duplicate = false;
                     for i in self.spatial.get(&center) {
                         if self.points[i].distance(center) < self.duplication_tolerance {
@@ -76,8 +76,8 @@ impl HitTester2 {
                 if !duplicate {
                     self.spatial.insert(&center, self.points.len());
                     self.points.push(center);
-                    let tangent0 = self.curves.0.get_tangent_at_u(u0);
-                    let tangent1 = self.curves.1.get_tangent_at_u(u1);
+                    let tangent0 = -self.curves.0.get_tangent_at_u(u0);
+                    let tangent1 = -self.curves.1.get_tangent_at_u(u1);
                     let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
                     let cross1 = Vec3::Z.cross(tangent1).normalize() * self.curves.1.nurbs.sign;
                     return Ok(Hit2{
@@ -98,9 +98,23 @@ impl HitTester2 {
         let tangent1 = self.curves.1.get_tangent_at_u(u1);
         let cross0 = Vec3::Z.cross((p1 - p0).normalize()).normalize() * self.curves.0.nurbs.sign;
         let cross1 = Vec3::Z.cross((p0 - p1).normalize()).normalize() * self.curves.1.nurbs.sign;
+        //let mut dist0 = distance;
+        //let mut dist1 = distance;
+        if u0 < EPSILON {
+            p0 += tangent0 * self.tolerance * 2.;
+        } else if u0 > 1.-EPSILON {
+            p0 -= tangent0 * self.tolerance * 2.;
+        }
+        if u1 < EPSILON {
+            p1 += tangent1 * self.tolerance * 2.;
+        } else if u1 > 1.-EPSILON {
+            p1 -= tangent1 * self.tolerance * 2.;
+        }
+        distance = p0.distance(p1);
+        //if u1 > 1.-EPSILON {dist0 = INFINITY;}
         Err((
-            Miss{dot:cross0.dot(tangent1), distance}, 
-            Miss{dot:cross1.dot(tangent0), distance},
+            Miss{dot:cross0.dot(-tangent1), distance, point:p0}, 
+            Miss{dot:cross1.dot(-tangent0), distance, point:p1},
         ))
     }
 

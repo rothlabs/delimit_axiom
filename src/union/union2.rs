@@ -1,5 +1,9 @@
-use crate::{hit::Miss, CurveHit, CurveShape, HitTester2, Shape, Spatial3};
+use crate::{log, hit::Miss, CurveHit, CurveShape, HitTester2, Shape, Spatial3};
 use glam::*;
+
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 pub struct UnionBasis2 {
     pub tester: HitTester2,
@@ -13,7 +17,7 @@ pub struct UnionBasis2 {
 
 impl UnionBasis2 { 
     pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>, tolerance: f32, same_groups: bool) -> Self {
-        let mut duplication_tolerance = tolerance * 10.; 
+        let duplication_tolerance = tolerance * 10.; 
         UnionBasis2 {
             tester: HitTester2 {
                 curves: (CurveShape::default(), CurveShape::default()),
@@ -40,7 +44,22 @@ impl UnionBasis2 {
         for g in group_start..2 {
             for i in 0..self.groups[g].len() {
                 if self.hits[g][i].is_empty() {
+                    self.miss[g][i] = self.miss[g][i].clone().into_iter().filter(|a| !a.distance.is_nan()).collect();
                     self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+                    // let mut miss_dot = 0.;
+                    // if !self.miss[g][i].is_empty() {
+                    //     let mut count = 1.;
+                    //     miss_dot = self.miss[g][i][0].dot;
+                    //     console_log!("original dot: {}", self.miss[g][i][0].dot);
+                    //     for miss in self.miss[g][i].iter().skip(1) {
+                    //         if !miss.dot.is_nan() && miss.point.distance(self.miss[g][i][0].point) < self.tester.tolerance {
+                    //             miss_dot += miss.dot;
+                    //             count += 1.;
+                    //         }
+                    //     }
+                    //     miss_dot /= count;
+                    //     console_log!("new dot: {}", miss_dot);
+                    // }
                     if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 || self.same_groups {
                         self.curves.push(self.groups[g][i].clone());
                     }

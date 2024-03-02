@@ -116,17 +116,18 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         for i in 1..self.controls.len()-1 {
             let dir = (self.controls[i+1].truncate() - self.controls[i].truncate()).normalize();
             let turn = direction_basis.angle_between(dir);
-            //if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
-                //let u0 = self.nurbs.knots[self.nurbs.order + i - 2] / last_knot;
-                let u = self.nurbs.knots[self.nurbs.order + i - 1] / last_knot;
-                //let u = (u0 + u1) / 2.;
+            if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
+                let u0 = self.nurbs.knots[self.nurbs.order + i - 2] / last_knot;
+                let u1 = self.nurbs.knots[self.nurbs.order + i - 1] / last_knot;
+                let u = (u0 + u1) / 2.;
                 if u >= self.min && u <= self.max {
                     knots.push(u);
                 }
-            //}
+            }
             direction_basis = dir;
             turn_basis = turn;
         }
+        knots.push(0.5);
         knots.push(1.);
         // console_log!("full knots! {:?}", self.nurbs.knots);
         // console_log!("knots! {:?}", knots);
@@ -138,7 +139,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         if u + step > 1. {step = -step;}
         let p0 = self.get_point_at_u(u);
         let p1 = self.get_point_at_u(u + step);
-        (p0 - p1).normalize() * step.signum()
+        (p1 - p0).normalize() * step.signum()
     }
 
     pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {

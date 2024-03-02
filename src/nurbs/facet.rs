@@ -21,9 +21,9 @@ use lyon::path::builder::NoAttributes;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
-// macro_rules! console_log {
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Facet::default")]
@@ -50,6 +50,7 @@ impl Facet {
             },
             controls:   get_curves(&self.controls),
             boundaries,
+            sign: 1.,
         })]
     }
 }
@@ -59,6 +60,7 @@ pub struct FacetShape {
     pub nurbs:      Nurbs,
     pub controls:   Vec<CurveShape>,
     pub boundaries: Vec<CurveShape>,
+    pub sign:       f32, 
 }
 
 impl Default for FacetShape {
@@ -67,6 +69,7 @@ impl Default for FacetShape {
             nurbs: Nurbs::default(),
             controls: vec![],
             boundaries: vec![],
+            sign: 1.,
         }
     }
 }
@@ -83,6 +86,17 @@ impl FacetShape {
         facet
     }
 
+    pub fn reverse(&mut self) -> &mut Self {
+        self.sign = -self.sign;
+        self
+    }
+
+    pub fn reversed(&self) -> Self {
+        let mut facet = self.clone();
+        facet.sign = -facet.sign;
+        facet
+    }
+
     pub fn get_reshape(&self, mat4: Mat4) -> Self {
         let mut facet = self.clone_with_empty_controls_and_boundaries();
         for control in &self.controls {
@@ -92,13 +106,13 @@ impl FacetShape {
         facet
     }
 
-    pub fn get_negated_reshape(&self, mat4: Mat4) -> Self {
+    pub fn get_reversed_reshape(&self, mat4: Mat4) -> Self {
         let mut facet = self.clone_with_empty_controls_and_boundaries();
         for control in &self.controls {
             facet.controls.push(control.get_reshape(mat4));
         }
         facet.boundaries = self.boundaries.clone();
-        facet.negate();
+        facet.sign = -facet.sign;
         facet
     }
 
@@ -121,6 +135,7 @@ impl FacetShape {
             nurbs: self.nurbs.clone(),
             controls: vec![],
             boundaries: vec![],
+            sign: self.sign,
         }
     }
 
@@ -144,10 +159,13 @@ impl FacetShape {
         let p0 = self.get_point_at_uv(uv);
         let p1 = self.get_point_at_uv(uv + Vec2::X * step_u);
         let p2 = self.get_point_at_uv(uv + Vec2::Y * step_v);
-        self.nurbs.sign * step_u.signum() * step_v.signum() * (p0 - p1).normalize().cross((p0 - p2).normalize()).normalize() // TODO: remove final normalize after Union3 works!!!!
+        self.sign * step_u.signum() * step_v.signum() * (p0 - p1).normalize().cross((p0 - p2).normalize()).normalize() // TODO: remove final normalize after Union3 works!!!!
     }
 
     pub fn get_uv_and_point_from_target(&self, uv: Vec2, target: Vec3) -> (Vec2, Vec3) {
+        // if target.length() < EPSILON {
+        //     log("too small move target!!");
+        // }
         let mut step_u = 0.0001;
         let mut step_v = 0.0001;
         if uv.x + step_u > 1. {step_u = -step_u;}
@@ -161,17 +179,24 @@ impl FacetShape {
             (pu-p0).normalize().dot(target.normalize()) * length_ratio_u, 
             (pv-p0).normalize().dot(target.normalize()) * length_ratio_v
         );
-        let mut uv1 = uv;
-        if uv_dir.length() > 0.0001 {
-            uv1 = uv + uv_dir; 
-            if uv1.x > 1. {uv1 = get_line_intersection2(uv, uv + uv_dir*10., Vec2::X, Vec2::ONE).unwrap();}
-            if uv1.x < 0. {uv1 = get_line_intersection2(uv, uv + uv_dir*10., Vec2::ZERO, Vec2::Y).unwrap();}
-            if uv1.y > 1. {uv1 = get_line_intersection2(uv, uv + uv_dir*10., Vec2::Y, Vec2::ONE).unwrap();}
-            if uv1.y < 0. {uv1 = get_line_intersection2(uv, uv + uv_dir*10., Vec2::ZERO, Vec2::X).unwrap();}
-        }
+        let mut uv1 = uv + uv_dir;
+        
+        //if uv_dir.length() > 0.0001 {
+        //   uv1 = uv + uv_dir; 
+            if uv1.x > 1. {uv1 = get_line_intersection2(uv, uv + uv_dir*100., Vec2::X, Vec2::ONE).unwrap_or(uv1);}
+            if uv1.x < 0. {uv1 = get_line_intersection2(uv, uv + uv_dir*100., Vec2::ZERO, Vec2::Y).unwrap_or(uv1);}
+            if uv1.y > 1. {uv1 = get_line_intersection2(uv, uv + uv_dir*100., Vec2::Y, Vec2::ONE).unwrap_or(uv1);}
+            if uv1.y < 0. {uv1 = get_line_intersection2(uv, uv + uv_dir*100., Vec2::ZERO, Vec2::X).unwrap_or(uv1);}
+        //}
         uv1 = uv1.clamp(Vec2::ZERO, Vec2::ONE); // TODO: might not be needed
         // if uv1.x > 1. || uv1.x < 0. || uv1.y < 0. || uv1.x > 1. {
         //     console_log!("over bounds! {},{}", uv.x, uv.y);
+        // }
+        // if uv1.x.is_nan() {
+        //     log("nan uv1 x!!!");
+        // }
+        // if uv1.y.is_nan() {
+        //     log("nan uv1 y!!!");
         // }
         let point = self.get_point_at_uv(uv1);
         (uv1, point)
@@ -245,7 +270,7 @@ impl FacetShape {
             vector.extend(facet.get_vector_at_uv(u, v));
         }
         let mut trivec = geometry.indices;
-        if self.nurbs.sign > 0. { 
+        if self.sign > 0. { 
             for k in 0..trivec.len()/3 {
                 let i = k * 3;
                 let index = trivec[i];
@@ -293,6 +318,7 @@ impl FacetShape {
             nurbs: self.nurbs.get_valid(self.controls.len()),
             controls: self.controls.iter().map(|c| c.get_valid()).collect(), // self.controls.clone(), //
             boundaries: self.boundaries.clone(),
+            sign: self.sign,
         }
     }
 }

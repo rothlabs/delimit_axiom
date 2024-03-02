@@ -89,17 +89,21 @@ impl HitTester3 {
         let normal0 = self.facets.0.get_normal_at_uv(uv0);
         let normal1 = self.facets.1.get_normal_at_uv(uv1);
         Err((
-            Miss{dot:(p1 - p0).normalize().dot(normal1), distance}, 
-            Miss{dot:(p0 - p1).normalize().dot(normal0), distance},
+            Miss{dot:(p1 - p0).normalize().dot(normal1), distance, point:p0}, 
+            Miss{dot:(p0 - p1).normalize().dot(normal0), distance, point:p1},
         ))
     }
 
     fn trace(&self, start: &HitPointUV) -> Option<Hit3> { 
         let start_point = (start.p0 + start.p1) / 2.;
         let mut curve0 = CurveShape::default();
-        curve0.negate();
         let mut curve1 = CurveShape::default();
+        //curve0.nurbs.order = 4;
+        //curve1.nurbs.order = 4;
+        curve0.negate();
+        //if self.facets.0.nurbs.sign > 0. {curve0.negate();}
         curve1.negate();
+        //if self.facets.1.nurbs.sign > 0. {curve1.negate();}
         let mut center_curve = CurveShape::default();
         let mut looped = false;
         let mut potential_duplicates = vec![];
@@ -116,9 +120,27 @@ impl HitTester3 {
                 center
             };
             'step_loop: for k in 0..1000 {
-                let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
-                (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
-                (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
+                // let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
+                // (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
+                // (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
+                let center = self.get_tangent_intersection(uv0, uv1, p0, p1);
+                let (uv0_t0, p0_t0) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
+                let (uv1_t0, p1_t0) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
+                let center = (p0 + p1) / 2.;
+                let (uv0_t1, p0_t1) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
+                let (uv1_t1, p1_t1) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
+                if p0_t0.distance(p1_t0) < p0_t1.distance(p1_t1) {
+                    p0 = p0_t0;
+                    p1 = p1_t0;
+                    uv0 = uv0_t0;
+                    uv1 = uv1_t0;
+                } else {
+                    p0 = p0_t1;
+                    p1 = p1_t1;
+                    uv0 = uv0_t1;
+                    uv1 = uv1_t1;
+                }
+
                 if k > 10 {//if total_steps > 10 {
                     if p0.distance(start.p0) < self.step || p1.distance(start.p1) < self.step {
                         add_points(start.clone());
@@ -147,26 +169,36 @@ impl HitTester3 {
                 (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, dir * self.step);
                 (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, dir * self.step);
                 if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
-                    (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, p0 - p1);
-                    add_points(HitPointUV{uv0, uv1, p0, p1});
+                    //if p0.distance(p1) > self.tolerance {
+                        (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, p0 - p1);
+                        add_points(HitPointUV{uv0, uv1, p0, p1});
+                    //}
                     break 'step_loop
                 } 
                 if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
-                    (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, p1 - p0);
-                    add_points(HitPointUV{uv0, uv1, p0, p1});
+                    //if p0.distance(p1) > self.tolerance {
+                       (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, p1 - p0);
+                       add_points(HitPointUV{uv0, uv1, p0, p1});
+                    //}
                     break 'step_loop
                 }
             }
             if center_controls.len() > 1 {
-                if direction < 1 {
+                if (direction < 1 && self.facets.0.sign > 0.) || (direction > 0 && self.facets.0.sign < 0.) { // if direction < 1 {//
                     curve0.controls.extend(controls0);
-                    controls1.reverse();
-                    curve1.controls.splice(0..0, controls1);
-                    center_curve.controls.extend(center_controls);
                 }else{
                     controls0.reverse();
                     curve0.controls.splice(0..0, controls0);
+                }
+                if (direction < 1 && self.facets.1.sign > 0.) || (direction > 0 && self.facets.1.sign < 0.) { // if direction < 1 {//
+                    controls1.reverse();
+                    curve1.controls.splice(0..0, controls1);
+                }else{
                     curve1.controls.extend(controls1);
+                }
+                if direction < 1 {
+                    center_curve.controls.extend(center_controls);
+                }else{
                     center_controls.reverse();
                     center_curve.controls.splice(0..0, center_controls);
                 }
@@ -192,6 +224,28 @@ impl HitTester3 {
         get_line_intersection3(p0, cross0, p1, cross1)
     }
 }
+
+
+
+
+
+
+// if center_controls.len() > 1 {
+//     if direction < 1 {
+//         curve0.controls.extend(controls0);
+//         controls1.reverse();
+//         curve1.controls.splice(0..0, controls1);
+//         center_curve.controls.extend(center_controls);
+//     }else{
+//         controls0.reverse();
+//         curve0.controls.splice(0..0, controls0);
+//         curve1.controls.extend(controls1);
+//         center_controls.reverse();
+//         center_curve.controls.splice(0..0, center_controls);
+//     }
+// }
+
+
 
 
 

@@ -20,7 +20,7 @@ impl Extrude {
         for shape in get_shapes(&self.parts) {
             if let Shape::Facet(facet) = &shape { 
                 if self.length > 0. {
-                    shapes.push(Shape::Facet(facet.negated())); // facet.get_reverse_reshape(Mat4::IDENTITY))
+                    shapes.push(Shape::Facet(facet.reversed())); // facet.get_reverse_reshape(Mat4::IDENTITY))
                 }else{
                     shapes.push(shape.clone());
                 }
@@ -52,6 +52,7 @@ impl Extrude {
                         nurbs: basis.nurbs.clone(),
                         controls:   vec![curve.clone(), curve.get_reshape(basis.mat4)], 
                         boundaries: Rectangle::unit(),
+                        sign: 1.,
                     };
                     if self.length < 0. {
                         facet.controls.reverse();
@@ -70,7 +71,7 @@ impl Extrude {
                         //shapes.push(shape.clone());
                         shapes.push(Shape::Facet(facet.get_reshape(basis.mat4)));
                     }else{
-                        shapes.push(Shape::Facet(facet.get_negated_reshape(basis.mat4))); // shapes.push(shape.get_reverse_reshape(basis.mat4));
+                        shapes.push(Shape::Facet(facet.get_reversed_reshape(basis.mat4))); // shapes.push(shape.get_reverse_reshape(basis.mat4));
                     }
                 },
             }

@@ -117,6 +117,7 @@ impl Cuboid {
 pub struct Cylinder {
     pub radius: f32,
     pub length: f32,
+    pub center: [f32; 2],
     pub reshape: Reshape,
 }
 
@@ -124,6 +125,7 @@ impl Cylinder {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut circle = Circle::default();
         circle.radius = self.radius;
+        circle.center = self.center;
         let area = Area::from_part(Model::Circle(circle));
         Extrude::from_area(area, self.length, &self.reshape).get_shapes()
     }

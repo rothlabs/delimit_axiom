@@ -71,6 +71,9 @@ impl HitTester3 {
             }
             distance = p0.distance(p1);
             if distance < self.tolerance {
+                let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
+                let (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
+                let (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
                 let start = HitPointUV {uv0, uv1, p0, p1};
                 if let Some(hit) = self.trace(&start) {
                     for control in hit.center_curve.controls.clone() {
@@ -98,11 +101,12 @@ impl HitTester3 {
         let start_point = (start.p0 + start.p1) / 2.;
         let mut curve0 = CurveShape::default();
         let mut curve1 = CurveShape::default();
-        //curve0.nurbs.order = 4;
-        //curve1.nurbs.order = 4;
+        let mut center_curve = CurveShape::default();
+        // curve0.nurbs.order = 3;
+        // curve1.nurbs.order = 3;
+        // center_curve.nurbs.order = 3;
         curve0.negate();
         curve1.negate();
-        let mut center_curve = CurveShape::default();
         let mut looped = false;
         let mut potential_duplicates = vec![];
         'direction_loop: for direction in 0..2 {
@@ -133,26 +137,19 @@ impl HitTester3 {
                 center
             };
             'step_loop: for k in 0..1000 {
-                // let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
-                // (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
-                // (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
-                let center = self.get_tangent_intersection(uv0, uv1, p0, p1);
-                let (uv0_t0, p0_t0) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
-                let (uv1_t0, p1_t0) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
-                let center = (p0 + p1) / 2.;
-                let (uv0_t1, p0_t1) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
-                let (uv1_t1, p1_t1) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
-                if p0_t0.distance(p1_t0) < p0_t1.distance(p1_t1) {
-                    p0 = p0_t0;
-                    p1 = p1_t0;
-                    uv0 = uv0_t0;
-                    uv1 = uv1_t0;
-                } else {
-                    p0 = p0_t1;
-                    p1 = p1_t1;
-                    uv0 = uv0_t1;
-                    uv1 = uv1_t1;
-                }
+                let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
+                (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
+                (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
+
+                let normal0 = self.facets.0.get_normal_at_uv(uv0);
+                let normal1 = self.facets.1.get_normal_at_uv(uv1);
+                let normal_cross = normal0.cross(normal1).normalize();
+                let dir = normal_cross * (1-direction*2) as f32;
+
+                let curvature0 = self.facets.0.get_curvature(uv0, dir);
+                let curvature1 = self.facets.1.get_curvature(uv1, dir);
+                let mut step = self.step / curvature0;
+                
 
                 if k > 10 {//if total_steps > 10 {
                     if p0.distance(start.p0) < self.step || p1.distance(start.p1) < self.step {
@@ -162,10 +159,7 @@ impl HitTester3 {
                     }
                 }
                 let center = add_points(HitPointUV{uv0, uv1, p0, p1});
-                let normal0 = self.facets.0.get_normal_at_uv(uv0);
-                let normal1 = self.facets.1.get_normal_at_uv(uv1);
-                let normal_cross = normal0.cross(normal1).normalize();
-                let dir = normal_cross * (1-direction*2) as f32;
+                
                 for i in self.spatial.get(&center) {
                     let dist = self.points[i].distance(center);
                     if dist > self.step*0.001 && dist < self.step*1.5 {

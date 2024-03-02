@@ -10,7 +10,7 @@ mod sketch;
 mod area;
 mod extrude;
 mod revolve;
-mod pattern;
+mod grid_pattern;
 mod radial_pattern;
 mod mirror;
 
@@ -24,7 +24,7 @@ use sketch::*;
 use area::*;
 use extrude::*;
 use revolve::*;
-use pattern::*;
+use grid_pattern::*;
 use radial_pattern::*;
 use mirror::*;
 
@@ -52,7 +52,7 @@ pub enum Model {
     Cylinder(Cylinder),
     Revolve(Revolve),
     Union(Union),
-    Pattern(Pattern),
+    GridPattern(GridPattern),
     RadialPattern(RadialPattern),
     Mirror(Mirror),
 }
@@ -75,7 +75,7 @@ impl Model {
             Model::Cylinder(m)  => m.get_shapes(),
             Model::Revolve(m)   => m.get_shapes(),
             Model::Union(m)     => m.get_shapes(),
-            Model::Pattern(m)   => m.get_shapes(),
+            Model::GridPattern(m)   => m.get_shapes(),
             Model::RadialPattern(m) => m.get_shapes(),
             Model::Mirror(m)    => m.get_shapes(),
         }

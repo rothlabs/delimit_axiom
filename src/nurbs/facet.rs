@@ -202,6 +202,10 @@ impl FacetShape {
         (uv1, point)
     }
 
+    pub fn get_curvature(&self, uv: Vec2, dir: Vec3) -> f32 {
+        0.
+    }
+
     pub fn get_point_at_uv(&self, uv: Vec2) -> Vec3 {
         let p = self.get_vector_at_uv(uv.x, uv.y);
         vec3(p[0], p[1], p[2])

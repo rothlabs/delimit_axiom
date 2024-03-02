@@ -44,24 +44,16 @@ impl UnionBasis2 {
         for g in group_start..2 {
             for i in 0..self.groups[g].len() {
                 if self.hits[g][i].is_empty() {
-                    self.miss[g][i] = self.miss[g][i].clone().into_iter().filter(|a| !a.distance.is_nan()).collect();
+                    self.miss[g][i] = self.miss[g][i].clone().into_iter().filter(|a| !a.distance.is_nan() && !a.dot.is_nan()).collect();
                     self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                    // let mut miss_dot = 0.;
-                    // if !self.miss[g][i].is_empty() {
-                    //     let mut count = 1.;
-                    //     miss_dot = self.miss[g][i][0].dot;
-                    //     console_log!("original dot: {}", self.miss[g][i][0].dot);
-                    //     for miss in self.miss[g][i].iter().skip(1) {
-                    //         if !miss.dot.is_nan() && miss.point.distance(self.miss[g][i][0].point) < self.tester.tolerance {
-                    //             miss_dot += miss.dot;
-                    //             count += 1.;
-                    //         }
-                    //     }
-                    //     miss_dot /= count;
-                    //     console_log!("new dot: {}", miss_dot);
-                    // }
                     if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 || self.same_groups {
                         self.curves.push(self.groups[g][i].clone());
+                    }else{
+                        // log("miss data");
+                        // for miss in self.miss[g][i].clone() {
+                        //     console_log!("miss distance: {}", miss.distance);
+                        //     console_log!("miss dot: {}", miss.dot);
+                        // }
                     }
                 }else{
                     self.hits[g][i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
@@ -148,6 +140,22 @@ impl UnionBasis2 {
         }
     }
 }
+
+
+// let mut miss_dot = 0.;
+                    // if !self.miss[g][i].is_empty() {
+                    //     let mut count = 1.;
+                    //     miss_dot = self.miss[g][i][0].dot;
+                    //     console_log!("original dot: {}", self.miss[g][i][0].dot);
+                    //     for miss in self.miss[g][i].iter().skip(1) {
+                    //         if !miss.dot.is_nan() && miss.point.distance(self.miss[g][i][0].point) < self.tester.tolerance {
+                    //             miss_dot += miss.dot;
+                    //             count += 1.;
+                    //         }
+                    //     }
+                    //     miss_dot /= count;
+                    //     console_log!("new dot: {}", miss_dot);
+                    // }
 
 
 

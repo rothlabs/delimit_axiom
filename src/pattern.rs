@@ -1,4 +1,4 @@
-use crate::{get_reshapes, get_vec3_or, Group, Model, Shape};
+use crate::{get_reshapes, get_vec3_or, Reshape, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -7,7 +7,7 @@ use glam::*;
 #[serde(default = "Pattern::default")]
 pub struct Pattern {
     pub parts:    Vec<Model>,
-    pub transform:  Group,
+    pub reshape:  Reshape,
     pub grid:     Grid,
     pub x_count:  usize,
     pub y_count:  usize,
@@ -61,7 +61,7 @@ impl Pattern {
                 }
             }
         }
-        self.transform.get_reshapes(shapes)
+        self.reshape.get_reshapes(shapes)
     }
 }
 

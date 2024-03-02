@@ -89,8 +89,8 @@ impl HitTester3 {
         let normal0 = self.facets.0.get_normal_at_uv(uv0);
         let normal1 = self.facets.1.get_normal_at_uv(uv1);
         Err((
-            Miss{dot:(p1 - p0).normalize().dot(normal1), distance, point:p0}, 
-            Miss{dot:(p0 - p1).normalize().dot(normal0), distance, point:p1},
+            Miss{dot:(p1 - p0).normalize().dot(normal1), distance}, 
+            Miss{dot:(p0 - p1).normalize().dot(normal0), distance},
         ))
     }
 
@@ -101,9 +101,7 @@ impl HitTester3 {
         //curve0.nurbs.order = 4;
         //curve1.nurbs.order = 4;
         curve0.negate();
-        //if self.facets.0.nurbs.sign > 0. {curve0.negate();}
         curve1.negate();
-        //if self.facets.1.nurbs.sign > 0. {curve1.negate();}
         let mut center_curve = CurveShape::default();
         let mut looped = false;
         let mut potential_duplicates = vec![];
@@ -114,9 +112,24 @@ impl HitTester3 {
             let mut center_controls = vec![];
             let mut add_points = |hit: HitPointUV| -> Vec3 {
                 let center = (hit.p0 + hit.p1) / 2.;
-                controls0.push(hit.uv0.extend(0.));
-                controls1.push(hit.uv1.extend(0.));
-                center_controls.push(center);
+                let mut allow_point = true;
+                if !center_controls.is_empty() {
+                    if center.distance(*center_controls.last().unwrap()) < self.tolerance * 0.5 {
+                        log("close to zero distance!!!");
+                        if center_controls.len() > 1 {
+                            controls0.pop();
+                            controls1.pop();
+                            center_controls.pop();
+                        }else{
+                            allow_point = false
+                        }
+                    }
+                }
+                if allow_point {
+                    controls0.push(hit.uv0.extend(0.));
+                    controls1.push(hit.uv1.extend(0.));
+                    center_controls.push(center);
+                }
                 center
             };
             'step_loop: for k in 0..1000 {
@@ -188,10 +201,12 @@ impl HitTester3 {
                     curve0.controls.extend(controls0);
                 }else{
                     controls0.reverse();
+                    controls0.pop();
                     curve0.controls.splice(0..0, controls0);
                 }
                 if (direction < 1 && self.facets.1.sign > 0.) || (direction > 0 && self.facets.1.sign < 0.) { // if direction < 1 {//
                     controls1.reverse();
+                    controls1.pop();
                     curve1.controls.splice(0..0, controls1);
                 }else{
                     curve1.controls.extend(controls1);
@@ -200,6 +215,7 @@ impl HitTester3 {
                     center_curve.controls.extend(center_controls);
                 }else{
                     center_controls.reverse();
+                    center_controls.pop();
                     center_curve.controls.splice(0..0, center_controls);
                 }
             }

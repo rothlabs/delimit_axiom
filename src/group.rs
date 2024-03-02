@@ -4,8 +4,8 @@ use glam::*;
 
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "Group::default")]
-pub struct Group {
+#[serde(default = "Reshape::default")]
+pub struct Reshape {
     pub parts:    Vec<Model>,
     pub negate:   bool,
     pub reverse:  bool,
@@ -16,7 +16,7 @@ pub struct Group {
     pub angle:    f32,
 }
 
-impl Group {
+impl Reshape {
     pub fn get_shapes(&self) -> Vec<Shape> {
         self.get_reshapes(get_shapes(&self.parts))
     }

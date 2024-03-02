@@ -11,6 +11,7 @@ mod area;
 mod extrude;
 mod revolve;
 mod pattern;
+mod radial_pattern;
 mod mirror;
 
 use utils::*;
@@ -24,6 +25,7 @@ use area::*;
 use extrude::*;
 use revolve::*;
 use pattern::*;
+use radial_pattern::*;
 use mirror::*;
 
 use serde::{Deserialize, Serialize};
@@ -40,7 +42,7 @@ pub enum Model {
     Facet(Facet),
     Sketch(Sketch),
     Area(Area),
-    Group(Group),
+    Group(Reshape),
     Arc(Arc),
     Circle(Circle),
     Rectangle(Rectangle),
@@ -51,6 +53,7 @@ pub enum Model {
     Revolve(Revolve),
     Union(Union),
     Pattern(Pattern),
+    RadialPattern(RadialPattern),
     Mirror(Mirror),
 }
 
@@ -73,6 +76,7 @@ impl Model {
             Model::Revolve(m)   => m.get_shapes(),
             Model::Union(m)     => m.get_shapes(),
             Model::Pattern(m)   => m.get_shapes(),
+            Model::RadialPattern(m) => m.get_shapes(),
             Model::Mirror(m)    => m.get_shapes(),
         }
     }
@@ -122,15 +126,23 @@ pub fn get_shapes(parts: &Vec<Model>) -> Vec<Shape> {
     result
 }
 
-pub fn get_reshapes(parts: &Vec<Model>, mat4: Mat4) -> Vec<Shape> {
+pub fn get_reshapes(parts: &Vec<Shape>, mat4: Mat4) -> Vec<Shape> {
     let mut result = vec![];
-    for part in parts {
-        for shape in part.get_shapes() {
-            result.push(shape.get_reshape(mat4));
-        }
+    for shape in parts {
+        result.push(shape.get_reshape(mat4));
     }
     result
 }
+
+// pub fn get_reshapes(parts: &Vec<Model>, mat4: Mat4) -> Vec<Shape> {
+//     let mut result = vec![];
+//     for part in parts {
+//         for shape in part.get_shapes() {
+//             result.push(shape.get_reshape(mat4));
+//         }
+//     }
+//     result
+// }
 
 pub fn get_points(parts: &Vec<Model>) -> Vec<Vec3> {
     let mut result = vec![];

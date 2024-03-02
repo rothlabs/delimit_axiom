@@ -1,4 +1,4 @@
-use crate::{get_reshapes, get_shapes, get_vec3_or, Group, Model, Shape};
+use crate::{get_reshapes, get_shapes, get_vec3_or, Reshape, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -7,7 +7,7 @@ use glam::*;
 #[serde(default = "Mirror::default")]
 pub struct Mirror {
     pub parts:   Vec<Model>,
-    pub transform: Group,
+    pub reshape: Reshape,
     pub axis:    [f32; 3], 
 }
 
@@ -23,7 +23,7 @@ impl Mirror {
         //     let mat4 = Mat4::from_translation(pos);
         //     shapes.extend(get_reshapes(&self.parts, mat4));
         // }
-        self.transform.get_reshapes(shapes)
+        self.reshape.get_reshapes(shapes)
     }
 }
 

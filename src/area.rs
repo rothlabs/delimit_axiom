@@ -1,5 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{log, get_curves, get_points, CurveShape, FacetShape, Group, Model, Shape};
+use crate::{log, get_curves, get_points, CurveShape, FacetShape, Reshape, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -11,7 +11,7 @@ macro_rules! console_log {
 #[serde(default = "Area::default")]
 pub struct Area {
     pub parts: Vec<Model>,
-    pub transform: Group,
+    pub reshape: Reshape,
 }
 
 impl Area { 
@@ -56,7 +56,7 @@ impl Area {
         let valid_facet = facet.get_valid();
         //console_log!("face boundary count: {}", valid_facet.boundaries.len());
         shapes.push(Shape::Facet(valid_facet));
-        self.transform.get_reshapes(shapes)
+        self.reshape.get_reshapes(shapes)
     }
     pub fn from_parts(parts: Vec<Model>) -> Self {
         let mut area = Area::default();

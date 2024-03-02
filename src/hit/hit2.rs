@@ -32,8 +32,6 @@ pub struct CurveHit {
 
 impl HitTester2 { 
     pub fn test(&mut self, start_u0: f32, start_u1: f32) -> Result<Hit2, (Miss, Miss)> { 
-        //let curve0 = self.curves.0.clone(); //&self.groups.0[self.index.0];
-        //let curve1 = self.curves.1.clone(); //&self.groups.1[self.index.1];
         let mut u0 = start_u0;
         let mut u1 = start_u1;
         let mut p0 = self.curves.0.get_point_at_u(u0);
@@ -62,9 +60,9 @@ impl HitTester2 {
             distance = p0.distance(p1);
             if distance < self.tolerance  {
                 center = (p0 + p1) / 2.;
-                // (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
-                // (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
-                // center = (p0 + p1) / 2.;
+                (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
+                (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
+                center = (p0 + p1) / 2.;
                 let mut duplicate = false;
                     for i in self.spatial.get(&center) {
                         if self.points[i].distance(center) < self.duplication_tolerance {
@@ -78,6 +76,14 @@ impl HitTester2 {
                     self.points.push(center);
                     let tangent0 = -self.curves.0.get_tangent_at_u(u0);
                     let tangent1 = -self.curves.1.get_tangent_at_u(u1);
+                    if tangent0.is_nan() {
+                        log("tangent0 NaN!!!");
+                        //break;
+                    }
+                    if tangent1.is_nan() {
+                        log("tangent1 NaN!!!");
+                        //break;
+                    }
                     let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
                     let cross1 = Vec3::Z.cross(tangent1).normalize() * self.curves.1.nurbs.sign;
                     return Ok(Hit2{
@@ -98,23 +104,36 @@ impl HitTester2 {
         let tangent1 = self.curves.1.get_tangent_at_u(u1);
         let cross0 = Vec3::Z.cross((p1 - p0).normalize()).normalize() * self.curves.0.nurbs.sign;
         let cross1 = Vec3::Z.cross((p0 - p1).normalize()).normalize() * self.curves.1.nurbs.sign;
-        //let mut dist0 = distance;
-        //let mut dist1 = distance;
+
+        // if tangent0.is_nan() {
+        //     log("tangent0 NaN!");
+        // }
+        // if tangent1.is_nan() {
+        //     log("tangent1 NaN!");
+        // }
+
+        // if tangent0.length() < EPSILON {
+        //     log("tangent0 is 0!");
+        // }
+        // if tangent1.length() < EPSILON {
+        //     log("tangent1 is 0!");
+        // }
+
         if u0 < EPSILON {
-            p0 += tangent0 * self.tolerance * 2.;
+            p0 += tangent0 * self.tolerance * 4.;
         } else if u0 > 1.-EPSILON {
-            p0 -= tangent0 * self.tolerance * 2.;
+            p0 -= tangent0 * self.tolerance * 4.;
         }
         if u1 < EPSILON {
-            p1 += tangent1 * self.tolerance * 2.;
+            p1 += tangent1 * self.tolerance * 4.;
         } else if u1 > 1.-EPSILON {
-            p1 -= tangent1 * self.tolerance * 2.;
+            p1 -= tangent1 * self.tolerance * 4.;
         }
         distance = p0.distance(p1);
-        //if u1 > 1.-EPSILON {dist0 = INFINITY;}
+
         Err((
-            Miss{dot:cross0.dot(-tangent1), distance, point:p0}, 
-            Miss{dot:cross1.dot(-tangent0), distance, point:p1},
+            Miss{dot:cross0.dot(-tangent1), distance}, 
+            Miss{dot:cross1.dot(-tangent0), distance},
         ))
     }
 

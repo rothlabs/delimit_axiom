@@ -7,5 +7,4 @@ pub mod hit3;
 pub struct Miss {
     pub dot: f32,
     pub distance: f32,
-    pub point: Vec3,
 }

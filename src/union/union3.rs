@@ -1,12 +1,10 @@
-use crate::{hit::Miss, log, nurbs::curve, CurveShape, FacetShape, HitTester3, Shape, Spatial3};
+use crate::{hit::Miss, CurveShape, FacetShape, HitTester3, Shape, Spatial3};
 use glam::*;
-
 use super::union2::UnionBasis2;
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
-
+// macro_rules! console_log {
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }
 
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
@@ -26,11 +24,8 @@ impl UnionBasis3 {
         self.test_groups();
         self.curves.extend(self.curve_groups[0].clone());
         self.curves.extend(self.curve_groups[1].clone());
-        //self.facets.extend(self.facet_groups[0].clone());
-        //self.facets.extend(self.facet_groups[1].clone());
 
         for g in 0..2 {
-            //console_log!("facet group count: {}", self.facet_groups[g].len());
             for i in 0..self.facet_groups[g].len() {
                 if self.facet_hits[g][i].is_empty() {
                     //self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
@@ -68,7 +63,6 @@ impl UnionBasis3 {
 
     fn add_bounded_facet(&mut self, g: usize, i: usize) {
         let mut facet = self.facet_groups[g][i].clone();
-
         let mut curves0 = vec![];
         for mut curve in facet.boundaries.clone() {
             if facet.nurbs.sign < 0. {
@@ -76,22 +70,17 @@ impl UnionBasis3 {
             }
             curves0.push(curve);
         }
-
         let mut union = UnionBasis2::new(self.facet_hits[g][i].clone(), self.facet_hits[g][i].clone(), 0.001, true);
         let curves1 = union.build();
-
         let mut union = UnionBasis2::new(curves0, curves1.clone(), 0.001, false); // self.facet_hits[g][i].clone()
         facet.boundaries = union.build();
         for mut boundary in facet.boundaries.clone() {
             for k in 0..boundary.controls.len() {
-                //console_log!("facet i {}", i);
                 boundary.controls[k] += vec3(100., g as f32 * 2., 0.);
                 boundary.controls[k] += vec3(i as f32 * 2., 0., 0.);
-                //boundary.controls[i] += Vec3::Y * g as f32 * 2.;
             }
             self.shapes.push(Shape::Curve(boundary));
         }
-
         self.facets.push(facet);
     }
 

@@ -1,5 +1,5 @@
 use std::f32::consts::{FRAC_PI_2, PI};
-use crate::{get_shapes, CurveShape, Group, Model, Revolve, Shape};
+use crate::{get_shapes, CurveShape, Reshape, Model, Revolve, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -8,7 +8,7 @@ use glam::*;
 #[serde(default = "Sketch::default")]
 pub struct Sketch {
     pub parts:   Vec<Model>,
-    pub transform: Group,
+    pub reshape: Reshape,
     pub actions: Vec<Action>,
 }
 
@@ -31,7 +31,7 @@ impl Sketch {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut sketch_shape = SketchShape {
             shapes: get_shapes(&self.parts),
-            transform: self.transform.clone(),
+            reshape: self.reshape.clone(),
             actions: self.actions.clone(),
             start_point: vec2(0., 0.),
             turtle: Turtle::default(),
@@ -46,23 +46,30 @@ pub struct SketchShape {
     pub actions: Vec<Action>,
     pub start_point: Vec2,
     pub turtle: Turtle,
-    pub transform: Group,
+    pub reshape: Reshape,
 }
 
 impl SketchShape { 
     pub fn get_shapes(&self) -> Vec<Shape> {
-        self.transform.get_reshapes(self.shapes.clone())
+        self.reshape.get_reshapes(self.shapes.clone())
     }
     pub fn build_from_actions(&mut self) -> Vec<Shape> {
+        let mut closed = false;
         for action in self.actions.clone() {
             match action {
                 Action::JumpTo(p)  => self.jump_to(Vec2::from_array(p)),
                 Action::LineTo(p)  => self.line_to(Vec2::from_array(p)),
                 Action::Turn(turn) => self.turn(turn.angle, turn.radius),
-                Action::Close(_)   => self.close(),
+                Action::Close(_)   => {
+                    closed = true;
+                    self.close()
+                },
             };
         }
-        self.transform.get_reshapes(self.shapes.clone())
+        if !closed {
+            self.shapes.push(Shape::Point(self.start_point.extend(0.)));
+        }
+        self.reshape.get_reshapes(self.shapes.clone())
     }
     fn jump_to(&mut self, point: Vec2) -> &mut Self {
         self.start_point = point;
@@ -105,7 +112,7 @@ impl SketchShape {
                 center: [center.x, center.y, 0.],
                 axis: [0., 0., angle.signum()],
                 angle: angle.abs(),
-                transform: Group::default(),
+                reshape: Reshape::default(),
             };
             self.shapes.extend(revolve.get_shapes());
         }
@@ -158,9 +165,9 @@ impl Circle {
             center: [self.center[0], self.center[1], 0.],
             axis: [0., 0., 1.],
             angle: PI*2.,
-            transform: Group::default(),
+            reshape: Reshape::default(),
         };
-        revolve.transform.reverse = self.reverse;
+        revolve.reshape.reverse = self.reverse;
         revolve.get_shapes()
     }
 }
@@ -179,7 +186,7 @@ pub struct Rectangle {
 impl Rectangle {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut sketch = SketchShape::default();
-        sketch.transform.reverse = self.reverse;
+        sketch.reshape.reverse = self.reverse;
         let mut point_a = -Vec2::from_array(self.half_lengths);
         let mut point_b = -point_a;
         if self.lengths[0] > 0. || self.lengths[1] > 0. {
@@ -226,7 +233,7 @@ pub struct Slot {
 impl Slot {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut sketch = SketchShape::default();
-        sketch.transform.reverse = self.reverse;
+        sketch.reshape.reverse = self.reverse;
         let mut point_a = vec2(-self.half_length, 0.);
         let mut point_b = vec2( self.half_length, 0.);
         if self.length > 0. {

@@ -23,8 +23,6 @@ pub struct Curve {
     pub knots:    Vec<f32>,    // knot_count = order + control_count
     pub weights:  Vec<f32>,    // weight_count = control_count
     pub order:    usize,       // order = polynomial_degree + 1
-    //pub min:      f32,
-    //pub max:      f32,
 }
 
 impl Curve {
@@ -36,9 +34,9 @@ impl Curve {
                 knots:   self.knots.clone(),
                 weights: self.weights.clone(),
             },
-            controls: get_points(&self.controls),//.iter().map(|p| vec3(p[0], p[1], p[2])).collect(),
-            min: 0., //self.min,
-            max: 1., //self.max,
+            controls: get_points(&self.controls),
+            min: 0., 
+            max: 1., 
         }.get_valid())]
     }
 }
@@ -139,6 +137,11 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         if u + step > 1. {step = -step;}
         let p0 = self.get_point_at_u(u);
         let p1 = self.get_point_at_u(u + step);
+        // if let Some(_) = (p1 - p0).try_normalize() {
+
+        // }else{
+        //     log("failed to normalize");
+        // }
         (p1 - p0).normalize() * step.signum()
     }
 

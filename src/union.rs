@@ -1,7 +1,7 @@
 mod union2;
 mod union3;
 
-use crate::{log, get_grouped_curves_and_facets, CurveShape, FacetShape, Group, HitTester3, Model, Shape, Spatial3};
+use crate::{log, get_grouped_curves_and_facets, CurveShape, FacetShape, Reshape, HitTester3, Model, Shape, Spatial3};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -16,7 +16,7 @@ macro_rules! console_log {
 pub struct Union {
     pub parts:         Vec<Model>,
     pub negated_parts: Vec<Model>,
-    pub transform:     Group,
+    pub reshape:     Reshape,
 }
 
 // pub struct UnionBasis {

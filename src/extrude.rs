@@ -1,5 +1,7 @@
-use crate::{get_reshaped_point, get_shapes, get_vec3_or, nurbs::Nurbs, Arc, Area, Circle, CurveShape, FacetShape, Group, Model, Rectangle, Shape};
-use lyon::algorithms::length;
+use crate::{get_reshaped_point, get_shapes, get_vec3_or, 
+    nurbs::Nurbs, Area, Circle, 
+    CurveShape, FacetShape, Reshape, Model, Rectangle, Shape
+};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -9,7 +11,7 @@ pub struct Extrude {
     pub parts:  Vec<Model>,
     pub axis:   [f32; 3],
     pub length: f32,
-    pub transform: Group,
+    pub reshape: Reshape,
 }
 
 impl Extrude {
@@ -20,7 +22,7 @@ impl Extrude {
         for shape in get_shapes(&self.parts) {
             if let Shape::Facet(facet) = &shape { 
                 if self.length > 0. {
-                    shapes.push(Shape::Facet(facet.reversed())); // facet.get_reverse_reshape(Mat4::IDENTITY))
+                    shapes.push(Shape::Facet(facet.reversed())); 
                 }else{
                     shapes.push(shape.clone());
                 }
@@ -38,14 +40,8 @@ impl Extrude {
                     if self.length < 0. {
                         curve.controls.reverse();
                     }
-                    //curve.controls.push(*point);
-                    //if self.length > 0. {
-                        shapes.push(Shape::Curve(curve));
-                        shapes.push(shape.get_reshape(basis.mat4));
-                    // }else{
-                    //     shapes.push(Shape::Curve(curve).get_reshape(basis.mat4));
-                    //     shapes.push(shape);
-                    // }
+                    shapes.push(Shape::Curve(curve));
+                    shapes.push(shape.get_reshape(basis.mat4));
                 },
                 Shape::Curve(curve) => {
                     let mut facet = FacetShape {
@@ -57,32 +53,25 @@ impl Extrude {
                     if self.length < 0. {
                         facet.controls.reverse();
                     }
-                    //facet.controls.push(curve.clone()); 
-                    //if self.length > 0. {
-                        shapes.push(Shape::Facet(facet));
-                        shapes.push(shape.get_reshape(basis.mat4));
-                    // }else{
-                    //     shapes.push(Shape::Facet(facet).get_reshape(basis.mat4));
-                    //     shapes.push(shape);
-                    // }
+                    shapes.push(Shape::Facet(facet));
+                    shapes.push(shape.get_reshape(basis.mat4));
                 },
                 Shape::Facet(facet) => {
                     if self.length > 0. {
-                        //shapes.push(shape.clone());
                         shapes.push(Shape::Facet(facet.get_reshape(basis.mat4)));
                     }else{
-                        shapes.push(Shape::Facet(facet.get_reversed_reshape(basis.mat4))); // shapes.push(shape.get_reverse_reshape(basis.mat4));
+                        shapes.push(Shape::Facet(facet.get_reversed_reshape(basis.mat4))); 
                     }
                 },
             }
         }
-        self.transform.get_reshapes(shapes) 
+        self.reshape.get_reshapes(shapes) 
     }
-    pub fn from_area(area: Area, length: f32, transform: &Group) -> Self {
+    pub fn from_area(area: Area, length: f32, reshape: &Reshape) -> Self {
         let mut model = Self::default();
         model.parts = vec![Model::Area(area)];
         model.length = length;
-        model.transform = transform.clone();
+        model.reshape = reshape.clone();
         model
     }
 }
@@ -111,7 +100,7 @@ impl ExtrudeBasis {
 #[serde(default = "Cuboid::default")]
 pub struct Cuboid {
     pub lengths: [f32; 3],
-    pub transform: Group,
+    pub reshape: Reshape,
 }
 
 impl Cuboid {
@@ -119,7 +108,7 @@ impl Cuboid {
         let mut rect = Rectangle::default();
         rect.lengths = [self.lengths[0], self.lengths[1]];
         let area = Area::from_part(Model::Rectangle(rect));
-        Extrude::from_area(area, self.lengths[2], &self.transform).get_shapes()
+        Extrude::from_area(area, self.lengths[2], &self.reshape).get_shapes()
     }
 }
 
@@ -128,7 +117,7 @@ impl Cuboid {
 pub struct Cylinder {
     pub radius: f32,
     pub length: f32,
-    pub transform: Group,
+    pub reshape: Reshape,
 }
 
 impl Cylinder {
@@ -136,14 +125,6 @@ impl Cylinder {
         let mut circle = Circle::default();
         circle.radius = self.radius;
         let area = Area::from_part(Model::Circle(circle));
-        Extrude::from_area(area, self.length, &self.transform).get_shapes()
+        Extrude::from_area(area, self.length, &self.reshape).get_shapes()
     }
 }
-
-
-// let mut length = self.length;
-        // let mut transform = self.transform;
-        // if length < 0. {
-        //     length = -length;
-        //     transform.position = [transform.position[2]];
-        // }

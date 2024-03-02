@@ -1,5 +1,5 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{get_reshaped_point, get_shapes, get_vec3_or, nurbs::Nurbs, CurveShape, FacetShape, Group, Model, Rectangle, Shape};
+use crate::{get_reshaped_point, get_shapes, get_vec3_or, nurbs::Nurbs, CurveShape, FacetShape, Reshape, Model, Rectangle, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -11,7 +11,7 @@ use glam::*;
 #[serde(default = "Revolve::default")]
 pub struct Revolve {
     pub parts:  Vec<Model>,
-    pub transform: Group,
+    pub reshape: Reshape,
     pub center: [f32; 3],
     pub axis:   [f32; 3],
     pub angle:  f32,
@@ -74,7 +74,7 @@ impl Revolve {
                 },
             }
         }
-        self.transform.get_reshapes(shapes) 
+        self.reshape.get_reshapes(shapes) 
     }
 }
 

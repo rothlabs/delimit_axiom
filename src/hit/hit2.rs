@@ -77,11 +77,11 @@ impl HitTester2 {
                     let tangent0 = -self.curves.0.get_tangent_at_u(u0);
                     let tangent1 = -self.curves.1.get_tangent_at_u(u1);
                     if tangent0.is_nan() {
-                        log("tangent0 NaN!!!");
+                        log("hit tangent0 NaN!!!");
                         //break;
                     }
                     if tangent1.is_nan() {
-                        log("tangent1 NaN!!!");
+                        log("hit tangent1 NaN!!!");
                         //break;
                     }
                     let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
@@ -104,13 +104,12 @@ impl HitTester2 {
         let tangent1 = self.curves.1.get_tangent_at_u(u1);
         let cross0 = Vec3::Z.cross((p1 - p0).normalize()).normalize() * self.curves.0.nurbs.sign;
         let cross1 = Vec3::Z.cross((p0 - p1).normalize()).normalize() * self.curves.1.nurbs.sign;
-
-        // if tangent0.is_nan() {
-        //     log("tangent0 NaN!");
-        // }
-        // if tangent1.is_nan() {
-        //     log("tangent1 NaN!");
-        // }
+        if tangent0.is_nan() {
+            log("miss tangent0 NaN!");
+        }
+        if tangent1.is_nan() {
+            log("miss tangent1 NaN!");
+        }
 
         // if tangent0.length() < EPSILON {
         //     log("tangent0 is 0!");
@@ -120,16 +119,17 @@ impl HitTester2 {
         // }
 
         if u0 < EPSILON {
-            p0 += tangent0 * self.tolerance * 4.;
+            p0 += tangent0 * self.tolerance * 2.;
         } else if u0 > 1.-EPSILON {
-            p0 -= tangent0 * self.tolerance * 4.;
+            p0 -= tangent0 * self.tolerance * 2.;
         }
         if u1 < EPSILON {
-            p1 += tangent1 * self.tolerance * 4.;
+            p1 += tangent1 * self.tolerance * 2.;
         } else if u1 > 1.-EPSILON {
-            p1 -= tangent1 * self.tolerance * 4.;
+            p1 -= tangent1 * self.tolerance * 2.;
         }
         distance = p0.distance(p1);
+
 
         Err((
             Miss{dot:cross0.dot(-tangent1), distance}, 

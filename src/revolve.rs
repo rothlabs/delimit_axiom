@@ -48,9 +48,9 @@ impl Revolve {
                     curve.controls.push(get_reshaped_point(point, final_turn)); 
                     //curve.controls.reverse();
                     shapes.push(Shape::Curve(curve));
-                    if angle.abs() < PI*2. {
+                    //if angle.abs() < PI*2. {
                         shapes.push(shape.get_reshape(final_turn));
-                    }
+                    //}
                 },
                 Shape::Curve(curve) => {
                     let mut facet = FacetShape {

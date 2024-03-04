@@ -109,21 +109,23 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     pub fn get_inflection_params(&self) -> Vec<f32> {
         let mut knots = vec![0.];
         let last_knot = self.nurbs.knots.last().unwrap();
-        let mut direction_basis = (self.controls[1].truncate() - self.controls[0].truncate()).normalize();
-        let mut turn_basis = 0.;
-        for i in 1..self.controls.len()-1 {
-            let dir = (self.controls[i+1].truncate() - self.controls[i].truncate()).normalize();
-            let turn = direction_basis.angle_between(dir);
-            if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
-                let u0 = self.nurbs.knots[self.nurbs.order + i - 2] / last_knot;
-                let u1 = self.nurbs.knots[self.nurbs.order + i - 1] / last_knot;
-                let u = (u0 + u1) / 2.;
-                if u >= self.min && u <= self.max {
-                    knots.push(u);
+        if self.controls.len() > 1 {
+            let mut direction_basis = (self.controls[1].truncate() - self.controls[0].truncate()).normalize();
+            let mut turn_basis = 0.;
+            for i in 1..self.controls.len()-1 {
+                let dir = (self.controls[i+1].truncate() - self.controls[i].truncate()).normalize();
+                let turn = direction_basis.angle_between(dir);
+                if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
+                    let u0 = self.nurbs.knots[self.nurbs.order + i - 2] / last_knot;
+                    let u1 = self.nurbs.knots[self.nurbs.order + i - 1] / last_knot;
+                    let u = (u0 + u1) / 2.;
+                    if u >= self.min && u <= self.max {
+                        knots.push(u);
+                    }
                 }
+                direction_basis = dir;
+                turn_basis = turn;
             }
-            direction_basis = dir;
-            turn_basis = turn;
         }
         knots.push(0.5);
         knots.push(1.);

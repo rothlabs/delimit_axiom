@@ -179,7 +179,11 @@ impl FacetShape {
             (pu-p0).normalize().dot(target.normalize()) * length_ratio_u, 
             (pv-p0).normalize().dot(target.normalize()) * length_ratio_v
         );
-        let mut uv1 = uv + uv_dir;
+        //let mut uv1 = uv + uv_dir;
+        let mut uv1 = uv;
+        if uv_dir.length() > EPSILON {// step.abs() {
+            uv1 = uv + uv_dir; 
+        }
         
         //if uv_dir.length() > 0.0001 {
         //   uv1 = uv + uv_dir; 
@@ -202,8 +206,18 @@ impl FacetShape {
         (uv1, point)
     }
 
-    pub fn get_curvature(&self, uv: Vec2, dir: Vec3) -> f32 {
-        0.
+    pub fn get_curvature(&self, uv0: Vec2, p0: Vec3, dir: Vec3) -> f32 {
+        let step = 1.;
+        let (uv1, p1) = self.get_uv_and_point_from_target(uv0, dir * step);
+        let normal0 = self.get_normal_at_uv(uv0);
+        let normal1 = self.get_normal_at_uv(uv1);
+        let distance = p0.distance(p1);
+        if distance > EPSILON*10. {
+            (1. + (1. - normal0.dot(normal1)) / distance).powf(18.)
+        }else{
+            1.
+        }
+        
     }
 
     pub fn get_point_at_uv(&self, uv: Vec2) -> Vec3 {

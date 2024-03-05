@@ -90,11 +90,11 @@ impl HitTester3 {
             }
             distance_basis = distance;
         }
-        let normal0 = self.facets.0.get_normal_at_uv(uv0);
-        let normal1 = self.facets.1.get_normal_at_uv(uv1);
+        let normal0 = -self.facets.0.get_normal_at_uv(uv0);
+        let normal1 = -self.facets.1.get_normal_at_uv(uv1);
         Err((
-            Miss{dot:(p1 - p0).normalize().dot(normal1), distance, point: p0}, 
-            Miss{dot:(p0 - p1).normalize().dot(normal0), distance, point: p1},
+            Miss{dot:(p1 - p0).normalize().dot(normal1) * self.facets.0.nurbs.sign, distance, point: p0}, 
+            Miss{dot:(p0 - p1).normalize().dot(normal0) * self.facets.1.nurbs.sign, distance, point: p1},
         ))
     }
 
@@ -131,8 +131,8 @@ impl HitTester3 {
                 //     }
                 // }
                 //if allow_point {
-                    controls0.push(hit.uv0.extend(0.) * 1000.);
-                    controls1.push(hit.uv1.extend(0.) * 1000.);
+                    controls0.push(hit.uv0.extend(0.));
+                    controls1.push(hit.uv1.extend(0.));
                     center_controls.push(center);
                 //}
                 center
@@ -235,9 +235,9 @@ impl HitTester3 {
         if center_curve.controls.is_empty() {
             return None
         }
-        // curve0.set_knots_by_control_distance();
-        // curve1.set_knots_by_control_distance();
-        // center_curve.set_knots_by_control_distance();
+        curve0.set_knots_by_control_distance();
+        curve1.set_knots_by_control_distance();
+        center_curve.set_knots_by_control_distance();
         Some(Hit3{
             hits: (curve0.get_valid(), curve1.get_valid()),
             center_curve: center_curve.get_valid(),

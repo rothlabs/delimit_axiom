@@ -117,6 +117,9 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     }
 
     pub fn get_inflection_params(&self) -> Vec<f32> {
+        if self.nurbs.order == 2 && self.controls.len() == 2 {
+            return vec![0., 1.];
+        }
         let mut knots = vec![0.];
         let last_knot = self.nurbs.knots.last().unwrap();
         if self.controls.len() > 1 {
@@ -137,13 +140,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
                 turn_basis = turn;
             }
         }
-        // knots.push(0.125);
-        knots.push(0.25);
-        // knots.push(0.325);
         knots.push(0.5);
-        // knots.push(0.625);
-        knots.push(0.75);
-        // knots.push(0.825);
         knots.push(1.);
         // console_log!("full knots! {:?}", self.nurbs.knots);
         // console_log!("knots! {:?}", knots);

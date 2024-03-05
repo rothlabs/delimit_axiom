@@ -30,7 +30,7 @@ impl UnionBasis3 {
                 points:  vec![],
                 tolerance,
                 step,
-                hone_count: 10,
+                hone_count: 5,
             },
             facet_hits: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]], 
             facet_miss: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]],
@@ -50,10 +50,10 @@ impl UnionBasis3 {
         for g in 0..2 {
             for i in 0..self.facet_groups[g].len() {
                 if self.facet_hits[g][i].is_empty() {
-                    //self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                    //if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 {
+                    self.facet_miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+                    if self.facet_miss[g][i].is_empty() || self.facet_miss[g][i][0].dot > -0.01 {
                         self.facets.push(self.facet_groups[g][i].clone());
-                    //}
+                    }
                 }else{
                     // self.facet_hits[g][i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
                     self.add_bounded_facet(g, i);  
@@ -92,15 +92,16 @@ impl UnionBasis3 {
             }
             curves0.push(curve);
         }
-        //let mut union = UnionBasis2::new(self.facet_hits[g][i].clone(), self.facet_hits[g][i].clone(), 0.001, true);
-        let mut curves1 = self.facet_hits[g][i].clone();// union.build();
+        let mut union = UnionBasis2::new(self.facet_hits[g][i].clone(), self.facet_hits[g][i].clone(), 0.005, true);
+        let curves1 = union.build();
+        //let mut curves1 = self.facet_hits[g][i].clone();
         // let circle = Circle{center:[0.2, 0.2], radius:0.05, reverse:true}.get_shapes();
         // if let Shape::Curve(mut circle) = circle[0].clone() {
         //     circle.negate();
         //     curves1 = vec![circle];//curves1.push(circle);
         // }
         
-        let mut union = UnionBasis2::new(curves0, curves1.clone(), 0.0001, false); // self.facet_hits[g][i].clone()
+        let mut union = UnionBasis2::new(curves0, curves1.clone(), 0.005, false); // self.facet_hits[g][i].clone()
         facet.boundaries = union.build();
         
         // for shape in union.shapes {
@@ -109,13 +110,13 @@ impl UnionBasis3 {
         //     }
         // }
 
-        for mut boundary in facet.boundaries.clone() {
-            for k in 0..boundary.controls.len() {
-                boundary.controls[k] += vec3(100., g as f32 * 2., 0.);
-                boundary.controls[k] += vec3(i as f32 * 2., 0., 0.);
-            }
-            self.shapes.push(Shape::Curve(boundary));
-        }
+        // for mut boundary in facet.boundaries.clone() {
+        //     for k in 0..boundary.controls.len() {
+        //         boundary.controls[k] += vec3(100., g as f32 * 2., 0.);
+        //         boundary.controls[k] += vec3(i as f32 * 2., 0., 0.);
+        //     }
+        //     self.shapes.push(Shape::Curve(boundary));
+        // }
         self.facets.push(facet);
     }
 

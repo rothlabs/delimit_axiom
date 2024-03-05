@@ -213,7 +213,7 @@ impl FacetShape {
         let normal1 = self.get_normal_at_uv(uv1);
         let distance = p0.distance(p1);
         if distance > EPSILON*10. {
-            (1. + (1. - normal0.dot(normal1)) / distance).powf(18.)
+            (1. + (1. - normal0.dot(normal1)) / distance).powf(30.)
         }else{
             1.
         }
@@ -239,11 +239,11 @@ impl FacetShape {
         // }
         for ui in 0..u_count {
             let u = ui as f32 / (u_count-1) as f32;
-            builder.add_rectangle(&Box2D{min:Point::new(u, 0.), max:Point::new(u, 1000.)}, Winding::Positive);
+            builder.add_rectangle(&Box2D{min:Point::new(u, 0.), max:Point::new(u, 1.)}, Winding::Positive);
         }
         for vi in 0..v_count {
             let v = vi as f32 / (v_count-1) as f32;
-            builder.add_rectangle(&Box2D{min:Point::new(0., v), max:Point::new(1000., v)}, Winding::Positive);
+            builder.add_rectangle(&Box2D{min:Point::new(0., v), max:Point::new(1., v)}, Winding::Positive);
         }
         let mut loop_open = false;
         let mut bndry_i = 0;

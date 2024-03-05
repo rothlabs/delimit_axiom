@@ -41,7 +41,7 @@ impl HitTester2 {
         let mut distance_basis = INFINITY;
         let mut u0_prev = u0;
         let mut u1_prev = u1;
-        for i in 0..40 {
+        for _ in 0..20 {
             let target = self.get_tangent_intersection(u0, u1, p0, p1);
             let (u0_t0, p0_t0) = self.curves.0.get_u_and_point_from_target(u0, target - p0);
             let (u1_t0, p1_t0) = self.curves.1.get_u_and_point_from_target(u1, target - p1);

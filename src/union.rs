@@ -50,7 +50,7 @@ impl Union {
             }
             shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
         }else{
-            let step = 2.;
+            let step = 1.;
             let mut curve_groups = curve_groups_basis;
             let mut facet_groups = facet_groups_basis;
             for i in 0..neg_curve_groups.len() {

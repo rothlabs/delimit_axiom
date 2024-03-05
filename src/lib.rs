@@ -103,11 +103,11 @@ impl Shape {
             Shape::Facet(s) => Shape::Facet(s.get_reshape(mat4)),
         }
     }
-    pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
+    pub fn get_reverse(&self) -> Self {
         match self {
-            Shape::Point(s) => Shape::Point(get_reshaped_point(s, mat4)),
-            Shape::Curve(s) => Shape::Curve(s.get_reverse_reshape(mat4)),
-            Shape::Facet(s) => Shape::Facet(s.get_reverse_reshape(mat4)),
+            Shape::Point(s) => Shape::Point(*s),
+            Shape::Curve(s) => Shape::Curve(s.get_reverse()),
+            Shape::Facet(s) => Shape::Facet(s.get_reverse()),
         }
     }
 }

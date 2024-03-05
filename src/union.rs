@@ -2,7 +2,6 @@ mod union2;
 mod union3;
 
 use crate::{get_grouped_curves_and_facets, log, Model, Reshape, Shape};
-use memoize::memoize;
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -27,7 +26,6 @@ pub struct Union {
 // }
 
 impl Union {
-    //#[memoize]
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut shapes = vec![];
         let tolerance = 0.005;

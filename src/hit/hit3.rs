@@ -206,14 +206,14 @@ impl HitTester3 {
                 }
             }
             if center_controls.len() > 1 {
-                if (direction < 1 && self.facets.0.sign > 0.) || (direction > 0 && self.facets.0.sign < 0.) { // if direction < 1 {//
+                if direction < 1 {//if (direction < 1 && self.facets.0.sign > 0.) || (direction > 0 && self.facets.0.sign < 0.) { // if direction < 1 {//
                     curve0.controls.extend(controls0);
                 }else{
                     controls0.reverse();
                     controls0.pop();
                     curve0.controls.splice(0..0, controls0);
                 }
-                if (direction < 1 && self.facets.1.sign > 0.) || (direction > 0 && self.facets.1.sign < 0.) { // if direction < 1 {//
+                if direction < 1 {//if (direction < 1 && self.facets.1.sign > 0.) || (direction > 0 && self.facets.1.sign < 0.) { // if direction < 1 {//
                     controls1.reverse();
                     controls1.pop();
                     curve1.controls.splice(0..0, controls1);

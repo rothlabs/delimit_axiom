@@ -80,64 +80,110 @@ impl FacetShape {
         self
     }
 
-    pub fn negated(&self) -> Self {
-        let mut facet = self.clone();
-        facet.negate();
-        facet
-    }
+    // pub fn get_negated(&self) -> Self {
+    //     let mut facet = self.clone();
+    //     facet.negate();
+    //     facet
+    // }
 
     pub fn reverse(&mut self) -> &mut Self {
-        self.sign = -self.sign;
+        // self.sign = -self.sign;
+        // self
+        let max_knot = *self.nurbs.knots.last().unwrap(); 
+        self.nurbs.knots.reverse();
+        for i in 0..self.nurbs.knots.len() {
+            self.nurbs.knots[i] = max_knot - self.nurbs.knots[i];
+        }
+        self.nurbs.weights.reverse();
+        self.controls.reverse();
+        for bndry in &mut self.boundaries {
+            bndry.reverse();
+            bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
+            // self.boundaries.push(bndry.get_reshape(
+            //     Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.))
+            // ));
+        }
         self
     }
 
-    pub fn reversed(&self) -> Self {
+    // pub fn reversed(&self) -> Self {
+    //     let mut facet = self.clone();
+    //     facet.sign = -facet.sign;
+    //     facet
+    // }
+
+    pub fn reshape(&mut self, mat4: Mat4) -> &mut Self {
+        for control in &mut self.controls {
+            control.reshape(mat4);
+        }
+        self
+    }
+
+    pub fn get_reverse(&self) -> Self {
         let mut facet = self.clone();
-        facet.sign = -facet.sign;
+        facet.reverse();
         facet
     }
 
     pub fn get_reshape(&self, mat4: Mat4) -> Self {
-        let mut facet = self.clone_with_empty_controls_and_boundaries();
-        for control in &self.controls {
-            facet.controls.push(control.get_reshape(mat4));
-        }
-        facet.boundaries = self.boundaries.clone();
-        facet
-    }
-
-    pub fn get_reversed_reshape(&self, mat4: Mat4) -> Self {
-        let mut facet = self.clone_with_empty_controls_and_boundaries();
-        for control in &self.controls {
-            facet.controls.push(control.get_reshape(mat4));
-        }
-        facet.boundaries = self.boundaries.clone();
-        facet.sign = -facet.sign;
+        let mut facet = self.clone();
+        facet.reshape(mat4);
         facet
     }
 
     pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
-        let mut facet = self.clone_with_empty_controls_and_boundaries();
-        facet.nurbs.weights.reverse();
-        for control in self.controls.iter().rev() {
-            facet.controls.push(control.get_reshape(mat4)); //  * Mat4::from_scale(vec3(0., 0., 0.))
-        }
-        for bndry in &self.boundaries {
-            facet.boundaries.push(bndry.get_reshape(
-                Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.))
-            ));
-        }
+        let mut facet = self.clone();
+        facet.reverse();
+        facet.reshape(mat4);
         facet
     }
 
-    fn clone_with_empty_controls_and_boundaries(&self) -> Self {
-        FacetShape {
-            nurbs: self.nurbs.clone(),
-            controls: vec![],
-            boundaries: vec![],
-            sign: self.sign,
-        }
-    }
+    // pub fn get_reshape(&self, mat4: Mat4) -> Self {
+    //     let mut facet = self.clone_with_empty_controls_and_boundaries();
+    //     for control in &self.controls {
+    //         facet.controls.push(control.get_reshape(mat4));
+    //     }
+    //     facet.boundaries = self.boundaries.clone();
+    //     facet
+    // }
+
+    // pub fn get_reversed_reshape(&self, mat4: Mat4) -> Self {
+    //     let mut facet = self.clone_with_empty_controls_and_boundaries();
+    //     for control in &self.controls {
+    //         facet.controls.push(control.get_reshape(mat4));
+    //     }
+    //     facet.boundaries = self.boundaries.clone();
+    //     facet.sign = -facet.sign;
+    //     facet
+    // }
+
+    // pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
+    //     let mut facet = self.clone_with_empty_controls_and_boundaries();
+    //     let max_knot = *facet.nurbs.knots.last().unwrap(); 
+    //     facet.nurbs.knots.reverse();
+    //     for i in 0..facet.nurbs.knots.len() {
+    //         facet.nurbs.knots[i] = max_knot - facet.nurbs.knots[i];
+    //     }
+    //     facet.nurbs.weights.reverse();
+    //     for control in self.controls.iter().rev() {
+    //         facet.controls.push(control.get_reshape(mat4)); //  * Mat4::from_scale(vec3(0., 0., 0.))
+    //     }
+    //     for bndry in &self.boundaries {
+    //         facet.boundaries.push(bndry.get_reshape(
+    //             Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.))
+    //         ));
+    //     }
+    //     facet
+    // }
+
+    // fn clone_with_empty_controls_and_boundaries(&self) -> Self {
+    //     FacetShape {
+    //         nurbs: self.nurbs.clone(),
+    //         controls: vec![],
+    //         boundaries: vec![],
+    //         sign: self.sign,
+    //     }
+    // }
 
     pub fn get_normalized_knots(&self) -> Vec<Vec2> {
         let mut knots = vec![];
@@ -159,7 +205,7 @@ impl FacetShape {
         let p0 = self.get_point_at_uv(uv);
         let p1 = self.get_point_at_uv(uv + Vec2::X * step_u);
         let p2 = self.get_point_at_uv(uv + Vec2::Y * step_v);
-        self.sign * step_u.signum() * step_v.signum() * (p0 - p1).normalize().cross((p0 - p2).normalize()).normalize() // TODO: remove final normalize after Union3 works!!!!
+        step_u.signum() * step_v.signum() * (p0 - p1).normalize().cross((p0 - p2).normalize()).normalize() // TODO: remove final normalize after Union3 works!!!!
     }
 
     pub fn get_uv_and_point_from_target(&self, uv: Vec2, target: Vec3) -> (Vec2, Vec3) {
@@ -288,14 +334,14 @@ impl FacetShape {
             vector.extend(facet.get_vector_at_uv(u, v));
         }
         let mut trivec = geometry.indices;
-        if self.sign > 0. { 
+        //if self.sign > 0. { 
             for k in 0..trivec.len()/3 {
                 let i = k * 3;
                 let index = trivec[i];
                 trivec[i] = trivec[i+1];
                 trivec[i+1] = index;
             }
-        }
+        //}
         Mesh {
             digest: get_vector_hash(&vector), 
             vector, 

@@ -25,11 +25,11 @@ impl Reshape {
         let mut result = vec![];
         if self.reverse {
             for shape in shapes {
-                result.push(shape.get_reverse_reshape(mat4));
+                result.push(shape.clone().get_reverse().get_reshape(mat4));
             }
         }else{
             for shape in shapes {
-                result.push(shape.get_reshape(mat4));
+                result.push(shape.clone().get_reshape(mat4));
             }
         }
         result

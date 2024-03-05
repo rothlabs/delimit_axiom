@@ -22,7 +22,7 @@ impl Extrude {
         for shape in get_shapes(&self.parts) {
             if let Shape::Facet(facet) = &shape { 
                 if self.length > 0. {
-                    shapes.push(Shape::Facet(facet.reversed())); 
+                    shapes.push(Shape::Facet(facet.get_reverse())); 
                 }else{
                     shapes.push(shape.clone());
                 }
@@ -60,7 +60,7 @@ impl Extrude {
                     if self.length > 0. {
                         shapes.push(Shape::Facet(facet.get_reshape(basis.mat4)));
                     }else{
-                        shapes.push(Shape::Facet(facet.get_reversed_reshape(basis.mat4))); 
+                        shapes.push(Shape::Facet(facet.get_reverse_reshape(basis.mat4))); 
                     }
                 },
             }

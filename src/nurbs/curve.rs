@@ -66,45 +66,72 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         self
     }
 
+    // pub fn get_negated(&self) -> Self {
+    //     let mut curve = self.clone();
+    //     curve.negate();
+    //     curve
+    // }
+
     pub fn reverse(&mut self) -> &mut Self{
         let max_knot = *self.nurbs.knots.last().unwrap(); 
-        self.controls.reverse();
-        self.nurbs.weights.reverse();
         self.nurbs.knots.reverse();
         for i in 0..self.nurbs.knots.len() {
             self.nurbs.knots[i] = max_knot - self.nurbs.knots[i];
         }
+        self.nurbs.weights.reverse();
+        self.controls.reverse();
         let min_basis = self.min;
         self.min = 1.-self.max;
         self.max = 1.-min_basis;
         self
     }
 
+    pub fn get_reverse(&self) -> Self {
+        let mut curve = self.clone();
+        curve.reverse();
+        curve
+    }
+
+    pub fn reshape(&mut self, mat4: Mat4) -> &mut Self {
+        let controls = self.controls.clone();
+        self.controls.clear();
+        for point in controls {
+            self.controls.push(get_reshaped_point(&point, mat4));
+        }
+        self
+    }
+
     pub fn get_reshape(&self, mat4: Mat4) -> Self {
-        let mut curve = self.clone_with_empty_controls();
-        for point in &self.controls {
-            curve.controls.push(get_reshaped_point(point, mat4));
-        }
+        let mut curve = self.clone();
+        curve.reshape(mat4);
         curve
     }
 
-    pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
-        let mut curve = self.clone_with_empty_controls();
-        curve.nurbs.weights.reverse();
-        for point in self.controls.iter().rev() {
-            curve.controls.push(get_reshaped_point(point, mat4));
-        }
-        curve
-    }
+    // pub fn get_reshape(&self, mat4: Mat4) -> Self {
+    //     let mut curve = self.clone_with_empty_controls();
+    //     for point in &self.controls {
+    //         curve.controls.push(get_reshaped_point(point, mat4));
+    //     }
+    //     curve
+    // }
 
-    fn clone_with_empty_controls(&self) -> Self {
-        Self {
-            nurbs: self.nurbs.clone(),
-            controls: vec![],
-            min: self.min,
-            max: self.max,
-        }
-    }
+    // pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
+    //     let mut curve = self.clone_with_empty_controls();
+    //     curve.nurbs.weights.reverse();
+    //     for point in self.controls.iter().rev() {
+    //         curve.controls.push(get_reshaped_point(point, mat4));
+    //     }
+    //     curve
+    // }
+
+    // fn clone_with_empty_controls(&self) -> Self {
+    //     Self {
+    //         nurbs: self.nurbs.clone(),
+    //         controls: vec![],
+    //         min: self.min,
+    //         max: self.max,
+    //     }
+    // }
 
     pub fn set_knots_by_control_distance(&mut self) {
         self.nurbs.knots = vec![0.; self.nurbs.order];

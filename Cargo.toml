@@ -18,7 +18,7 @@ rayon = "1.8"
 glam = { version = "0.25", default-features = false, features = ["libm"] }
 lyon = { version = "1.0" }
 euclid = { version = "0.21" }
-memoize = "0.4.2"
+# memoize = "0.4.2"
 # rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
 # rand_chacha = "0.3.0"
 # rand = {version = "0.8.5", getrandom = false}

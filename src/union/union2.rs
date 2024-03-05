@@ -55,15 +55,20 @@ impl UnionBasis2 {
                 }
             }
         }
-        let mut curves = vec![]; 
-        for curve in &self.curves {
-            let mut crv = curve.clone();
-            if !self.same_groups {
-                if crv.nurbs.sign < 0. {crv.reverse().negate();}
+        // let mut curves = vec![]; 
+        // for curve in &self.curves {
+        //     let mut crv = curve.clone();
+        //     if !self.same_groups {
+        //         if crv.nurbs.sign < 0. {crv.reverse().negate();}
+        //     }
+        //     curves.push(crv);
+        // }
+        if !self.same_groups {
+            for curve in &mut self.curves {
+                if curve.nurbs.sign < 0. {curve.reverse().negate();}
             }
-            curves.push(crv);
         }
-        curves
+        self.curves.clone()
     }
 
     fn add_bounded_curves(&mut self, g: usize, i: usize) {

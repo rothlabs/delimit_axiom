@@ -1,8 +1,6 @@
 use std::{f32::{consts::PI, EPSILON, INFINITY}, hash::Hash};
 use crate::{get_line_intersection3, log, CurveShape, FacetShape, Spatial3};
-
-//use super::union3::UnionBasis3;
-use rand::Rng;
+//use rand::Rng;
 use glam::*;
 
 use super::Miss;

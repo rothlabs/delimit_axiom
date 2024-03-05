@@ -29,7 +29,7 @@ impl Curve {
     pub fn get_shapes(&self) -> Vec<Shape> {
         vec![Shape::Curve(CurveShape{
             nurbs: Nurbs {
-                sign: 1.,
+                sign:    1.,
                 order:   self.order,
                 knots:   self.knots.clone(),
                 weights: self.weights.clone(),

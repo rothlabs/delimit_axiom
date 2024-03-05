@@ -1,4 +1,4 @@
-use crate::{hit::Miss, CurveShape, FacetShape, HitTester3, Shape, Spatial3};
+use crate::{hit::Miss, Circle, CurveShape, FacetShape, HitTester3, Shape, Spatial3};
 use glam::*;
 use super::union2::UnionBasis2;
 
@@ -20,6 +20,28 @@ pub struct UnionBasis3 {
 }
 
 impl UnionBasis3 { 
+    pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>,
+               facets0: Vec<FacetShape>, facets1: Vec<FacetShape>, tolerance: f32, step: f32) -> Self {
+        UnionBasis3 {
+            tester: HitTester3 {
+                curves: (CurveShape::default(), CurveShape::default()),
+                facets: (FacetShape::default(), FacetShape::default()),
+                spatial: Spatial3::new(step), // (0..facets.len()).map(|_| Spatial3::new(step)).collect(), // 
+                points:  vec![],
+                tolerance,
+                step,
+                hone_count: 10,
+            },
+            facet_hits: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]], 
+            facet_miss: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]],
+            curve_groups: [curves0, curves1],
+            facet_groups: [facets0, facets1],
+            curves: vec![],
+            facets: vec![],
+            shapes: vec![],
+        }
+    }
+
     pub fn build(&mut self) -> (Vec<CurveShape>, Vec<FacetShape>) {
         self.test_groups();
         self.curves.extend(self.curve_groups[0].clone());
@@ -70,10 +92,23 @@ impl UnionBasis3 {
             }
             curves0.push(curve);
         }
-        let mut union = UnionBasis2::new(self.facet_hits[g][i].clone(), self.facet_hits[g][i].clone(), 0.001, true);
-        let curves1 = union.build();
-        let mut union = UnionBasis2::new(curves0, curves1.clone(), 0.001, false); // self.facet_hits[g][i].clone()
+        //let mut union = UnionBasis2::new(self.facet_hits[g][i].clone(), self.facet_hits[g][i].clone(), 0.001, true);
+        let mut curves1 = self.facet_hits[g][i].clone();// union.build();
+        // let circle = Circle{center:[0.2, 0.2], radius:0.05, reverse:true}.get_shapes();
+        // if let Shape::Curve(mut circle) = circle[0].clone() {
+        //     circle.negate();
+        //     curves1 = vec![circle];//curves1.push(circle);
+        // }
+        
+        let mut union = UnionBasis2::new(curves0, curves1.clone(), 0.0001, false); // self.facet_hits[g][i].clone()
         facet.boundaries = union.build();
+        
+        // for shape in union.shapes {
+        //     if let Shape::Point(point) = shape {
+        //         self.shapes.push(Shape::Point(point));
+        //     }
+        // }
+
         for mut boundary in facet.boundaries.clone() {
             for k in 0..boundary.controls.len() {
                 boundary.controls[k] += vec3(100., g as f32 * 2., 0.);

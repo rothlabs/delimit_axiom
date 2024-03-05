@@ -5,9 +5,9 @@ use glam::*;
 
 use super::Miss;
 
-// macro_rules! console_log {
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 //#[derive(Clone)]
 pub struct HitTester2 {
@@ -39,7 +39,9 @@ impl HitTester2 {
         let mut center = Vec3::ZERO;
         let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
-        for _ in 0..40 {
+        let mut u0_prev = u0;
+        let mut u1_prev = u1;
+        for i in 0..40 {
             let target = self.get_tangent_intersection(u0, u1, p0, p1);
             let (u0_t0, p0_t0) = self.curves.0.get_u_and_point_from_target(u0, target - p0);
             let (u1_t0, p1_t0) = self.curves.1.get_u_and_point_from_target(u1, target - p1);
@@ -95,10 +97,23 @@ impl HitTester2 {
                 break;
             } 
             if distance >= distance_basis {
-                //console_log!("break early! {}", i);
+
+                // //console_log!("break early! {}", i);
                 break;
+                // u0 = (u0 + u0_prev) / 2.;
+                // u1 = (u1 + u1_prev) / 2.;
+                // p0 = self.curves.0.get_point_at_u(u0);
+                // p1 = self.curves.1.get_point_at_u(u1);
+                // //(u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
+                // //(u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
             }
+            // u0 = (u0 + u0_prev) / 2.;
+            // u1 = (u1 + u1_prev) / 2.;
+            // p0 = self.curves.0.get_point_at_u(u0);
+            // p1 = self.curves.1.get_point_at_u(u1);
             distance_basis = distance;
+            u0_prev = u0;
+            u1_prev = u1;
         }
         let tangent0 = self.curves.0.get_tangent_at_u(u0);
         let tangent1 = self.curves.1.get_tangent_at_u(u1);
@@ -132,8 +147,8 @@ impl HitTester2 {
 
 
         Err((
-            Miss{dot:cross0.dot(-tangent1), distance}, 
-            Miss{dot:cross1.dot(-tangent0), distance},
+            Miss{dot:cross0.dot(-tangent1), distance, point: p0}, 
+            Miss{dot:cross1.dot(-tangent0), distance, point: p1},
         ))
     }
 

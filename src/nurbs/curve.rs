@@ -106,6 +106,16 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         }
     }
 
+    pub fn set_knots_by_control_distance(&mut self) {
+        self.nurbs.knots = vec![0.; self.nurbs.order];
+        let mut distance = 0.;
+        for i in 1..self.controls.len() {
+            distance += self.controls[i-1].distance(self.controls[i]);
+            self.nurbs.knots.push(distance);
+        }
+        self.nurbs.knots.extend(vec![distance as f32; self.nurbs.order-1]);
+    }
+
     pub fn get_inflection_params(&self) -> Vec<f32> {
         let mut knots = vec![0.];
         let last_knot = self.nurbs.knots.last().unwrap();
@@ -127,7 +137,13 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
                 turn_basis = turn;
             }
         }
+        // knots.push(0.125);
+        knots.push(0.25);
+        // knots.push(0.325);
         knots.push(0.5);
+        // knots.push(0.625);
+        knots.push(0.75);
+        // knots.push(0.825);
         knots.push(1.);
         // console_log!("full knots! {:?}", self.nurbs.knots);
         // console_log!("knots! {:?}", knots);
@@ -135,7 +151,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     }
 
     pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
-        let mut step = 0.00001;
+        let mut step = 0.0001;
         if u + step > 1. {step = -step;}
         let p0 = self.get_point_at_u(u);
         let p1 = self.get_point_at_u(u + step);
@@ -148,13 +164,16 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     }
 
     pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
-        let mut step = 0.00001;
+        let mut step = 0.0001;
         if u + step > 1. {step = -step;}
         let p0 = self.get_point_at_u(u);
         let p1 = self.get_point_at_u(u + step);
-        let length_ratio = target.length() / p0.distance(p1) * step;
+        let length_ratio = (target.length() / p0.distance(p1)) * step;
         let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
         let mut u1 = u;
+        // if u_dir.is_nan() {
+        //     log("u_dir is nan!!");
+        // }
         if u_dir.abs() > EPSILON {// step.abs() {
             u1 = u + u_dir; 
         }

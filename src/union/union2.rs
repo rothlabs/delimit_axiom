@@ -46,8 +46,13 @@ impl UnionBasis2 {
                 if self.hits[g][i].is_empty() {
                     self.miss[g][i] = self.miss[g][i].clone().into_iter().filter(|a| !a.distance.is_nan() && !a.dot.is_nan()).collect();
                     self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+                    if !self.miss[g][i].is_empty() {
+                        //console_log!("MISS!! {}, {}, {}", self.miss[g][i][0].point.x, self.miss[g][i][0].point.y, self.miss[g][i][0].point.z);
+                        //self.shapes.push(Shape::Point(self.miss[g][i][0].point));
+                    }
                     if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 || self.same_groups {
                         self.curves.push(self.groups[g][i].clone());
+                        
                     }else{
                         // log("miss data");
                         // for miss in self.miss[g][i].clone() {
@@ -131,9 +136,11 @@ impl UnionBasis2 {
             Ok(hit) => {
                 self.hits[0][i0].push(hit.hit.0);
                 self.hits[1][i1].push(hit.hit.1);
-                self.shapes.push(Shape::Point(hit.center));
+                //self.shapes.push(Shape::Point(hit.center));
             },
             Err(miss) => {
+                //self.shapes.push(Shape::Point(miss.0.point.clone()));
+                //self.shapes.push(Shape::Point(miss.1.point.clone()));
                 self.miss[0][i0].push(miss.0);
                 self.miss[1][i1].push(miss.1);
             }

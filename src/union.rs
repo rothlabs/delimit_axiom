@@ -29,7 +29,7 @@ impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut shapes = vec![];
         let tolerance = 0.005;
-        let duplication_tolerance = tolerance * 10.;
+        //let duplication_tolerance = tolerance * 10.;
         let (_, facets, curve_groups_basis, facet_groups_basis) = get_grouped_curves_and_facets(&self.parts);
         let (_, neg_facets, neg_curve_groups, neg_facet_groups) = get_grouped_curves_and_facets(&self.negated_parts);
         if facets.is_empty() && neg_facets.is_empty() {
@@ -72,23 +72,7 @@ impl Union {
             for i in 1..curve_groups.len() {
                 let curves1 = curve_groups[i].clone();
                 let facets1 = facet_groups[i].clone();
-                let mut basis = UnionBasis3 {
-                    tester: HitTester3 {
-                        curves: (CurveShape::default(), CurveShape::default()),
-                        facets: (FacetShape::default(), FacetShape::default()),
-                        spatial: Spatial3::new(step), // (0..facets.len()).map(|_| Spatial3::new(step)).collect(), // 
-                        points:  vec![],
-                        tolerance: 0.05,
-                        step,
-                    },
-                    facet_hits: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]], 
-                    facet_miss: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]],
-                    curve_groups: [curves0, curves1],
-                    facet_groups: [facets0, facets1],
-                    curves: vec![],
-                    facets: vec![],
-                    shapes: vec![],
-                };
+                let mut basis = UnionBasis3::new(curves0, curves1, facets0, facets1, tolerance, step);
                 (curves0, facets0) = basis.build();
                 shapes.extend(basis.shapes);
             }
@@ -104,6 +88,23 @@ impl Union {
 //rng: StdRng::from_seed(seed),
 
 
+// let mut basis = UnionBasis3 {
+                //     tester: HitTester3 {
+                //         curves: (CurveShape::default(), CurveShape::default()),
+                //         facets: (FacetShape::default(), FacetShape::default()),
+                //         spatial: Spatial3::new(step), // (0..facets.len()).map(|_| Spatial3::new(step)).collect(), // 
+                //         points:  vec![],
+                //         tolerance: 0.05,
+                //         step,
+                //     },
+                //     facet_hits: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]], 
+                //     facet_miss: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]],
+                //     curve_groups: [curves0, curves1],
+                //     facet_groups: [facets0, facets1],
+                //     curves: vec![],
+                //     facets: vec![],
+                //     shapes: vec![],
+                // };
 
 // let mut basis = UnionBasis2 {
                 //     tester: HitTester2 {

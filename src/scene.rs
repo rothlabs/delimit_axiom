@@ -1,4 +1,4 @@
-use crate::{get_facets, get_vector_hash, query::{self, DiscreteQuery}, Shape};
+use crate::{get_facets, get_vector_hash, query::{self, DiscreteQuery}, Curve, Facet, Shape};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -8,6 +8,8 @@ pub struct Scene {
     pub points:    Vec<[f32; 3]>,
     pub polylines: Vec<Polyline>,
     pub meshes:    Vec<Mesh>, 
+    pub curves:    Vec<Curve>,
+    pub facets:    Vec<Facet>,
 }
 
 #[derive(Default, Serialize, Deserialize)]

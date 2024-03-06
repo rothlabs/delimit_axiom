@@ -7,7 +7,7 @@ use glam::*;
 //     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 // }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Revolve::default")]
 pub struct Revolve {
     pub parts:  Vec<Model>,
@@ -57,7 +57,6 @@ impl Revolve {
                         nurbs: basis.nurbs.clone(),
                         controls:   vec![curve.clone()], 
                         boundaries: Rectangle::unit(),
-                        sign: 1.,
                     };
                     for &mat4 in &basis.transforms {
                         facet.controls.push(curve.get_reshape(mat4)); 

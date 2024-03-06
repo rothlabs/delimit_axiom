@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use glam::*;
 
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "RadialPattern::default")]
 pub struct RadialPattern {
     pub parts:    Vec<Model>,

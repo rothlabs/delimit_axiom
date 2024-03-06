@@ -11,7 +11,7 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Union::default")]
 pub struct Union {
     pub parts:         Vec<Model>,
@@ -27,6 +27,8 @@ pub struct Union {
 
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
+        
+
         let mut shapes = vec![];
         let tolerance = 0.005;
         //let duplication_tolerance = tolerance * 10.;
@@ -50,7 +52,7 @@ impl Union {
             }
             shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
         }else{
-            let step = 1.;
+            let step = 2.;
             let mut curve_groups = curve_groups_basis;
             let mut facet_groups = facet_groups_basis;
             for i in 0..neg_curve_groups.len() {

@@ -1,4 +1,7 @@
-use crate::{hit::Miss, Circle, CurveShape, FacetShape, HitTester3, Shape, Spatial3};
+use std::f32::EPSILON;
+
+use crate::{log, hit::Miss, Circle, CurveShape, FacetShape, HitTester3, Shape, Spatial3};
+use euclid::{box3d, Box3D};
 use glam::*;
 use super::union2::UnionBasis2;
 
@@ -30,7 +33,7 @@ impl UnionBasis3 {
                 points:  vec![],
                 tolerance,
                 step,
-                hone_count: 5,
+                hone_count: 15,
             },
             facet_hits: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]], 
             facet_miss: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]],
@@ -46,44 +49,23 @@ impl UnionBasis3 {
         self.test_groups();
         self.curves.extend(self.curve_groups[0].clone());
         self.curves.extend(self.curve_groups[1].clone());
-
         for g in 0..2 {
             for i in 0..self.facet_groups[g].len() {
                 if self.facet_hits[g][i].is_empty() {
+                    self.facet_miss[g][i] = self.facet_miss[g][i].clone().into_iter().filter(|a| !a.distance.is_nan() && !a.dot.is_nan()).collect();
                     self.facet_miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
                     if self.facet_miss[g][i].is_empty() || self.facet_miss[g][i][0].dot > -0.01 {
                         self.facets.push(self.facet_groups[g][i].clone());
                     }
                 }else{
-                    // self.facet_hits[g][i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
                     self.add_bounded_facet(g, i);  
                 }
             }
         }
-
-        // let mut facets = vec![]; 
-        // for facet in &self.facets {
-        //     let mut fct = facet.clone(); //.get_reverse_reshape(Mat4::IDENTITY);
-        //     if fct.nurbs.sign < 0. {fct.reverse().negate();}
-        //     facets.push(fct);
-        // }
-
         for facet in &mut self.facets {
             if facet.nurbs.sign < 0. {facet.reverse().negate();}
         }
         (self.curves.clone(), self.facets.clone())
-        //let mut shapes = (vec![], vec![]); 
-        // for i in 0..self.facets.len() {
-        //     let mut facet = self.facets[i].clone();
-        //     // if facet.boundaries.is_empty() {
-        //     //     facet.perimeter = true;
-        //     // }
-        //     facet.boundaries.extend(self.facet_hits[i].clone());
-        //     self.shapes.push(Shape::Facet(facet));
-        // }
-        // for i in 0..self.curves.len() {
-        //     self.shapes.push(Shape::Curve(self.curves[i].clone()));
-        // }
     }
 
     fn add_bounded_facet(&mut self, g: usize, i: usize) {
@@ -100,6 +82,9 @@ impl UnionBasis3 {
         //     }
         //     curves0.push(curve);
         // }
+
+        
+
         let mut union = UnionBasis2::new(self.facet_hits[g][i].clone(), self.facet_hits[g][i].clone(), 0.005, true);
         let curves1 = union.build();
         //let mut curves1 = self.facet_hits[g][i].clone();
@@ -118,13 +103,15 @@ impl UnionBasis3 {
         //     }
         // }
 
-        // for mut boundary in facet.boundaries.clone() {
-        //     for k in 0..boundary.controls.len() {
-        //         boundary.controls[k] += vec3(100., g as f32 * 2., 0.);
-        //         boundary.controls[k] += vec3(i as f32 * 2., 0., 0.);
-        //     }
-        //     self.shapes.push(Shape::Curve(boundary));
-        // }
+        for mut boundary in facet.boundaries.clone() {
+            for k in 0..boundary.controls.len() {
+                boundary.controls[k] += vec3(100., g as f32 * 2., 0.);
+                boundary.controls[k] += vec3(i as f32 * 2., 0., 0.);
+            }
+            self.shapes.push(Shape::Curve(boundary.get_valid()));
+        }
+
+        
         self.facets.push(facet);
     }
 
@@ -144,16 +131,27 @@ impl UnionBasis3 {
     }
 
     fn test_groups(&mut self) {
+        //let boxes1: Vec<euclid::Box3D<f32, f32>> = self.facet_groups[1].iter().map(|fct| fct.get_box3()).collect();
+        let mut box1 = Box3D::zero();
+        for facet in &self.facet_groups[1] {
+            box1 = box1.union(&facet.get_box3());
+        }
         for i0 in 0..self.facet_groups[0].len() {
-            for i1 in 0..self.facet_groups[1].len() {
-                self.tester.facets.0 = self.facet_groups[0][i0].clone();
-                self.tester.facets.1 = self.facet_groups[1][i1].clone();
-                self.tester.points = vec![];
-                self.tester.spatial = Spatial3::new(self.tester.step);
-                for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
-                    for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
-                        self.test_facets(i0, i1, uv0, uv1);
-                    }
+            let box0 = self.facet_groups[0][i0].get_box3();
+            //Box3D::union(&self, other)
+            if box0.intersects(&box1) {
+                for i1 in 0..self.facet_groups[1].len() {
+                    //if box0.intersects(&boxes1[i1]) {
+                        self.tester.facets.0 = self.facet_groups[0][i0].clone();
+                        self.tester.facets.1 = self.facet_groups[1][i1].clone();
+                        self.tester.points = vec![];
+                        self.tester.spatial = Spatial3::new(self.tester.step);
+                        for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
+                            for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
+                                self.test_facets(i0, i1, uv0, uv1);
+                            }
+                        }
+                    //}
                 }
             }
         }        

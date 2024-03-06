@@ -7,7 +7,7 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Area::default")]
 pub struct Area {
     pub parts: Vec<Model>,

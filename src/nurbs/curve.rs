@@ -16,27 +16,34 @@ macro_rules! console_log {
 
 //static default_boundary: BoundaryV = BoundaryV::default();
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Curve::default")]
 pub struct Curve {
     pub controls: Vec<Model>,
     pub knots:    Vec<f32>,    // knot_count = order + control_count
     pub weights:  Vec<f32>,    // weight_count = control_count
     pub order:    usize,       // order = polynomial_degree + 1
+    pub min: f32,
+    pub max: f32,
+    pub sign: f32,
 }
 
 impl Curve {
     pub fn get_shapes(&self) -> Vec<Shape> {
+        let mut sign = self.sign;
+        if sign == 0. {sign = 1.;}
+        let mut max = self.max;
+        if max == 0. {max = 1.;}
         vec![Shape::Curve(CurveShape{
             nurbs: Nurbs {
-                sign:    1.,
+                sign,
                 order:   self.order,
                 knots:   self.knots.clone(),
                 weights: self.weights.clone(),
             },
             controls: get_points(&self.controls),
-            min: 0., 
-            max: 1., 
+            min: self.min, 
+            max, 
         }.get_valid())]
     }
 }
@@ -65,12 +72,6 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         self.nurbs.sign = -self.nurbs.sign;
         self
     }
-
-    // pub fn get_negated(&self) -> Self {
-    //     let mut curve = self.clone();
-    //     curve.negate();
-    //     curve
-    // }
 
     pub fn reverse(&mut self) -> &mut Self{
         let max_knot = *self.nurbs.knots.last().unwrap(); 
@@ -107,32 +108,6 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         curve
     }
 
-    // pub fn get_reshape(&self, mat4: Mat4) -> Self {
-    //     let mut curve = self.clone_with_empty_controls();
-    //     for point in &self.controls {
-    //         curve.controls.push(get_reshaped_point(point, mat4));
-    //     }
-    //     curve
-    // }
-
-    // pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
-    //     let mut curve = self.clone_with_empty_controls();
-    //     curve.nurbs.weights.reverse();
-    //     for point in self.controls.iter().rev() {
-    //         curve.controls.push(get_reshaped_point(point, mat4));
-    //     }
-    //     curve
-    // }
-
-    // fn clone_with_empty_controls(&self) -> Self {
-    //     Self {
-    //         nurbs: self.nurbs.clone(),
-    //         controls: vec![],
-    //         min: self.min,
-    //         max: self.max,
-    //     }
-    // }
-
     pub fn set_knots_by_control_distance(&mut self) {
         self.nurbs.knots = vec![0.; self.nurbs.order];
         let mut distance = 0.;
@@ -167,7 +142,9 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
                 turn_basis = turn;
             }
         }
-        knots.push(0.5);
+        //knots.push(0.3);
+        //knots.push(0.5);
+        //knots.push(0.8);
         knots.push(1.);
         // console_log!("full knots! {:?}", self.nurbs.knots);
         // console_log!("knots! {:?}", knots);

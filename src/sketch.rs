@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use glam::*;
 
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Sketch::default")]
 pub struct Sketch {
     pub parts:   Vec<Model>,
@@ -12,7 +12,7 @@ pub struct Sketch {
     pub actions: Vec<Action>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum Action {
     JumpTo([f32; 2]),
     LineTo([f32; 2]),
@@ -20,7 +20,7 @@ pub enum Action {
     Close(bool),
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Turn::default")]
 pub struct Turn {
     pub angle:  f32,
@@ -150,7 +150,7 @@ impl Turtle {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Circle::default")]
 pub struct Circle {
     pub center: [f32; 2], 
@@ -172,7 +172,7 @@ impl Circle {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Rectangle::default")]
 pub struct Rectangle {
     pub half_lengths: [f32; 2],
@@ -219,7 +219,7 @@ impl Rectangle {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Slot::default")]
 pub struct Slot {
     pub length:      f32,
@@ -254,7 +254,7 @@ impl Slot {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Arc::default")]
 pub struct Arc {
     pub center: [f32; 2], 

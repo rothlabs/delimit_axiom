@@ -5,7 +5,7 @@ use crate::{get_reshaped_point, get_shapes, get_vec3_or,
 use serde::{Deserialize, Serialize};
 use glam::*;
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Extrude::default")]
 pub struct Extrude {
     pub parts:  Vec<Model>,
@@ -48,7 +48,6 @@ impl Extrude {
                         nurbs: basis.nurbs.clone(),
                         controls:   vec![curve.clone(), curve.get_reshape(basis.mat4)], 
                         boundaries: Rectangle::unit(),
-                        sign: 1.,
                     };
                     if self.length < 0. {
                         facet.controls.reverse();
@@ -96,7 +95,7 @@ impl ExtrudeBasis {
 }
 
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Cuboid::default")]
 pub struct Cuboid {
     pub lengths: [f32; 3],
@@ -112,7 +111,7 @@ impl Cuboid {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Cylinder::default")]
 pub struct Cylinder {
     pub radius: f32,

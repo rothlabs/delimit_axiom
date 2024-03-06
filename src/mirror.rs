@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use glam::*;
 
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Mirror::default")]
 pub struct Mirror {
     pub parts:   Vec<Model>,

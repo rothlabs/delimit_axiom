@@ -17,7 +17,7 @@ pub struct UnionBasis2 {
 
 impl UnionBasis2 { 
     pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>, tolerance: f32, same_groups: bool) -> Self {
-        let duplication_tolerance = tolerance * 10.; 
+        let duplication_tolerance = tolerance * 5.; 
         UnionBasis2 {
             tester: HitTester2 {
                 curves: (CurveShape::default(), CurveShape::default()),
@@ -37,11 +37,11 @@ impl UnionBasis2 {
 
     pub fn build(&mut self) -> Vec<CurveShape> {
         self.test_groups();
-        let mut group_start = 0;
+        let mut group_start = 2;
         if self.same_groups {
             group_start = 1;
         }
-        for g in group_start..2 {
+        for g in 0..group_start {
             for i in 0..self.groups[g].len() {
                 if self.hits[g][i].is_empty() {
                     self.miss[g][i] = self.miss[g][i].clone().into_iter().filter(|a| !a.distance.is_nan() && !a.dot.is_nan()).collect();
@@ -68,19 +68,19 @@ impl UnionBasis2 {
         let min_basis = curve.min;
         let mut start_k = 0;
         let mut set_min = false;
-        let mut use_hits = false;
-        for k in 0..self.hits[g][i].len() {
-            if self.hits[g][i][k].u > 0.001 && self.hits[g][i][k].u < 0.999 {
-                start_k = k;
-                use_hits = true;
-                break;
-            }
-        }
-        if use_hits {
+        //let mut use_hits = false;
+        // for k in 0..self.hits[g][i].len() {
+        //     if self.hits[g][i][k].u > 0.05 && self.hits[g][i][k].u < 0.95 {
+        //         start_k = k;
+        //         //use_hits = true;
+        //         break;
+        //     }
+        // }
+        //if use_hits {
             //let first = &self.hits[g][i][start_k];//.first().unwrap();
             if self.hits[g][i][start_k].dot > 0. {set_min = true;} //  * curve.nurbs.sign
             for curve_hit in self.hits[g][i].iter().skip(start_k) { //for curve_hit in &self.hits[g][i] { 
-                if curve_hit.u < 0.999 {
+                //if curve_hit.u < 0.95 {
                     if set_min {
                         curve.set_min(curve_hit.u);
                     }else{
@@ -89,9 +89,9 @@ impl UnionBasis2 {
                         curve = self.groups[g][i].clone();
                     }
                     set_min = !set_min;
-                }
+                //}
             }
-        }
+        //}
         if !set_min {
             self.curves.push(curve);
         }

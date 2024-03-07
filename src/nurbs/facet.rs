@@ -131,7 +131,8 @@ impl FacetShape {
                 points.push(Point3D::from(control.to_array()));
             }
         }
-        Box3D::from_points(points)
+        let box3 = Box3D::from_points(points);
+        box3.inflate(0.01, 0.01, 0.01)
     }
 
     pub fn get_normalized_knots(&self) -> Vec<Vec2> {

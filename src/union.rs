@@ -75,7 +75,7 @@ impl Union {
                 let curves1 = curve_groups[i].clone();
                 let facets1 = facet_groups[i].clone();
                 let mut basis = UnionBasis3::new(curves0, curves1, facets0, facets1, tolerance, step);
-                (curves0, facets0) = basis.build();
+                (curves0, facets0) = basis.build(i);
                 shapes.extend(basis.shapes);
             }
             shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));

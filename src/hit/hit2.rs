@@ -74,8 +74,7 @@ impl HitTester2 {
                         }
                     }
                 if !duplicate {
-                    self.spatial.insert(&center, self.points.len());
-                    self.points.push(center);
+                    
                     let tangent0 = -self.curves.0.get_tangent_at_u(u0);
                     let tangent1 = -self.curves.1.get_tangent_at_u(u1);
                     if tangent0.is_nan() {
@@ -86,8 +85,16 @@ impl HitTester2 {
                         log("hit tangent1 NaN!!!");
                         //break;
                     }
+                    if tangent0.dot(tangent1).abs() > 0.995 {
+                        return Err((
+                            Miss{dot:self.curves.0.nurbs.sign, distance:0., point: p0}, 
+                            Miss{dot:self.curves.1.nurbs.sign, distance:0., point: p1},
+                        ))
+                    }
                     let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
                     let cross1 = Vec3::Z.cross(tangent1).normalize() * self.curves.1.nurbs.sign;
+                    self.spatial.insert(&center, self.points.len());
+                    self.points.push(center);
                     return Ok(Hit2{
                         hit: (CurveHit {u:u0, dot:cross0.dot(tangent1)}, 
                               CurveHit {u:u1, dot:cross1.dot(tangent0)}),

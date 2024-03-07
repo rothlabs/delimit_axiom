@@ -50,37 +50,44 @@ impl HitTester3 {
         let mut p1 = self.facets.1.get_point_at_uv(uv1);
         let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
-        for _ in 0..20 {
-            let center = self.get_tangent_intersection(uv0, uv1, p0, p1);
-            let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
-            let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
-            let center = (p0 + p1) / 2.;
-            let (uv0_b, p0_b) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
-            let (uv1_b, p1_b) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
-            if p0_a.distance(p1_a) < p0_b.distance(p1_b) {
-                p0 = p0_a;
-                p1 = p1_a;
-                uv0 = uv0_a;
-                uv1 = uv1_a;
-            } else {
-                p0 = p0_b;
-                p1 = p1_b;
-                uv0 = uv0_b;
-                uv1 = uv1_b;
-            }
+        for _ in 0..80 {
+            (uv0, uv1, p0, p1) = self.hone(uv0, uv1, p0, p1, 1);
+            // let center = self.get_tangent_intersection(uv0, uv1, p0, p1);
+            // let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
+            // let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
+            // let center = (p0 + p1) / 2.;
+            // let (uv0_b, p0_b) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
+            // let (uv1_b, p1_b) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
+            // if p0_a.distance(p1_a) < p0_b.distance(p1_b) {
+            //     p0 = p0_a;
+            //     p1 = p1_a;
+            //     uv0 = uv0_a;
+            //     uv1 = uv1_a;
+            // } else {
+            //     p0 = p0_b;
+            //     p1 = p1_b;
+            //     uv0 = uv0_b;
+            //     uv1 = uv1_b;
+            // }
 
-            if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
-                (uv1, p1) = self.hone_uv1_to_p0(uv0, uv1, p0, p1, 10);
-            } 
-            if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
-                (uv0, p0) = self.hone_uv0_to_p1(uv0, uv1, p0, p1, 10);
-            }
+            // if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
+            //     (uv1, p1) = self.hone_uv1_to_p0(uv0, uv1, p0, p1, 10);
+            // } 
+            // if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
+            //     (uv0, p0) = self.hone_uv0_to_p1(uv0, uv1, p0, p1, 10);
+            // }
 
             distance = p0.distance(p1);
             if distance < self.tolerance {
-                // let center = (p0 + p1) / 2.; //let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
-                // let (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
-                // let (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
+                let normal0 = self.facets.0.get_normal_at_uv(uv0);
+                let normal1 = self.facets.1.get_normal_at_uv(uv1);
+                if normal0.dot(normal1) > 0.95 { 
+                    return Err((
+                        Miss{dot:self.facets.0.nurbs.sign, distance, point: p0}, 
+                        Miss{dot:self.facets.1.nurbs.sign, distance, point: p1},
+                    ))
+                }
+                (uv0, uv1, p0, p1) = self.hone(uv0, uv1, p0, p1, self.hone_count);
                 let start = HitPointUV {uv0, uv1, p0, p1};
                 if let Some(hit) = self.trace(&start) {
                     for control in hit.center_curve.controls.clone() {
@@ -126,23 +133,17 @@ impl HitTester3 {
                 let center = (hit.p0 + hit.p1) / 2.;
                 let mut short_move = false;
                 if !center_controls.is_empty() {
-                    if center.distance(*center_controls.last().unwrap()) < self.tolerance * 0.25 {
-                        log("close to zero distance!!!");
-                        short_move = true;//short_move_count += 1;
-                        //if center_controls.len() > 1 {
-                            controls0.pop();
-                            controls1.pop();
-                            center_controls.pop();
-                        //}else{
-                        //   allow_point = false
-                        //}
+                    if center.distance(*center_controls.last().unwrap()) < self.tolerance * 2. {
+                        //log("close to zero distance!!!");
+                        short_move = true;
+                        controls0.pop();
+                        controls1.pop();
+                        center_controls.pop();
                     }
                 }
-                //if allow_point {
-                    controls0.push(hit.uv0.extend(0.));
-                    controls1.push(hit.uv1.extend(0.));
-                    center_controls.push(center);
-                //}
+                controls0.push(hit.uv0.extend(0.));
+                controls1.push(hit.uv1.extend(0.));
+                center_controls.push(center);
                 short_move
             };
             let mut can_loop = false;
@@ -190,7 +191,7 @@ impl HitTester3 {
                 let short_move = add_points(HitPointUV{uv0, uv1, p0, p1});
                 if short_move {
                     short_move_count += 1;
-                    if short_move_count > 8 {
+                    if short_move_count > 2 {
                         short_move_count = 0;
                         break 'step_loop;
                     }
@@ -199,11 +200,11 @@ impl HitTester3 {
                 
                 for i in self.spatial.get(&center) {
                     let dist = self.points[i].distance(center);
-                    if dist > self.step*0.001 && dist < self.step*1.5 {
-                        if (self.points[i]-center).normalize().dot(dir) > 0. {
+                    if dist > self.step*0.1 && dist < self.step*1.5 {
+                        if (self.points[i]-center).normalize().dot(dir) > 0.25 {
                             potential_duplicates.push(i);
                         } 
-                        if (self.points[i]-center).normalize().dot(dir) < 0.{
+                        if (self.points[i]-center).normalize().dot(dir) < -0.25{
                             if potential_duplicates.contains(&i) {
                                 return None
                             }
@@ -235,26 +236,17 @@ impl HitTester3 {
                 //     //break 'step_loop
                 // }
             }
-            if center_controls.len() > 1 {
-                if direction < 1 {//if (direction < 1 && self.facets.0.sign > 0.) || (direction > 0 && self.facets.0.sign < 0.) { // if direction < 1 {//
-                    curve0.controls.extend(controls0);
-                }else{
-                    controls0.reverse();
-                    //controls0.pop();
-                    curve0.controls.splice(0..0, controls0);
-                }
-                if direction < 1 {//if (direction < 1 && self.facets.1.sign > 0.) || (direction > 0 && self.facets.1.sign < 0.) { // if direction < 1 {//
-                    controls1.reverse();
-                    //controls1.pop();
-                    curve1.controls.splice(0..0, controls1);
-                }else{
-                    curve1.controls.extend(controls1);
-                }
+            if controls0.len() > 1 {
                 if direction < 1 {
+                    curve0.controls.extend(controls0);
+                    controls1.reverse();
+                    curve1.controls.splice(0..0, controls1);
                     center_curve.controls.extend(center_controls);
                 }else{
+                    controls0.reverse();
+                    curve0.controls.splice(0..0, controls0);
+                    curve1.controls.extend(controls1);
                     center_controls.reverse();
-                    //center_controls.pop();
                     center_curve.controls.splice(0..0, center_controls);
                 }
             }
@@ -263,6 +255,9 @@ impl HitTester3 {
         if center_curve.controls.is_empty() {
             return None
         }
+        curve0.remove_doubles(self.tolerance * 2.);
+        curve1.remove_doubles(self.tolerance * 2.);
+        center_curve.remove_doubles(self.tolerance * 2.);
         curve0.set_knots_by_control_distance();
         curve1.set_knots_by_control_distance();
         center_curve.set_knots_by_control_distance();
@@ -304,52 +299,6 @@ impl HitTester3 {
         (uv0, uv1, p0, p1)
     }
 
-    fn hone_uv0_to_p1(&self, uv0_start: Vec2, uv1: Vec2, p0_start: Vec3, p1: Vec3, hone_count: usize) -> (Vec2, Vec3) {
-        let mut uv0 = uv0_start;
-        let mut p0 = p0_start;
-        for i in 0..hone_count {
-            let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
-            let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
-            let target = (p0 + p1) / 2.;
-            let (uv0_b, p0_b) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
-            //if p0_a.distance(p1) < p0.distance(p1) || p0_b.distance(p1) < p0.distance(p1) {
-                if p0_a.distance(p1) < p0_b.distance(p1) {
-                    p0 = p0_a;
-                    uv0 = uv0_a;
-                } else {
-                    p0 = p0_b;
-                    uv0 = uv0_b;
-                }
-            // }else{
-            //     log("honing fail uv0");
-            // }
-        }
-        (uv0, p0)
-    }
-
-    fn hone_uv1_to_p0(&self, uv0: Vec2, uv1_start: Vec2, p0: Vec3, p1_start: Vec3, hone_count: usize) -> (Vec2, Vec3) {
-        let mut uv1 = uv1_start;
-        let mut p1 = p1_start;
-        for i in 0..hone_count {
-            let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
-            let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
-            let target = (p0 + p1) / 2.;
-            let (uv1_b, p1_b) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
-            //if p1_a.distance(p0) < p0.distance(p1) || p1_b.distance(p0) < p0.distance(p1) {
-                if p1_a.distance(p0) < p1_b.distance(p0) {
-                    p1 = p1_a;
-                    uv1 = uv1_a;
-                } else {
-                    p1 = p1_b;
-                    uv1 = uv1_b;
-                }
-            // }else{
-            //     log("honing fail uv1");
-            // }
-        }
-        (uv1, p1)
-    }
-
     fn get_tangent_intersection(&self, uv0: Vec2, uv1: Vec2, p0: Vec3, p1: Vec3) -> Vec3 { 
         let normal0 = self.facets.0.get_normal_at_uv(uv0);
         let normal1 = self.facets.1.get_normal_at_uv(uv1);
@@ -362,7 +311,51 @@ impl HitTester3 {
 
 
 
+// fn hone_uv0_to_p1(&self, uv0_start: Vec2, uv1: Vec2, p0_start: Vec3, p1: Vec3, hone_count: usize) -> (Vec2, Vec3) {
+//     let mut uv0 = uv0_start;
+//     let mut p0 = p0_start;
+//     for i in 0..hone_count {
+//         let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
+//         let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
+//         let target = (p0 + p1) / 2.;
+//         let (uv0_b, p0_b) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
+//         //if p0_a.distance(p1) < p0.distance(p1) || p0_b.distance(p1) < p0.distance(p1) {
+//             if p0_a.distance(p1) < p0_b.distance(p1) {
+//                 p0 = p0_a;
+//                 uv0 = uv0_a;
+//             } else {
+//                 p0 = p0_b;
+//                 uv0 = uv0_b;
+//             }
+//         // }else{
+//         //     log("honing fail uv0");
+//         // }
+//     }
+//     (uv0, p0)
+// }
 
+// fn hone_uv1_to_p0(&self, uv0: Vec2, uv1_start: Vec2, p0: Vec3, p1_start: Vec3, hone_count: usize) -> (Vec2, Vec3) {
+//     let mut uv1 = uv1_start;
+//     let mut p1 = p1_start;
+//     for i in 0..hone_count {
+//         let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
+//         let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
+//         let target = (p0 + p1) / 2.;
+//         let (uv1_b, p1_b) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
+//         //if p1_a.distance(p0) < p0.distance(p1) || p1_b.distance(p0) < p0.distance(p1) {
+//             if p1_a.distance(p0) < p1_b.distance(p0) {
+//                 p1 = p1_a;
+//                 uv1 = uv1_a;
+//             } else {
+//                 p1 = p1_b;
+//                 uv1 = uv1_b;
+//             }
+//         // }else{
+//         //     log("honing fail uv1");
+//         // }
+//     }
+//     (uv1, p1)
+// }
 
 
 // if center_controls.len() > 1 {

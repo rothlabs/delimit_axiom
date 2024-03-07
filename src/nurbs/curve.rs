@@ -108,6 +108,20 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         curve
     }
 
+    pub fn remove_doubles(&mut self, tolerance: f32) {
+        let mut controls = vec![*self.controls.first().unwrap()];
+        let last_point = *self.controls.last().unwrap();
+        let mut prev_point = controls[0];
+        for i in 1..self.controls.len()-1 {
+            if self.controls[i].distance(prev_point) > tolerance && self.controls[i].distance(last_point) > tolerance {
+                controls.push(self.controls[i]);
+                prev_point = self.controls[i];
+            }
+        }
+        controls.push(last_point);
+        self.controls = controls;
+    }
+
     pub fn set_knots_by_control_distance(&mut self) {
         self.nurbs.knots = vec![0.; self.nurbs.order];
         let mut distance = 0.;
@@ -120,7 +134,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
 
     pub fn get_inflection_params(&self) -> Vec<f32> {
         if self.nurbs.order == 2 && self.controls.len() == 2 {
-            return vec![0., 1.];
+            return vec![0., 0.5, 1.];
         }
         let mut knots = vec![0.];
         let last_knot = self.nurbs.knots.last().unwrap();
@@ -143,7 +157,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
             }
         }
         //knots.push(0.3);
-        //knots.push(0.5);
+        knots.push(0.5);
         //knots.push(0.8);
         knots.push(1.);
         // console_log!("full knots! {:?}", self.nurbs.knots);

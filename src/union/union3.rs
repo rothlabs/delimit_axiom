@@ -33,7 +33,7 @@ impl UnionBasis3 {
                 points:  vec![],
                 tolerance,
                 step,
-                hone_count: 15,
+                hone_count: 8,
             },
             facet_hits: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]], 
             facet_miss: [vec![vec![]; facets0.len()], vec![vec![]; facets1.len()]],
@@ -45,7 +45,7 @@ impl UnionBasis3 {
         }
     }
 
-    pub fn build(&mut self) -> (Vec<CurveShape>, Vec<FacetShape>) {
+    pub fn build(&mut self, index: usize) -> (Vec<CurveShape>, Vec<FacetShape>) {
         self.test_groups();
         self.curves.extend(self.curve_groups[0].clone());
         self.curves.extend(self.curve_groups[1].clone());
@@ -58,7 +58,7 @@ impl UnionBasis3 {
                         self.facets.push(self.facet_groups[g][i].clone());
                     }
                 }else{
-                    self.add_bounded_facet(g, i);  
+                    self.add_bounded_facet(g, i, index);  
                 }
             }
         }
@@ -68,7 +68,7 @@ impl UnionBasis3 {
         (self.curves.clone(), self.facets.clone())
     }
 
-    fn add_bounded_facet(&mut self, g: usize, i: usize) {
+    fn add_bounded_facet(&mut self, g: usize, i: usize, index: usize) {
         let mut facet = self.facet_groups[g][i].clone();
         if facet.nurbs.sign < 0. {
             for curve in &mut facet.boundaries {
@@ -85,7 +85,7 @@ impl UnionBasis3 {
 
         
 
-        let mut union = UnionBasis2::new(self.facet_hits[g][i].clone(), self.facet_hits[g][i].clone(), 0.005, true);
+        let mut union = UnionBasis2::new(self.facet_hits[g][i].clone(), self.facet_hits[g][i].clone(), 0.001, true);
         let curves1 = union.build();
         //let mut curves1 = self.facet_hits[g][i].clone();
         // let circle = Circle{center:[0.2, 0.2], radius:0.05, reverse:true}.get_shapes();
@@ -94,7 +94,7 @@ impl UnionBasis3 {
         //     curves1 = vec![circle];//curves1.push(circle);
         // }
         
-        let mut union = UnionBasis2::new(facet.boundaries, curves1.clone(), 0.005, false); // self.facet_hits[g][i].clone()
+        let mut union = UnionBasis2::new(facet.boundaries, curves1.clone(), 0.001, false); // self.facet_hits[g][i].clone()
         facet.boundaries = union.build();
         
         // for shape in union.shapes {
@@ -103,12 +103,43 @@ impl UnionBasis3 {
         //     }
         // }
 
-        for mut boundary in facet.boundaries.clone() {
-            for k in 0..boundary.controls.len() {
-                boundary.controls[k] += vec3(100., g as f32 * 2., 0.);
-                boundary.controls[k] += vec3(i as f32 * 2., 0., 0.);
+        if index > 1 {
+            // for j in 0..self.facet_hits[g][i].len() {
+            //     let mut bndry = self.facet_hits[g][i][j].clone();
+            //     bndry.controls.clear();
+            //     for k in 0..self.facet_hits[g][i][j].controls.len() {
+            //         bndry.controls.push(self.facet_hits[g][i][j].controls[k] + vec3(
+            //             100. + i as f32 * 2., //  + (j as f32)*0.01  
+            //             g as f32 * 2., //  + (j as f32)*0.01 
+            //             0.
+            //         ));
+            //     }
+            //     self.shapes.push(Shape::Curve(bndry));
+            // }
+            for j in 0..curves1.len() {
+                let mut bndry = curves1[j].clone();
+                bndry.controls.clear();
+                for k in 0..curves1[j].controls.len() {
+                    bndry.controls.push(curves1[j].controls[k] + vec3(
+                        100. + i as f32 * 2., //  + (j as f32)*0.01  
+                        g as f32 * 2., //  + (j as f32)*0.01 
+                        0.
+                    ));
+                }
+                self.shapes.push(Shape::Curve(bndry));
             }
-            self.shapes.push(Shape::Curve(boundary.get_valid()));
+            // for j in 0..facet.boundaries.len() {
+            //     let mut bndry = facet.boundaries[j].clone();
+            //     bndry.controls.clear();
+            //     for k in 0..facet.boundaries[j].controls.len() {
+            //         bndry.controls.push(facet.boundaries[j].controls[k] + vec3(
+            //             100. + i as f32 * 2., //  + (j as f32)*0.01  
+            //             g as f32 * 2., //  + (j as f32)*0.01 
+            //             0.
+            //         ));
+            //     }
+            //     self.shapes.push(Shape::Curve(bndry));
+            // }
         }
 
         
@@ -132,14 +163,14 @@ impl UnionBasis3 {
 
     fn test_groups(&mut self) {
         //let boxes1: Vec<euclid::Box3D<f32, f32>> = self.facet_groups[1].iter().map(|fct| fct.get_box3()).collect();
-        let mut box1 = Box3D::zero();
-        for facet in &self.facet_groups[1] {
-            box1 = box1.union(&facet.get_box3());
-        }
+        // let mut box1 = Box3D::zero();
+        // for facet in &self.facet_groups[1] {
+        //     box1 = box1.union(&facet.get_box3());
+        // }
         for i0 in 0..self.facet_groups[0].len() {
-            let box0 = self.facet_groups[0][i0].get_box3();
+            //let box0 = self.facet_groups[0][i0].get_box3();
             //Box3D::union(&self, other)
-            if box0.intersects(&box1) {
+            //if box0.intersects(&box1) {
                 for i1 in 0..self.facet_groups[1].len() {
                     //if box0.intersects(&boxes1[i1]) {
                         self.tester.facets.0 = self.facet_groups[0][i0].clone();
@@ -153,7 +184,7 @@ impl UnionBasis3 {
                         }
                     //}
                 }
-            }
+            //}
         }        
     }
 }

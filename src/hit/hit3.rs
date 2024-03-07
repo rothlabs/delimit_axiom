@@ -50,7 +50,7 @@ impl HitTester3 {
         let mut p1 = self.facets.1.get_point_at_uv(uv1);
         let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
-        for _ in 0..80 {
+        for _ in 0..20 {
             (uv0, uv1, p0, p1) = self.hone(uv0, uv1, p0, p1, 1);
             // let center = self.get_tangent_intersection(uv0, uv1, p0, p1);
             // let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
@@ -81,10 +81,10 @@ impl HitTester3 {
             if distance < self.tolerance {
                 let normal0 = self.facets.0.get_normal_at_uv(uv0);
                 let normal1 = self.facets.1.get_normal_at_uv(uv1);
-                if normal0.dot(normal1) > 0.95 { 
+                if normal0.dot(normal1).abs() > 0.995 { 
                     return Err((
-                        Miss{dot:self.facets.0.nurbs.sign, distance, point: p0}, 
-                        Miss{dot:self.facets.1.nurbs.sign, distance, point: p1},
+                        Miss{dot:self.facets.0.nurbs.sign, distance:0., point: p0}, 
+                        Miss{dot:self.facets.1.nurbs.sign, distance:0., point: p1},
                     ))
                 }
                 (uv0, uv1, p0, p1) = self.hone(uv0, uv1, p0, p1, self.hone_count);
@@ -99,7 +99,7 @@ impl HitTester3 {
                 break;
             }
             if distance >= distance_basis {//console_log!("break early! {}", i);
-                break;
+                //break;
             }
             distance_basis = distance;
         }

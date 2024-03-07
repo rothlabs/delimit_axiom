@@ -5,20 +5,19 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-pub struct UnionBasis2 {
+pub struct Trim {
     pub tester: HitTester2,
-    pub groups: [Vec<CurveShape>; 2],
-    pub hits:   [Vec<Vec<CurveHit>>; 2], 
-    pub miss:   [Vec<Vec<Miss>>; 2], 
+    pub group:  Vec<CurveShape>,
+    pub hits:   Vec<Vec<CurveHit>>, 
+    pub miss:   Vec<Vec<Miss>>, 
     pub curves: Vec<CurveShape>,
     pub shapes: Vec<Shape>,
-    pub same_groups: bool,
 }
 
-impl UnionBasis2 { 
-    pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>, tolerance: f32, same_groups: bool) -> Self {
+impl Trim { 
+    pub fn new(curves0: Vec<CurveShape>, tolerance: f32) -> Self {
         let duplication_tolerance = tolerance * 5.; 
-        UnionBasis2 {
+        Trim {
             tester: HitTester2 {
                 curves: (CurveShape::default(), CurveShape::default()),
                 spatial: Spatial3::new(duplication_tolerance), 
@@ -26,69 +25,57 @@ impl UnionBasis2 {
                 tolerance,
                 duplication_tolerance,
             },
-            hits: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
-            miss: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
-            groups: [curves0, curves1],
+            hits: vec![vec![]; curves0.len()],
+            miss: vec![vec![]; curves0.len()],
+            group: curves0,
             curves: vec![],
             shapes: vec![],
-            same_groups,
         }
     }
 
     pub fn build(&mut self) -> Vec<CurveShape> {
         self.test_groups();
-        let mut group_start = 2;
-        if self.same_groups {
-            group_start = 1;
-        }
-        for g in 0..group_start {
-            for i in 0..self.groups[g].len() {
-                if self.hits[g][i].is_empty() {
-                    self.miss[g][i] = self.miss[g][i].clone().into_iter().filter(
-                        |a| !a.distance.is_nan() && !a.dot.is_nan() && a.dot.abs() > 0.01
-                    ).collect();
-                    self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                    if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 || self.same_groups {
-                        self.curves.push(self.groups[g][i].clone());   
-                    }
-                }else{
-                    self.hits[g][i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
-                    self.add_bounded_curves(g, i);   
-                }
-            }
-        }
-        if !self.same_groups {
-            for curve in &mut self.curves {
-                if curve.nurbs.sign < 0. {curve.reverse().negate();}
+        for i in 0..self.group.len() {
+            if self.hits[i].is_empty() {
+                // self.miss[i] = self.miss[i].clone().into_iter().filter(
+                //     |a| !a.distance.is_nan() && !a.dot.is_nan() && a.dot.abs() > 0.01
+                // ).collect();
+                // self.miss[i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+                // if self.miss[i].is_empty() || self.miss[i][0].dot > -0.01 {
+                    self.curves.push(self.group[i].clone());   
+                //}
+            }else{
+                self.hits[i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
+                self.add_bounded_curves(i);   
             }
         }
         self.curves.clone()
     }
 
-    fn add_bounded_curves(&mut self, g: usize, i: usize) {
-        let mut curve = self.groups[g][i].clone();
+    fn add_bounded_curves(&mut self, i: usize) {
+        let mut curve = self.group[i].clone();
         let min_basis = curve.min;
         let mut start_k = 0;
         let mut set_min = false;
         //let mut use_hits = false;
-        for k in 0..self.hits[g][i].len() {
-            if self.hits[g][i][k].u > 0.01 && self.hits[g][i][k].u < 0.99 {
+        for k in 0..self.hits[i].len() {
+            if self.hits[i][k].u > 0.01 && self.hits[i][k].u < 0.99 {
                 start_k = k;
                 //use_hits = true;
                 break;
             }
         }
         //if use_hits {
-            //let first = &self.hits[g][i][start_k];//.first().unwrap();
-            if self.hits[g][i][start_k].dot > 0. {set_min = true;} //  * curve.nurbs.sign
-            for curve_hit in self.hits[g][i].iter().skip(start_k) { //for curve_hit in &self.hits[g][i] { 
+            //let first = &self.hits[i][start_k];//.first().unwrap();
+            if self.hits[i][start_k].dot > 0. {set_min = true;} //  * curve.nurbs.sign
+            for curve_hit in self.hits[i].iter().skip(start_k) { //for curve_hit in &self.hits[i] { 
                 if curve_hit.u < 0.99 {
                     if set_min {
                         curve.set_min(curve_hit.u);
                     }else{
                         curve.set_max(min_basis, curve_hit.u);
                         self.curves.push(curve);
-                        curve = self.groups[g][i].clone();
+                        curve = self.group[i].clone();
                     }
                     set_min = !set_min;
                 }
@@ -100,18 +87,13 @@ impl UnionBasis2 {
     }
 
     fn test_groups(&mut self){
-        for i0 in 0..self.groups[0].len() {
-            //let mut start_i1 = 0;
-            //if self.same_groups {start_i1 = i0+1;}
-            //if start_i1 < self.groups[1].len() {
-            for i1 in 0..self.groups[1].len() {
-                if self.same_groups && i0 == i1 {
-                    continue;
-                }
-                self.tester.curves.0 = self.groups[0][i0].clone();
-                self.tester.curves.1 = self.groups[1][i1].clone();
-                for u0 in self.groups[0][i0].get_inflection_params() {
-                    for u1 in self.groups[1][i1].get_inflection_params() {
+        for i0 in 0..self.group.len() {
+            for i1 in i0..self.group.len() {
+                if i0 == i1 {continue}
+                self.tester.curves.0 = self.group[i0].clone();
+                self.tester.curves.1 = self.group[i1].clone();
+                for u0 in self.group[i0].get_inflection_params() {
+                    for u1 in self.group[i1].get_inflection_params() {
                         self.test_curves(i0, i1, u0, u1);
                     }
                 }
@@ -122,15 +104,15 @@ impl UnionBasis2 {
     fn test_curves(&mut self, i0: usize, i1: usize, u0: f32, u1: f32) { 
         match self.tester.test(u0, u1) {
             Ok(hit) => {
-                self.hits[0][i0].push(hit.hit.0);
-                self.hits[1][i1].push(hit.hit.1);
+                self.hits[i0].push(hit.hit.0);
+                self.hits[i1].push(hit.hit.1);
                 //self.shapes.push(Shape::Point(hit.center));
             },
             Err(miss) => {
                 //self.shapes.push(Shape::Point(miss.0.point.clone()));
                 //self.shapes.push(Shape::Point(miss.1.point.clone()));
-                self.miss[0][i0].push(miss.0);
-                self.miss[1][i1].push(miss.1);
+                self.miss[i0].push(miss.0);
+                self.miss[i1].push(miss.1);
             }
         }
     }

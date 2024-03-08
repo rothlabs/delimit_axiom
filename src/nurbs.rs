@@ -117,6 +117,11 @@ impl Default for Nurbs {
 
 
 
+
+
+
+
+
 // pub fn get_sample_count_with_max_distance(&self, min_count: usize, max_distance: f32, controls: &Vec<Vec3>) -> usize {
 //     //let curve = self.get_valid(controls.len());
 //     let mut distance = 0.;

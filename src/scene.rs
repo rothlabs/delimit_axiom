@@ -1,4 +1,4 @@
-use crate::{get_facets, get_vector_hash, query::{self, DiscreteQuery}, Curve, Facet, Shape};
+use crate::{get_facets, get_vector_hash, query::DiscreteQuery, Curve, Facet, Shape};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 

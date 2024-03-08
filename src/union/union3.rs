@@ -1,6 +1,6 @@
 use std::f32::EPSILON;
 
-use crate::{hit::Miss, log, Circle, CurveShape, FacetShape, HitTester3, Shape, Spatial3, Trim};
+use crate::{get_facet_hit_points, hit::Miss, log, Circle, Curve, CurveShape, Facet, FacetShape, HitTester3, Model, Shape, Spatial3, Trim};
 use euclid::{box3d, Box3D};
 use glam::*;
 use super::union2::UnionBasis2;
@@ -179,6 +179,34 @@ impl UnionBasis3 {
     }
 
     fn test_groups(&mut self) {
+        let mut facet_groups = vec![];
+        let mut max_controls = vec![0, 0];
+        for g in 0..2 {
+            let mut facets = vec![];
+            for facet in &self.facet_groups[g] {
+                max_controls[g] = max_controls[g].max(facet.controls.iter().fold(0 as usize, |a,b| a + b.controls.len()));
+                let new_facet = Facet{
+                    sign: facet.nurbs.sign,
+                    order:   facet.nurbs.order,
+                    knots:   facet.nurbs.knots.clone(),
+                    weights: facet.nurbs.weights.clone(),
+                    controls:   facet.controls.iter().map(|c| Model::Curve(Curve{
+                        sign: c.nurbs.sign,
+                        order: c.nurbs.order,
+                        knots: c.nurbs.knots.clone(),
+                        weights: c.nurbs.weights.clone(),
+                        controls: c.controls.iter().map(|v| Model::Point(v.to_array())).collect(),
+                        min: c.min,
+                        max: c.max,
+                    })).collect(),
+                    boundaries: vec![],
+                };
+                facets.push(serde_wasm_bindgen::to_value(&new_facet).unwrap());
+            }
+            facet_groups.push(facets);
+        }
+        get_facet_hit_points(facet_groups[0].clone(), facet_groups[1].clone(), max_controls[0]*max_controls[1]);
+        //get_facet_hit_points(serde_wasm_bindgen::to_value(&facet_groups[0])?, serde_wasm_bindgen::to_value(&facet_groups[1])?);
         //let boxes1: Vec<euclid::Box3D<f32, f32>> = self.facet_groups[1].iter().map(|fct| fct.get_box3()).collect();
         // let mut box1 = Box3D::zero();
         // for facet in &self.facet_groups[1] {

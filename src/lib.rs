@@ -323,6 +323,11 @@ extern "C" {
     fn log(s: &str);
 }
 
+#[wasm_bindgen(module = "facet_tester")]
+extern "C" {
+    pub fn get_facet_hit_points(facets0: Vec<JsValue>, facets1: Vec<JsValue>, max_hits: usize);
+}
+
 // macro_rules! console_log {
 //     // Note that this is using the `log` function imported above during
 //     // `bare_bones`

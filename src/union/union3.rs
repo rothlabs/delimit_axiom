@@ -206,7 +206,7 @@ impl UnionBasis3 {
             facet_groups.push(facets);
         }
         get_facet_hit_points(facet_groups[0].clone(), facet_groups[1].clone(), max_controls[0]*max_controls[1]);
-        //get_facet_hit_points(serde_wasm_bindgen::to_value(&facet_groups[0])?, serde_wasm_bindgen::to_value(&facet_groups[1])?);
+
         //let boxes1: Vec<euclid::Box3D<f32, f32>> = self.facet_groups[1].iter().map(|fct| fct.get_box3()).collect();
         // let mut box1 = Box3D::zero();
         // for facet in &self.facet_groups[1] {

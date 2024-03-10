@@ -218,16 +218,105 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         vec3(p[0], p[1], p[2])
     }
 
+    // pub fn get_vector_at_u(&self, u: f32) -> Vec<f32> {
+    //     let bounded_u = self.min*(1.-u) + self.max*u;
+    //     let basis = self.nurbs.get_rational_basis_at_u(bounded_u);
+    //     let mut vector = vec![];
+    //     if !self.controls.is_empty() {
+    //         for component_index in 0..3 { // self.controls[0].len() { 
+    //             vector.push(
+    //                 (0..self.controls.len())
+    //                     .map(|i| self.controls[i][component_index] * basis[i]).sum()
+    //             );
+    //         }
+    //     }
+    //     vector
+    // }
+
     pub fn get_vector_at_u(&self, u: f32) -> Vec<f32> {
-        let bounded_u = self.min*(1.-u) + self.max*u;
-        let basis = self.nurbs.get_rational_basis_at_u(bounded_u);
+        let normal_u = self.min*(1.-u) + self.max*u;
+        let u = *self.nurbs.knots.last().unwrap_or(&0.) * normal_u;
+        //let basis = self.nurbs.get_rational_basis_at_u(bounded_u);
         let mut vector = vec![];
         if !self.controls.is_empty() {
-            for component_index in 0..3 { // self.controls[0].len() { 
-                vector.push(
-                    (0..self.controls.len())
-                        .map(|i| self.controls[i][component_index] * basis[i]).sum()
-                );
+            //let mut fist_active_knot_i = 0;
+            let mut knot_index = 0;
+            let mut basis = vec![0., 0., 0., 1.];
+            // let mut basis_i = 0;
+            // let mut basis_shift = 0;
+            // let mut basis_started = false;
+            for i in 0..self.nurbs.knots.len()-1 { 
+                if u >= self.nurbs.knots[i] && u < self.nurbs.knots[i+1] { 
+                    knot_index = i;
+                    break;
+                }
+                    //basis[basis_i] = 1.;
+                    //basis_started = true;
+                    //first_active_knot_i = i;
+                    //basis_shift = 3-basis_i;
+                // }else{
+                //     basis[basis_i] = 0.;
+                // }
+                // if basis_started {
+                //     //if basis_i < 1 {fist_active_knot_i = i;}
+                //     basis_i += 1;
+                // }
+                // if basis_i > 3 {break;}
+            }
+            // for i in 0..(4-basis_shift) {
+            //     basis[3-i] = basis[3-i-basis_shift];
+            //     basis[3-i-basis_shift] = 0.;
+            // }
+            //0 0 0 1 2 3 4 4 4
+            if knot_index < 1 {
+                //knot_index = self.nurbs.knots.len() - self.nurbs.order - 2;// self.nurbs.knots.len() - self.nurbs.order - 1;
+                // // basis = vec![0., 0., 0., 1.];
+                // // if self.nurbs.order > 2 {
+                // //     basis = vec![0., 0., 1., 1.];
+                // // }
+                for comp_i in 0..3 { 
+                    vector.push(self.controls.last().unwrap()[comp_i]);
+                }
+            }else{
+                for degree in 1..self.nurbs.order {
+                    for k in 0..(degree+1) { 
+                        let i = 3 - degree + k;//(4-self.nurbs.order) + k;
+                        let i0 = knot_index + k - degree;// - self.nurbs.order + k + 1;
+                        let i1 = i0 + 1;  
+                        //let mut f = 0.;
+                        //let mut g = 0.;
+                        let mut accumulator = 0.;
+                        if basis[i] != 0. {
+                            accumulator += basis[i] * (u - self.nurbs.knots[i0]) / (self.nurbs.knots[degree + i0] - self.nurbs.knots[i0]); // proportional distance from knot0 to u
+                        }
+                        if i < 3 && basis[i+1] != 0. {
+                            accumulator += basis[i+1] * (self.nurbs.knots[degree + i1] - u) / (self.nurbs.knots[degree + i1] - self.nurbs.knots[i1]); // proportional distance from u to knot2
+                        }
+                        basis[i] = accumulator; //f * basis[i] + g * basis[i+1];
+                        // if basis[i] != 0. { // degree + i0 < self.nurbs.knots.len() {//&& 
+                        //     basis[i] += basis[i] * ((u - self.nurbs.knots[i0]) / (self.nurbs.knots[degree + i0] - self.nurbs.knots[i0]));
+                        // }
+                        // if i < 3 && basis[i+1] != 0. { // && degree + i1 < self.nurbs.knots.len() {//
+                        //     basis[i] += basis[i+1] * ((self.nurbs.knots[degree + i1] - u) / (self.nurbs.knots[degree + i1] - self.nurbs.knots[i1]));
+                        // }
+                    }
+                }
+                let sum: f32 = (0..self.nurbs.order).map(|k| {
+                    let i = (4-self.nurbs.order) + k;
+                    let ci = knot_index - self.nurbs.order + k + 1;
+                    basis[i] * self.nurbs.weights[ci]
+                }).sum();
+                for comp_i in 0..3 { 
+                    //console_log!("order {}", self.nurbs.order);
+                    //console_log!("last_active_knot_i {}", last_active_knot_i);
+                    vector.push(
+                        (0..self.nurbs.order).map(|k| {
+                            let i = (4-self.nurbs.order) + k;
+                            let ci = knot_index - self.nurbs.order + k + 1;
+                            self.controls[ci][comp_i] * self.nurbs.weights[ci] * basis[i] / sum
+                        }).sum()
+                    );
+                }
             }
         }
         vector
@@ -250,6 +339,99 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         }
     }
 }
+
+
+
+
+
+
+// let mut last_active_knot_i = 0;
+//             let mut basis = vec![0.; 4];
+//             let mut basis_i = 0;
+//             let mut basis_shift = 0;
+//             let mut basis_started = false;
+//             for i in 0..self.nurbs.knots.len()-1 { 
+//                 if u >= self.nurbs.knots[i] && u < self.nurbs.knots[i+1] { 
+//                     basis[basis_i] = 1.;
+//                     basis_started = true;
+//                     last_active_knot_i = i;
+//                     basis_shift = 3-basis_i;
+//                 }else{
+//                     basis[basis_i] = 0.;
+//                 }
+//                 if basis_started {basis_i += 1;}
+//                 if basis_i > 3 {break;}
+//             }
+//             for i in 0..(4-basis_shift) {
+//                 basis[3-i] = basis[3-i-basis_shift];
+//                 basis[3-i-basis_shift] = 0.;
+//             }
+//             if last_active_knot_i < 1 {
+//                 last_active_knot_i = self.nurbs.knots.len() - self.nurbs.order - 1;
+//                 basis = vec![0., 0., 0., 1.];
+//             }
+//             for span in 1..self.nurbs.order {
+//                 for k in 0..self.nurbs.order { 
+//                     let i = (4-self.nurbs.order) + k;
+//                     let i0 = last_active_knot_i - self.nurbs.order + k + 1;
+//                     let i1 = i0 + 1;  
+//                     if basis[i] != 0. {
+//                         basis[i] += basis[i] * ((u - self.nurbs.knots[i0]) / (self.nurbs.knots[span + i0] - self.nurbs.knots[i0]));
+//                     }
+//                     if i < 3 && basis[i+1] != 0. {
+//                         basis[i] += basis[i+1] * ((self.nurbs.knots[span + i1] - u) / (self.nurbs.knots[span + i1] - self.nurbs.knots[i1]));
+//                     }
+//                 }
+//             }
+//             let sum: f32 = (0..self.nurbs.order).map(|k| {
+//                 let i = (4-self.nurbs.order) + k;
+//                 let ci = last_active_knot_i - self.nurbs.order + k + 1;
+//                 basis[i] * self.nurbs.weights[ci]
+//             }).sum();
+//             for comp_i in 0..3 { 
+//                 //console_log!("order {}", self.nurbs.order);
+//                 //console_log!("last_active_knot_i {}", last_active_knot_i);
+//                 vector.push(
+//                     (0..self.nurbs.order).map(|k| {
+//                         let i = (4-self.nurbs.order) + k;
+//                         let ci = last_active_knot_i - self.nurbs.order + k + 1;
+//                         self.controls[ci][comp_i] * self.nurbs.weights[ci] * basis[i] / sum
+//                     }).sum()
+//                 );
+//             }
+
+
+
+
+
+
+
+
+// let knot_len = self.nurbs.knots.len()-1;
+//             for i in 0..knot_len { // (self.nurbs.order-1)
+//                 if u >= self.nurbs.knots[knot_len-i-1] && u < self.nurbs.knots[knot_len-i] { 
+//                     if basis_count < 1 {last_active = knot_len-i-1;}
+//                     basis[3-basis_count] = 1.;
+//                     basis_count += 1;
+//                     if basis_count > 3 {break;}
+//                 }
+//             }
+
+
+// pub fn get_vector_at_u(&self, u: f32) -> Vec<f32> {
+//     let bounded_u = self.min*(1.-u) + self.max*u;
+//     let basis = self.nurbs.get_rational_basis_at_u(bounded_u);
+//     let mut vector = vec![];
+//     if !self.controls.is_empty() {
+//         for component_index in 0..3 { // self.controls[0].len() { 
+//             vector.push(
+//                 (0..self.controls.len())
+//                     .map(|i| self.controls[i][component_index] * basis[i]).sum()
+//             );
+//         }
+//     }
+//     vector
+// }
 
 // pub fn get_normalized_knots(&self) -> Vec<f32> {
 //     let mut knots = vec![0.];

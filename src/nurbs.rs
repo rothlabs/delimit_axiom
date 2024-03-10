@@ -79,30 +79,16 @@ impl Nurbs {
     fn get_basis_at_u(&self, normal_u: f32) -> Vec<f32> {
         let u = *self.knots.last().unwrap_or(&0.) * normal_u; // .unwrap_throw("") to js client
         let mut basis = self.get_basis_of_degree_0_at_u(u);
-        // let mut basis = vec![0.; self.knots.len()-1];
-        // // let mut start_i = 0;
-        // for i in (self.order-1)..self.knots.len()-1 {
-        //     if u >= self.knots[i] { //  && u < self.knots[i+1]
-        //         //start_i = (i - self.order).max(0);
-        //         basis[i] = 1.;
-        //         break;
-        //     }
-        // }
         for span in 1..self.order {
-            // let mut basis0 = 0.;
-                // let mut basis1 = 0.;
-                // if u >= knots[i0] && u < knots[i1] {
-
-                // }
             for i0 in 0..self.weights.len() {
                 let i1 = i0 + 1; 
                 let mut f = 0.;
                 let mut g = 0.;
                 if basis[i0] != 0. {
-                    f = (u - self.knots[i0]) / (self.knots[span + i0] - self.knots[i0]); // proportional distance from knot0 to u
+                    f = (u - self.knots[i0]) / (self.knots[span + i0] - self.knots[i0]);
                 }
                 if basis[i1] != 0. {
-                    g = (self.knots[span + i1] - u) / (self.knots[span + i1] - self.knots[i1]); // proportional distance from u to knot2
+                    g = (self.knots[span + i1] - u) / (self.knots[span + i1] - self.knots[i1]); 
                 }
                 basis[i0] = f * basis[i0] + g * basis[i1];
             }
@@ -113,7 +99,6 @@ impl Nurbs {
         basis
     }
 
-    // 0 0 0 1 2 3 4 4 4
     fn get_basis_of_degree_0_at_u(&self, u: f32) -> Vec<f32> {
         self.knots.windows(2)
             .map(|knots| {

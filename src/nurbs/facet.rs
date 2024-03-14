@@ -36,6 +36,12 @@ macro_rules! console_log {
 // }
 
 #[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default = "FacetGroup::default")]
+pub struct FacetGroup {
+    pub facets: Vec<Facet>,
+}
+
+#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default = "Facet::default")]
 pub struct Facet {
     pub controls:    Vec<Model>,

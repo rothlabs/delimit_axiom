@@ -1,6 +1,6 @@
 use std::f32::EPSILON;
 
-use crate::{get_facet_hit_points, hit::Miss, log, Circle, Curve, CurveShape, Facet, FacetShape, HitTester3, Model, Shape, Spatial3, Trim};
+use crate::{get_facet_hit_points, hit::Miss, log, Circle, Curve, CurveShape, Facet, FacetGroup, FacetShape, HitTester3, Model, Shape, Spatial3, Trim};
 use euclid::{box3d, Box3D};
 use glam::*;
 use super::union2::UnionBasis2;
@@ -179,58 +179,31 @@ impl UnionBasis3 {
     }
 
     fn test_groups(&mut self) {
-        let mut facet_groups = vec![];
-        let mut max_controls = vec![0, 0];
-        for g in 0..2 {
-            let mut facets = vec![];
-            for facet in &self.facet_groups[g] {
-                max_controls[g] = max_controls[g].max(facet.controls.iter().fold(0 as usize, |a,b| a + b.controls.len()));
-                let new_facet = Facet{
-                    sign: facet.nurbs.sign,
-                    order:   facet.nurbs.order,
-                    knots:   facet.nurbs.knots.clone(),
-                    weights: facet.nurbs.weights.clone(),
-                    controls:   facet.controls.iter().map(|c| Model::Curve(Curve{
-                        sign: c.nurbs.sign,
-                        order: c.nurbs.order,
-                        knots: c.nurbs.knots.clone(),
-                        weights: c.nurbs.weights.clone(),
-                        controls: c.controls.iter().map(|v| Model::Point(v.to_array())).collect(),
-                        min: c.min,
-                        max: c.max,
-                    })).collect(),
-                    boundaries: vec![],
-                };
-                facets.push(serde_wasm_bindgen::to_value(&new_facet).unwrap());
-            }
-            facet_groups.push(facets);
-        }
-        get_facet_hit_points(facet_groups[0].clone(), facet_groups[1].clone(), max_controls[0]*max_controls[1]);
-
-        //let boxes1: Vec<euclid::Box3D<f32, f32>> = self.facet_groups[1].iter().map(|fct| fct.get_box3()).collect();
-        // let mut box1 = Box3D::zero();
-        // for facet in &self.facet_groups[1] {
-        //     box1 = box1.union(&facet.get_box3());
-        // }
-        for i0 in 0..self.facet_groups[0].len() {
-            //let box0 = self.facet_groups[0][i0].get_box3();
-            //Box3D::union(&self, other)
-            //if box0.intersects(&box1) {
-                for i1 in 0..self.facet_groups[1].len() {
-                    //if box0.intersects(&boxes1[i1]) {
-                        self.tester.facets.0 = self.facet_groups[0][i0].clone();
-                        self.tester.facets.1 = self.facet_groups[1][i1].clone();
-                        self.tester.points = vec![];
-                        self.tester.spatial = Spatial3::new(self.tester.step);
-                        for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
-                            for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
-                                self.test_facets(i0, i1, uv0, uv1);
-                            }
-                        }
-                    //}
-                }
-            //}
-        }        
+        // //get_facet_hit_points(facet_groups[0].clone(), facet_groups[1].clone(), max_controls[0]*max_controls[1]);
+        // //let boxes1: Vec<euclid::Box3D<f32, f32>> = self.facet_groups[1].iter().map(|fct| fct.get_box3()).collect();
+        // // let mut box1 = Box3D::zero();
+        // // for facet in &self.facet_groups[1] {
+        // //     box1 = box1.union(&facet.get_box3());
+        // // }
+        // for i0 in 0..self.facet_groups[0].len() {
+        //     //let box0 = self.facet_groups[0][i0].get_box3();
+        //     //Box3D::union(&self, other)
+        //     //if box0.intersects(&box1) {
+        //         for i1 in 0..self.facet_groups[1].len() {
+        //             //if box0.intersects(&boxes1[i1]) {
+        //                 self.tester.facets.0 = self.facet_groups[0][i0].clone();
+        //                 self.tester.facets.1 = self.facet_groups[1][i1].clone();
+        //                 self.tester.points = vec![];
+        //                 self.tester.spatial = Spatial3::new(self.tester.step);
+        //                 for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
+        //                     for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
+        //                         self.test_facets(i0, i1, uv0, uv1);
+        //                     }
+        //                 }
+        //             //}
+        //         }
+        //     //}
+        // }        
     }
 }
 
@@ -246,6 +219,36 @@ impl UnionBasis3 {
 //console_log!("timed: {:?}", elapsed);
 
 
+
+
+
+// let mut facet_groups = vec![];
+//         let mut max_controls = vec![0, 0];
+//         for g in 0..2 {
+//             let mut facet_group = FacetGroup::default();
+//             for facet in &self.facet_groups[g] {
+//                 max_controls[g] = max_controls[g].max(facet.controls.iter().fold(0 as usize, |a,b| a + b.controls.len()));
+//                 let new_facet = Facet{
+//                     sign: facet.nurbs.sign,
+//                     order:   facet.nurbs.order,
+//                     knots:   facet.nurbs.knots.clone(),
+//                     weights: facet.nurbs.weights.clone(),
+//                     controls:   facet.controls.iter().map(|c| Model::Curve(Curve{
+//                         sign: c.nurbs.sign,
+//                         order: c.nurbs.order,
+//                         knots: c.nurbs.knots.clone(),
+//                         weights: c.nurbs.weights.clone(),
+//                         controls: c.controls.iter().map(|v| Model::Point(v.to_array())).collect(),
+//                         min: c.min,
+//                         max: c.max,
+//                     })).collect(),
+//                     boundaries: vec![],
+//                 };
+//                 facet_group.facets.push(new_facet);
+//             }
+//             facet_groups.push(serde_wasm_bindgen::to_value(&facet_group).unwrap());
+//         }
+//         get_facet_hit_points(facet_groups.clone());
 
 
 

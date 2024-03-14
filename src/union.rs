@@ -1,7 +1,7 @@
 mod union2;
 mod union3;
 
-use crate::{get_grouped_curves_and_facets, log, Model, Reshape, Shape};
+use crate::{get_facet_hit_points, get_grouped_curves_and_facets, log, nurbs::curve, Curve, Facet, FacetGroup, FacetShape, Model, Reshape, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -71,7 +71,8 @@ impl Union {
             }
             let mut curves0 = curve_groups.first().unwrap_or(&vec![]).clone();
             let mut facets0 = facet_groups.first().unwrap_or(&vec![]).clone();
-            for i in 1..curve_groups.len() {
+            self.get_hit_points(facet_groups.clone());
+            for i in 1..facet_groups.len() {
                 let curves1 = curve_groups[i].clone();
                 let facets1 = facet_groups[i].clone();
                 let mut basis = UnionBasis3::new(curves0, curves1, facets0, facets1, tolerance, step);
@@ -83,12 +84,62 @@ impl Union {
         }
         shapes
     }
+
+    fn get_hit_points(&self, groups: Vec<Vec<FacetShape>>){
+        let mut facet_groups = vec![];
+        for group in groups { 
+            let mut facet_group = FacetGroup::default();
+            for facet in &group {
+                facet_group.facets.push(Facet{
+                    sign:    facet.nurbs.sign,
+                    order:   facet.nurbs.order,
+                    knots:   facet.nurbs.knots.clone(),
+                    weights: facet.nurbs.weights.clone(),
+                    controls:   facet.controls.iter().map(|c| Model::Curve(Curve{
+                        sign: c.nurbs.sign,
+                        order: c.nurbs.order,
+                        knots: c.nurbs.knots.clone(),
+                        weights: c.nurbs.weights.clone(),
+                        controls: c.controls.iter().map(|v| Model::Point(v.to_array())).collect(),
+                        min: c.min,
+                        max: c.max,
+                    })).collect(),
+                    boundaries: vec![],
+                });
+            }
+            facet_groups.push(serde_wasm_bindgen::to_value(&facet_group).unwrap());
+        }
+        get_facet_hit_points(facet_groups);
+    }
 }
 
 
 //let seed: [u8; 32] = *b"01234567891234560123456789123456";
 //rng: StdRng::from_seed(seed),
 
+
+// let mut idx_texture: Vec<usize> = vec![];
+        // let mut int_texture: Vec<usize> = vec![];
+        // let mut f32_texture: Vec<f32> = vec![];
+        // for (group_index, group) in groups.iter().enumerate() {
+        //     for facet in group { // for (fi, facet) in group.iter().enumerate() {
+        //         let int_index = int_texture.len();
+        //         let f32_index = f32_texture.len();
+        //         int_texture.extend(&[facet.controls.len(), facet.nurbs.order]);
+        //         f32_texture.extend(&facet.nurbs.knots);
+        //         f32_texture.extend(&facet.nurbs.weights);
+        //         for curve in &facet.controls { //for (ci, curve) in facet.controls.iter().enumerate() {
+        //             int_texture.extend(&[curve.controls.len(), curve.nurbs.order]);
+        //             f32_texture.extend(&curve.nurbs.knots);
+        //             f32_texture.extend(&curve.nurbs.weights);
+        //             for point in &curve.controls { //for (pi, point) in curve.controls.iter().enumerate() {
+        //                 idx_texture.extend(&[group_index, int_index, f32_index]);
+        //                 f32_texture.extend(&point.to_array());
+        //             }
+        //         }
+        //     }
+        // }
+        //get_facet_hit_points(idx_texture, int_texture, f32_texture);
 
 // let mut basis = UnionBasis3 {
                 //     tester: HitTester3 {

@@ -325,7 +325,8 @@ extern "C" {
 
 #[wasm_bindgen(module = "facet_tester")]
 extern "C" {
-    pub fn get_facet_hit_points(facets0: Vec<JsValue>, facets1: Vec<JsValue>, max_hits: usize);
+    //pub fn get_facet_hit_points(idx_texture: Vec<usize>, int_texture: Vec<usize>, f32_texture: Vec<f32>);
+    pub fn get_facet_hit_points(facets_groups: Vec<JsValue>); // , facets1: Vec<JsValue>, max_hits: usize
 }
 
 // macro_rules! console_log {

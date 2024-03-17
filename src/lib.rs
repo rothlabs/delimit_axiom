@@ -284,7 +284,7 @@ pub fn get_line_intersection2(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<
     Some(vec2(x, y))
 }
 
-fn get_line_intersection3(p1: Vec3, d1: Vec3, p2: Vec3, d2: Vec3) -> Vec3 {
+fn get_point_between_lines(p1: Vec3, d1: Vec3, p2: Vec3, d2: Vec3) -> Vec3 {
     let v = p1 - p2;
     let a = d1.dot(d1);
     let b = d1.dot(d2);

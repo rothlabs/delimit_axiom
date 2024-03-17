@@ -1,5 +1,5 @@
 use std::{f32::{consts::PI, EPSILON, INFINITY}, hash::Hash};
-use crate::{get_line_intersection3, log, CurveShape, FacetShape, Spatial3};
+use crate::{get_point_between_lines, log, CurveShape, FacetShape, Spatial3};
 //use rand::Rng;
 use glam::*;
 
@@ -50,9 +50,9 @@ impl HitTester3 {
         let mut p1 = self.facets.1.get_point_at_uv(uv1);
         let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
-        for _ in 0..20 {
+        for _ in 0..6 {
             (uv0, uv1, p0, p1) = self.hone(uv0, uv1, p0, p1, 1);
-            // let center = self.get_tangent_intersection(uv0, uv1, p0, p1);
+            // let center = self.get_point_between_facet_tangents(uv0, uv1, p0, p1);
             // let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
             // let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
             // let center = (p0 + p1) / 2.;
@@ -150,7 +150,7 @@ impl HitTester3 {
             'step_loop: for k in 0..1000 {
                 (uv0, uv1, p0, p1) = self.hone(uv0, uv1, p0, p1, self.hone_count);
                 let center = (p0 + p1) / 2.;
-                //let target = self.get_tangent_intersection(uv0, uv1, p0, p1); // use center instead?
+                //let target = self.get_point_between_facet_tangents(uv0, uv1, p0, p1); // use center instead?
                 //(uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0); // jump to other point instead?
                 //(uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
 
@@ -215,8 +215,8 @@ impl HitTester3 {
                 // let old_uv1 = uv1;
                 // let old_p0 = p0;
                 // let old_p1 = p1;
-                (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, dir * step);
-                (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, dir * step);
+                (uv0, p0) = self.facets.0.get_uv_and_point_from_target(uv0, p0, dir * step);
+                (uv1, p1) = self.facets.1.get_uv_and_point_from_target(uv1, p1, dir * step);
                 // if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
                 //     //if p0.distance(p1) > self.tolerance {
                 //         //(uv1, p1) = self.facets.1.get_uv_and_point_from_target(old_uv1, p0 - old_p1);
@@ -274,12 +274,12 @@ impl HitTester3 {
         let mut uv1 = uv1_start;
         let mut p1 = p1_start;
         for _ in 0..hone_count {
-            let center = self.get_tangent_intersection(uv0, uv1, p0, p1);
-            let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
-            let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
+            let center = self.get_point_between_facet_tangents(uv0, uv1, p0, p1);
+            let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, p0, center - p0);
+            let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, p1, center - p1);
             let center = (p0 + p1) / 2.;
-            let (uv0_b, p0_b) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
-            let (uv1_b, p1_b) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
+            let (uv0_b, p0_b) = self.facets.0.get_uv_and_point_from_target(uv0, p0, center - p0);
+            let (uv1_b, p1_b) = self.facets.1.get_uv_and_point_from_target(uv1, p1, center - p1);
             //if p0_a.distance(p1_a) < p0.distance(p1) || p0_b.distance(p1_b) < p0.distance(p1) {
                 if p0_a.distance(p1_a) < p0_b.distance(p1_b) {
                     p0 = p0_a;
@@ -299,13 +299,13 @@ impl HitTester3 {
         (uv0, uv1, p0, p1)
     }
 
-    fn get_tangent_intersection(&self, uv0: Vec2, uv1: Vec2, p0: Vec3, p1: Vec3) -> Vec3 { 
+    fn get_point_between_facet_tangents(&self, uv0: Vec2, uv1: Vec2, p0: Vec3, p1: Vec3) -> Vec3 { 
         let normal0 = self.facets.0.get_normal_at_uv(uv0);
         let normal1 = self.facets.1.get_normal_at_uv(uv1);
         let normal_cross = normal0.cross(normal1).normalize();
         let cross0 = normal0.cross(normal_cross).normalize();
         let cross1 = normal1.cross(normal_cross).normalize();
-        get_line_intersection3(p0, cross0, p1, cross1)
+        get_point_between_lines(p0, cross0, p1, cross1)
     }
 }
 
@@ -315,7 +315,7 @@ impl HitTester3 {
 //     let mut uv0 = uv0_start;
 //     let mut p0 = p0_start;
 //     for i in 0..hone_count {
-//         let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
+//         let target = self.get_point_between_facet_tangents(uv0, uv1, p0, p1);
 //         let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
 //         let target = (p0 + p1) / 2.;
 //         let (uv0_b, p0_b) = self.facets.0.get_uv_and_point_from_target(uv0, target - p0);
@@ -338,7 +338,7 @@ impl HitTester3 {
 //     let mut uv1 = uv1_start;
 //     let mut p1 = p1_start;
 //     for i in 0..hone_count {
-//         let target = self.get_tangent_intersection(uv0, uv1, p0, p1);
+//         let target = self.get_point_between_facet_tangents(uv0, uv1, p0, p1);
 //         let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);
 //         let target = (p0 + p1) / 2.;
 //         let (uv1_b, p1_b) = self.facets.1.get_uv_and_point_from_target(uv1, target - p1);

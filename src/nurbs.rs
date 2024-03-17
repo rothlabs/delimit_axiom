@@ -51,10 +51,16 @@ impl Nurbs {
 
     fn get_valid_knots(&self, control_count: usize, order: usize) -> Vec<f32> {
         if self.knots.len() == control_count + order { 
-            self.knots.clone()
+            let last_knot = self.knots.last().unwrap();
+            self.knots.iter().map(|k| k / last_knot).collect()
         } else {
             self.get_open_knots(control_count, order)
         }
+    }
+    
+    pub fn normalize_knots(&mut self) {
+        let last_knot = self.knots.last().unwrap();
+        self.knots = self.knots.iter().map(|k| k / last_knot).collect();
     }
 
     fn get_open_knots(&self, control_count: usize, order: usize) -> Vec<f32> {
@@ -63,6 +69,8 @@ impl Nurbs {
         let mut knots = vec![0_f32; repeats];
         knots.extend((0..=max_knot).map(|k| k as f32));
         knots.extend(vec![max_knot as f32; repeats]);
+        let last_knot = knots.last().unwrap();
+        knots = knots.iter().map(|k| k / last_knot).collect();
         knots
     }
 
@@ -76,8 +84,8 @@ impl Nurbs {
         }
     }
 
-    fn get_basis_at_u(&self, normal_u: f32) -> Vec<f32> {
-        let u = *self.knots.last().unwrap_or(&0.) * normal_u; // .unwrap_throw("") to js client
+    fn get_basis_at_u(&self, u: f32) -> Vec<f32> {
+        //let u = self.knots.last().unwrap() * normal_u; // .unwrap_throw("") to js client
         let mut basis = self.get_basis_of_degree_0_at_u(u);
         for span in 1..self.order {
             for i0 in 0..self.weights.len() {
@@ -93,7 +101,7 @@ impl Nurbs {
                 basis[i0] = f * basis[i0] + g * basis[i1];
             }
         }
-        if normal_u == 1. { 
+        if u == 1. { 
             basis[self.weights.len() - 1] = 1.; // last control edge case
         }
         basis

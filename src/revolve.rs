@@ -28,6 +28,7 @@ impl Revolve {
         basis.add_intermediate_turn_if_needed(PI,           FRAC_PI_4*3., angle);
         basis.add_intermediate_turn_if_needed(FRAC_PI_2*3., FRAC_PI_4*5., angle);
         basis.add_second_to_last_turn(angle);
+        basis.nurbs.normalize_knots();
         let final_turn = basis.get_matrix(angle, 1.);
         let mut shapes = vec![];
         for shape in get_shapes(&self.parts) {

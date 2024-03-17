@@ -74,10 +74,10 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     }
 
     pub fn reverse(&mut self) -> &mut Self{
-        let max_knot = *self.nurbs.knots.last().unwrap(); 
+        //let max_knot = *self.nurbs.knots.last().unwrap(); 
         self.nurbs.knots.reverse();
         for i in 0..self.nurbs.knots.len() {
-            self.nurbs.knots[i] = max_knot - self.nurbs.knots[i];
+            self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
         }
         self.nurbs.weights.reverse();
         self.controls.reverse();
@@ -137,7 +137,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
             return vec![0., 0.5, 1.];
         }
         let mut knots = vec![0.];
-        let last_knot = self.nurbs.knots.last().unwrap();
+        //let last_knot = self.nurbs.knots.last().unwrap();
         if self.controls.len() > 1 {
             let mut direction_basis = (self.controls[1].truncate() - self.controls[0].truncate()).normalize();
             let mut turn_basis = 0.;
@@ -145,8 +145,8 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
                 let dir = (self.controls[i+1].truncate() - self.controls[i].truncate()).normalize();
                 let turn = direction_basis.angle_between(dir);
                 if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
-                    let u0 = self.nurbs.knots[self.nurbs.order + i - 2] / last_knot;
-                    let u1 = self.nurbs.knots[self.nurbs.order + i - 1] / last_knot;
+                    let u0 = self.nurbs.knots[self.nurbs.order + i - 2];// / last_knot;
+                    let u1 = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
                     let u = (u0 + u1) / 2.;
                     if u >= self.min && u <= self.max {
                         knots.push(u);
@@ -161,7 +161,7 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         //knots.push(0.8);
         knots.push(1.);
         // console_log!("full knots! {:?}", self.nurbs.knots);
-        // console_log!("knots! {:?}", knots);
+        //console_log!("knots! {:?}", knots);
         knots
     }
 
@@ -234,8 +234,8 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
     // }
 
     pub fn get_vector_at_u(&self, u: f32) -> Vec<f32> {
-        let normal_u = self.min*(1.-u) + self.max*u;
-        let u = *self.nurbs.knots.last().unwrap_or(&0.) * normal_u;
+        let u = self.min*(1.-u) + self.max*u;
+        //let u = *self.nurbs.knots.last().unwrap_or(&0.) * normal_u;
         let mut vector = vec![];
         if !self.controls.is_empty() {
             let mut knot_index = 0;

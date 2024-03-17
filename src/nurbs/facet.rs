@@ -99,10 +99,10 @@ impl FacetShape {
     }
 
     pub fn reverse(&mut self) -> &mut Self {
-        let max_knot = *self.nurbs.knots.last().unwrap(); 
+        //let max_knot = *self.nurbs.knots.last().unwrap(); 
         self.nurbs.knots.reverse();
         for i in 0..self.nurbs.knots.len() {
-            self.nurbs.knots[i] = max_knot - self.nurbs.knots[i];
+            self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
         }
         self.nurbs.weights.reverse();
         self.controls.reverse();
@@ -114,10 +114,10 @@ impl FacetShape {
     }
 
     pub fn reverse_normal(&mut self) -> &mut Self {
-        let max_knot = *self.nurbs.knots.last().unwrap(); 
+        //let max_knot = *self.nurbs.knots.last().unwrap(); 
         self.nurbs.knots.reverse();
         for i in 0..self.nurbs.knots.len() {
-            self.nurbs.knots[i] = max_knot - self.nurbs.knots[i];
+            self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
         }
         self.nurbs.weights.reverse();
         self.controls.reverse();
@@ -166,9 +166,9 @@ impl FacetShape {
 
     pub fn get_normalized_knots(&self) -> Vec<Vec2> {
         let mut knots = vec![];
-        let last_knot = self.nurbs.knots.last().unwrap();
+        //let last_knot = self.nurbs.knots.last().unwrap();
         for i in 0..self.controls.len() {
-            let v = self.nurbs.knots[self.nurbs.order + i - 1] / last_knot;
+            let v = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
             for u in self.controls[i].get_inflection_params(){
                 knots.push(vec2(u, v));
             }
@@ -184,13 +184,13 @@ impl FacetShape {
         let p0 = self.get_point_at_uv(uv);
         let p1 = self.get_point_at_uv(uv + Vec2::X * step_u);
         let p2 = self.get_point_at_uv(uv + Vec2::Y * step_v);
-        step_u.signum() * step_v.signum() * (p0 - p1).normalize().cross((p0 - p2).normalize()).normalize() // TODO: remove final normalize after Union3 works!!!!
+        step_u.signum() * step_v.signum() * (p0 - p1).cross(p0 - p2).normalize() // TODO: remove final normalize after Union3 works!!!!
     }
 
-    pub fn get_uv_and_point_from_target(&self, uv: Vec2, target: Vec3) -> (Vec2, Vec3) {
-        // if target.length() < EPSILON {
-        //     log("too small move target!!");
-        // }
+    pub fn get_uv_and_point_from_target(&self, uv: Vec2, point: Vec3, target: Vec3) -> (Vec2, Vec3) {
+        if target.is_nan() || target.length() < EPSILON {
+            return (uv, point);
+        }
         let mut step_u = 0.0001;
         let mut step_v = 0.0001;
         if uv.x + step_u > 1. {step_u = -step_u;}
@@ -200,45 +200,29 @@ impl FacetShape {
         let pv = self.get_point_at_uv(uv + Vec2::Y * step_v);
         let length_ratio_u = target.length() / p0.distance(pu) * step_u;
         let length_ratio_v = target.length() / p0.distance(pv) * step_v;
-        let uv_dir = vec2(
+        let uv_delta = vec2(
             (pu-p0).normalize().dot(target.normalize()) * length_ratio_u, 
             (pv-p0).normalize().dot(target.normalize()) * length_ratio_v
         );
-        //let mut uv1 = uv + uv_dir;
-        let mut uv1 = uv;
-        if uv_dir.length() > EPSILON {// step.abs() {
-            uv1 = uv + uv_dir; 
+        let mut uv1 = uv + uv_delta;
+        if uv1.x > 1. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
+            uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::X, Vec2::ONE).unwrap_or(uv1);
+        }else if uv1.x < 0. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
+            uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::Y).unwrap_or(uv1);
         }
-        
-        if uv1.x > 1. && uv_dir.normalize().dot(Vec2::Y).abs() < 0.95 {
-            uv1 = get_line_intersection2(uv, uv + uv_dir*100., Vec2::X, Vec2::ONE).unwrap_or(uv1);
-        }
-        if uv1.x < 0. && uv_dir.normalize().dot(Vec2::Y).abs() < 0.95 {
-            uv1 = get_line_intersection2(uv, uv + uv_dir*100., Vec2::ZERO, Vec2::Y).unwrap_or(uv1);
-        }
-        if uv1.y > 1. && uv_dir.normalize().dot(Vec2::X).abs() < 0.95 {
-            uv1 = get_line_intersection2(uv, uv + uv_dir*100., Vec2::Y, Vec2::ONE).unwrap_or(uv1);
-        }
-        if uv1.y < 0. && uv_dir.normalize().dot(Vec2::X).abs() < 0.95 {
-            uv1 = get_line_intersection2(uv, uv + uv_dir*100., Vec2::ZERO, Vec2::X).unwrap_or(uv1);
+        if uv1.y > 1. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
+            uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::Y, Vec2::ONE).unwrap_or(uv1);
+        }else if uv1.y < 0. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
+            uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::X).unwrap_or(uv1);
         }
         uv1 = uv1.clamp(Vec2::ZERO, Vec2::ONE); // TODO: might not be needed
-        // if uv1.x > 1. || uv1.x < 0. || uv1.y < 0. || uv1.x > 1. {
-        //     console_log!("over bounds! {},{}", uv.x, uv.y);
-        // }
-        // if uv1.x.is_nan() {
-        //     log("nan uv1 x!!!");
-        // }
-        // if uv1.y.is_nan() {
-        //     log("nan uv1 y!!!");
-        // }
         let point = self.get_point_at_uv(uv1);
         (uv1, point)
     }
 
     pub fn get_curvature(&self, uv0: Vec2, p0: Vec3, dir: Vec3) -> f32 {
         let step = 1.;
-        let (uv1, p1) = self.get_uv_and_point_from_target(uv0, dir * step);
+        let (uv1, p1) = self.get_uv_and_point_from_target(uv0, p0, dir * step);
         let normal0 = self.get_normal_at_uv(uv0);
         let normal1 = self.get_normal_at_uv(uv1);
         let distance = p0.distance(p1);

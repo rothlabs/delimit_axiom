@@ -85,7 +85,7 @@ impl Union {
         shapes
     }
 
-    fn get_hit_points(&self, groups: Vec<Vec<FacetShape>>){
+    fn get_hit_points(&self, groups: Vec<Vec<FacetShape>>) { //  -> Vec<Vec<(FacetShape)>> 
         let mut facet_groups = vec![];
         for group in groups { 
             let mut facet_group = FacetGroup::default();

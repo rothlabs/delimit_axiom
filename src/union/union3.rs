@@ -150,8 +150,8 @@ impl UnionBasis3 {
                 bndry.controls.clear();
                 for k in 0..facet.boundaries[j].controls.len() {
                     bndry.controls.push(facet.boundaries[j].controls[k] + vec3(
-                        100. + i as f32 * 2. + (j as f32)*0.005,  
-                        g as f32 * 2. + (j as f32)*0.01, 
+                        100. + i as f32 * 2.,// + (j as f32)*0.005,  
+                        g as f32 * 2.,// + (j as f32)*0.01, 
                         0.
                     ));
                 }
@@ -179,31 +179,31 @@ impl UnionBasis3 {
     }
 
     fn test_groups(&mut self) {
-        // //get_facet_hit_points(facet_groups[0].clone(), facet_groups[1].clone(), max_controls[0]*max_controls[1]);
-        // //let boxes1: Vec<euclid::Box3D<f32, f32>> = self.facet_groups[1].iter().map(|fct| fct.get_box3()).collect();
-        // // let mut box1 = Box3D::zero();
-        // // for facet in &self.facet_groups[1] {
-        // //     box1 = box1.union(&facet.get_box3());
-        // // }
-        // for i0 in 0..self.facet_groups[0].len() {
-        //     //let box0 = self.facet_groups[0][i0].get_box3();
-        //     //Box3D::union(&self, other)
-        //     //if box0.intersects(&box1) {
-        //         for i1 in 0..self.facet_groups[1].len() {
-        //             //if box0.intersects(&boxes1[i1]) {
-        //                 self.tester.facets.0 = self.facet_groups[0][i0].clone();
-        //                 self.tester.facets.1 = self.facet_groups[1][i1].clone();
-        //                 self.tester.points = vec![];
-        //                 self.tester.spatial = Spatial3::new(self.tester.step);
-        //                 for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
-        //                     for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
-        //                         self.test_facets(i0, i1, uv0, uv1);
-        //                     }
-        //                 }
-        //             //}
-        //         }
-        //     //}
-        // }        
+        //get_facet_hit_points(facet_groups[0].clone(), facet_groups[1].clone(), max_controls[0]*max_controls[1]);
+        //let boxes1: Vec<euclid::Box3D<f32, f32>> = self.facet_groups[1].iter().map(|fct| fct.get_box3()).collect();
+        // let mut box1 = Box3D::zero();
+        // for facet in &self.facet_groups[1] {
+        //     box1 = box1.union(&facet.get_box3());
+        // }
+        for i0 in 0..self.facet_groups[0].len() {
+            //let box0 = self.facet_groups[0][i0].get_box3();
+            //Box3D::union(&self, other)
+            //if box0.intersects(&box1) {
+                for i1 in 0..self.facet_groups[1].len() {
+                    //if box0.intersects(&boxes1[i1]) {
+                        self.tester.facets.0 = self.facet_groups[0][i0].clone();
+                        self.tester.facets.1 = self.facet_groups[1][i1].clone();
+                        self.tester.points = vec![];
+                        self.tester.spatial = Spatial3::new(self.tester.step);
+                        for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
+                            for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
+                                self.test_facets(i0, i1, uv0, uv1);
+                            }
+                        }
+                    //}
+                }
+            //}
+        }        
     }
 }
 

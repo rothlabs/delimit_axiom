@@ -71,7 +71,7 @@ impl Union {
             }
             let mut curves0 = curve_groups.first().unwrap_or(&vec![]).clone();
             let mut facets0 = facet_groups.first().unwrap_or(&vec![]).clone();
-            self.get_hit_points(facet_groups.clone());
+            //self.get_hit_points(facet_groups.clone());
             for i in 1..facet_groups.len() {
                 let curves1 = curve_groups[i].clone();
                 let facets1 = facet_groups[i].clone();
@@ -83,33 +83,6 @@ impl Union {
             shapes.extend(facets0.iter().map(|f| Shape::Facet(f.clone())));
         }
         shapes
-    }
-
-    fn get_hit_points(&self, groups: Vec<Vec<FacetShape>>) { //  -> Vec<Vec<(FacetShape)>> 
-        let mut facet_groups = vec![];
-        for group in groups { 
-            let mut facet_group = FacetGroup::default();
-            for facet in &group {
-                facet_group.facets.push(Facet{
-                    sign:    facet.nurbs.sign,
-                    order:   facet.nurbs.order,
-                    knots:   facet.nurbs.knots.clone(),
-                    weights: facet.nurbs.weights.clone(),
-                    controls:   facet.controls.iter().map(|c| Model::Curve(Curve{
-                        sign: c.nurbs.sign,
-                        order: c.nurbs.order,
-                        knots: c.nurbs.knots.clone(),
-                        weights: c.nurbs.weights.clone(),
-                        controls: c.controls.iter().map(|v| Model::Point(v.to_array())).collect(),
-                        min: c.min,
-                        max: c.max,
-                    })).collect(),
-                    boundaries: vec![],
-                });
-            }
-            facet_groups.push(serde_wasm_bindgen::to_value(&facet_group).unwrap());
-        }
-        get_facet_hit_points(facet_groups);
     }
 }
 

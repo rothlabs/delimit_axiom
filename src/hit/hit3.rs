@@ -50,35 +50,35 @@ impl HitTester3 {
         let mut p1 = self.facets.1.get_point_at_uv(uv1);
         let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
-        for _ in 0..6 {
-            (uv0, uv1, p0, p1) = self.hone(uv0, uv1, p0, p1, 1);
-            // let center = self.get_point_between_facet_tangents(uv0, uv1, p0, p1);
-            // let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
-            // let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
-            // let center = (p0 + p1) / 2.;
-            // let (uv0_b, p0_b) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
-            // let (uv1_b, p1_b) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
-            // if p0_a.distance(p1_a) < p0_b.distance(p1_b) {
-            //     p0 = p0_a;
-            //     p1 = p1_a;
-            //     uv0 = uv0_a;
-            //     uv1 = uv1_a;
-            // } else {
-            //     p0 = p0_b;
-            //     p1 = p1_b;
-            //     uv0 = uv0_b;
-            //     uv1 = uv1_b;
-            // }
+        // for _ in 0..6 {
+        //     (uv0, uv1, p0, p1) = self.hone(uv0, uv1, p0, p1, 1);
+        //     // let center = self.get_point_between_facet_tangents(uv0, uv1, p0, p1);
+        //     // let (uv0_a, p0_a) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
+        //     // let (uv1_a, p1_a) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
+        //     // let center = (p0 + p1) / 2.;
+        //     // let (uv0_b, p0_b) = self.facets.0.get_uv_and_point_from_target(uv0, center - p0);
+        //     // let (uv1_b, p1_b) = self.facets.1.get_uv_and_point_from_target(uv1, center - p1);
+        //     // if p0_a.distance(p1_a) < p0_b.distance(p1_b) {
+        //     //     p0 = p0_a;
+        //     //     p1 = p1_a;
+        //     //     uv0 = uv0_a;
+        //     //     uv1 = uv1_a;
+        //     // } else {
+        //     //     p0 = p0_b;
+        //     //     p1 = p1_b;
+        //     //     uv0 = uv0_b;
+        //     //     uv1 = uv1_b;
+        //     // }
 
-            // if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
-            //     (uv1, p1) = self.hone_uv1_to_p0(uv0, uv1, p0, p1, 10);
-            // } 
-            // if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
-            //     (uv0, p0) = self.hone_uv0_to_p1(uv0, uv1, p0, p1, 10);
-            // }
+        //     // if uv0.x < EPSILON || uv0.x > 1.-EPSILON || uv0.y < EPSILON || uv0.y > 1.-EPSILON {
+        //     //     (uv1, p1) = self.hone_uv1_to_p0(uv0, uv1, p0, p1, 10);
+        //     // } 
+        //     // if uv1.x < EPSILON || uv1.x > 1.-EPSILON || uv1.y < EPSILON || uv1.y > 1.-EPSILON {
+        //     //     (uv0, p0) = self.hone_uv0_to_p1(uv0, uv1, p0, p1, 10);
+        //     // }
 
             distance = p0.distance(p1);
-            if distance < self.tolerance {
+            if distance < self.tolerance * 2. {
                 let normal0 = self.facets.0.get_normal_at_uv(uv0);
                 let normal1 = self.facets.1.get_normal_at_uv(uv1);
                 if normal0.dot(normal1).abs() > 0.995 { 
@@ -96,13 +96,13 @@ impl HitTester3 {
                     }
                     return Ok(hit);
                 }
-                break;
-            }
-            if distance >= distance_basis {//console_log!("break early! {}", i);
                 //break;
             }
-            distance_basis = distance;
-        }
+        //     // if distance >= distance_basis {//console_log!("break early! {}", i);
+        //     //     break;
+        //     // }
+        //     distance_basis = distance;
+        // }
         let normal0 = -self.facets.0.get_normal_at_uv(uv0);
         let normal1 = -self.facets.1.get_normal_at_uv(uv1);
         Err((
@@ -157,6 +157,7 @@ impl HitTester3 {
                 let normal0 = self.facets.0.get_normal_at_uv(uv0);
                 let normal1 = self.facets.1.get_normal_at_uv(uv1);
                 if normal0.dot(normal1) > 0.95 { 
+                    //log("cancel trace because normals point same way");
                     return None; // TODO: need flag to force remove facet in this case?
                 }
                 let normal_cross = normal0.cross(normal1).normalize();
@@ -183,7 +184,7 @@ impl HitTester3 {
                         }
                     }
                 } else {
-                    if center.distance((start.p0 + start.p1)/2.) > step * 2. {
+                    if center.distance((start.p0 + start.p1)/2.) > step * 3. {
                         can_loop = true;
                     }
                 }

@@ -38,6 +38,8 @@ use glam::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+//use crate::hit::FacetHit;
+
 #[derive(Clone, Serialize, Deserialize, PartialEq)] 
 pub enum Model {
     Point([f32; 3]),
@@ -326,7 +328,7 @@ extern "C" {
 #[wasm_bindgen(module = "facet_tester")]
 extern "C" {
     //pub fn get_facet_hit_points(idx_texture: Vec<usize>, int_texture: Vec<usize>, f32_texture: Vec<f32>);
-    pub fn get_facet_hit_points(facets_groups: Vec<JsValue>); // , facets1: Vec<JsValue>, max_hits: usize
+    pub fn get_facet_hit_points(facets_groups: Vec<JsValue>) -> Vec<JsValue>; // , facets1: Vec<JsValue>, max_hits: usize
 }
 
 // macro_rules! console_log {

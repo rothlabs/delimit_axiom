@@ -192,9 +192,20 @@ impl UnionBasis3 {
 
     fn test_groups(&mut self) {
         let hits = self.get_hit_points();
+        let mut g0 = 0;
+        let mut g1 = 0;
+        let mut f0 = 0;
+        let mut f1 = 0;
         for hit in hits {
-            self.tester.facets.0 = self.facet_groups[hit.g0][hit.f0].clone();
-            self.tester.facets.1 = self.facet_groups[hit.g1][hit.f1].clone();
+            //if hit.g0 != g0 || hit.g1 != g1 || hit.f0 != f0 || hit.f1 != f1 {
+                g0 = hit.g0;
+                g1 = hit.g1;
+                f0 = hit.f0;
+                f1 = hit.f1;
+                self.tester.facets.0 = self.facet_groups[g0][f0].clone();
+                self.tester.facets.1 = self.facet_groups[g1][f1].clone();
+            //     self.tester.spatial = Spatial3::new(self.tester.step);
+            // }
             self.test_facets(hit.f0, hit.f1, Vec2::from_array(hit.uv0), Vec2::from_array(hit.uv1));
             let point = self.facet_groups[hit.g0][hit.f0].get_point_at_uv(Vec2::from_array(hit.uv0));
             self.shapes.push(Shape::Point(point));

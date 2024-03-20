@@ -11,14 +11,25 @@ use super::union2::UnionBasis2;
 // }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "FacetHit::default")]
-pub struct FacetHit {
+#[serde(default = "FacetHitPoint::default")]
+pub struct FacetHitPoint {
     g0: usize,
     g1: usize,
     f0: usize,
     f1: usize,
     uv0: [f32; 2],
     uv1: [f32; 2],
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(default = "FacetHit::default")]
+pub struct FacetHit {
+    g0: usize,
+    g1: usize,
+    f0: usize,
+    f1: usize,
+    curve0: Curve,
+    curve1: Curve,
 }
 
 //#[derive(Clone, Default)]
@@ -210,6 +221,7 @@ impl UnionBasis3 {
             let point = self.facet_groups[hit.g0][hit.f0].get_point_at_uv(Vec2::from_array(hit.uv0));
             self.shapes.push(Shape::Point(point));
         }
+
         // for i0 in 0..self.facet_groups[0].len() {
         //     for i1 in 0..self.facet_groups[1].len() {
         //         self.tester.facets.0 = self.facet_groups[0][i0].clone();
@@ -225,7 +237,7 @@ impl UnionBasis3 {
         // }        
     }
 
-    fn get_hit_points(&self) -> Vec<FacetHit> { 
+    fn get_hit_points(&self) -> Vec<FacetHitPoint> { 
         let mut facet_groups = vec![];
         for group in &self.facet_groups { 
             let mut facet_group = FacetGroup::default();

@@ -156,10 +156,10 @@ impl HitTester3 {
 
                 let normal0 = self.facets.0.get_normal_at_uv(uv0);
                 let normal1 = self.facets.1.get_normal_at_uv(uv1);
-                if normal0.dot(normal1) > 0.95 { 
-                    //log("cancel trace because normals point same way");
-                    return None; // TODO: need flag to force remove facet in this case?
-                }
+                // if normal0.dot(normal1) > 0.95 { 
+                //     //log("cancel trace because normals point same way");
+                //     return None; // TODO: need flag to force remove facet in this case?
+                // }
                 let normal_cross = normal0.cross(normal1).normalize();
                 let dir = normal_cross * (1-direction*2) as f32;
                 let curvature0 = self.facets.0.get_curvature(uv0, p0, dir);

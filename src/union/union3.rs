@@ -28,9 +28,11 @@ pub struct FacetHit {
     g1: usize,
     f0: usize,
     f1: usize,
-    curve0: Curve,
-    curve1: Curve,
+    points0: Vec<[f32; 2]>,
+    points1: Vec<[f32; 2]>,
+    centers: Vec<[f32; 3]>,
 }
+
 
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
@@ -143,19 +145,19 @@ impl UnionBasis3 {
         //     }
         // }
 
-        if index > 1 {
-            // for j in 0..self.facet_hits[g][i].len() {
-            //     let mut bndry = self.facet_hits[g][i][j].clone();
-            //     bndry.controls.clear();
-            //     for k in 0..self.facet_hits[g][i][j].controls.len() {
-            //         bndry.controls.push(self.facet_hits[g][i][j].controls[k] + vec3(
-            //             100. + i as f32 * 2., //  + (j as f32)*0.01  
-            //             g as f32 * 2., //  + (j as f32)*0.01 
-            //             0.
-            //         ));
-            //     }
-            //     self.shapes.push(Shape::Curve(bndry));
-            // }
+        if index < 2 {
+            for j in 0..self.facet_hits[g][i].len() {
+                let mut bndry = self.facet_hits[g][i][j].clone();
+                bndry.controls.clear();
+                for k in 0..self.facet_hits[g][i][j].controls.len() {
+                    bndry.controls.push(self.facet_hits[g][i][j].controls[k] + vec3(
+                        100. + i as f32 * 2., //  + (j as f32)*0.01  
+                        g as f32 * 2., //  + (j as f32)*0.01 
+                        0.
+                    ));
+                }
+                self.shapes.push(Shape::Curve(bndry));
+            }
             // for j in 0..curves1.len() {
             //     let mut bndry = curves1[j].clone();
             //     bndry.controls.clear();
@@ -168,21 +170,19 @@ impl UnionBasis3 {
             //     }
             //     self.shapes.push(Shape::Curve(bndry));
             // }
-            for j in 0..facet.boundaries.len() {
-                let mut bndry = facet.boundaries[j].clone();
-                bndry.controls.clear();
-                for k in 0..facet.boundaries[j].controls.len() {
-                    bndry.controls.push(facet.boundaries[j].controls[k] + vec3(
-                        100. + i as f32 * 2.,// + (j as f32)*0.005,  
-                        g as f32 * 2.,// + (j as f32)*0.01, 
-                        0.
-                    ));
-                }
-                self.shapes.push(Shape::Curve(bndry));
-            }
+            // for j in 0..facet.boundaries.len() {
+            //     let mut bndry = facet.boundaries[j].clone();
+            //     bndry.controls.clear();
+            //     for k in 0..facet.boundaries[j].controls.len() {
+            //         bndry.controls.push(facet.boundaries[j].controls[k] + vec3(
+            //             100. + i as f32 * 2.,// + (j as f32)*0.005,  
+            //             g as f32 * 2.,// + (j as f32)*0.01, 
+            //             0.
+            //         ));
+            //     }
+            //     self.shapes.push(Shape::Curve(bndry));
+            // }
         }
-
-        
         self.facets.push(facet);
     }
 
@@ -203,24 +203,53 @@ impl UnionBasis3 {
 
     fn test_groups(&mut self) {
         let hits = self.get_hit_points();
-        let mut g0 = 0;
-        let mut g1 = 0;
-        let mut f0 = 0;
-        let mut f1 = 0;
+        // let mut g0 = 0;
+        // let mut g1 = 0;
+        // let mut f0 = 0;
+        // let mut f1 = 0;
         for hit in hits {
-            //if hit.g0 != g0 || hit.g1 != g1 || hit.f0 != f0 || hit.f1 != f1 {
-                g0 = hit.g0;
-                g1 = hit.g1;
-                f0 = hit.f0;
-                f1 = hit.f1;
-                self.tester.facets.0 = self.facet_groups[g0][f0].clone();
-                self.tester.facets.1 = self.facet_groups[g1][f1].clone();
-            //     self.tester.spatial = Spatial3::new(self.tester.step);
-            // }
-            self.test_facets(hit.f0, hit.f1, Vec2::from_array(hit.uv0), Vec2::from_array(hit.uv1));
-            let point = self.facet_groups[hit.g0][hit.f0].get_point_at_uv(Vec2::from_array(hit.uv0));
-            self.shapes.push(Shape::Point(point));
+            let mut curve0 = CurveShape::default();
+            curve0.negate();
+            for point in hit.points0 {
+                curve0.controls.push(vec3(point[0], point[1], 0.));
+            }
+            if !curve0.controls.is_empty() {
+                self.facet_hits[hit.g0][hit.f0].push(curve0.get_valid());
+                //self.shapes.push(Shape::Curve(curve0.get_valid()));
+            }
+            let mut curve1 = CurveShape::default();
+            curve1.negate();
+            for point in hit.points1 {
+                curve1.controls.push(vec3(point[0], point[1], 0.));
+            }
+            if !curve1.controls.is_empty() {
+                self.facet_hits[hit.g1][hit.f1].push(curve1.get_valid());
+            }
+            let mut center_curve = CurveShape::default();
+            center_curve.negate();
+            for point in hit.centers {
+                center_curve.controls.push(Vec3::from_array(point));
+            }
+            if !center_curve.controls.is_empty() {
+                //curve0.remove_doubles(self.tester.tolerance * 2.);
+                //self.facet_hits[hit.g0][hit.f0].push(curve0.get_valid());
+                self.shapes.push(Shape::Curve(center_curve.get_valid()));
+            }
         }
+        // for hit in hits {
+        //     //if hit.g0 != g0 || hit.g1 != g1 || hit.f0 != f0 || hit.f1 != f1 {
+        //         g0 = hit.g0;
+        //         g1 = hit.g1;
+        //         f0 = hit.f0;
+        //         f1 = hit.f1;
+        //         self.tester.facets.0 = self.facet_groups[g0][f0].clone();
+        //         self.tester.facets.1 = self.facet_groups[g1][f1].clone();
+        //     //     self.tester.spatial = Spatial3::new(self.tester.step);
+        //     // }
+        //     self.test_facets(hit.f0, hit.f1, Vec2::from_array(hit.uv0), Vec2::from_array(hit.uv1));
+        //     let point = self.facet_groups[hit.g0][hit.f0].get_point_at_uv(Vec2::from_array(hit.uv0));
+        //     self.shapes.push(Shape::Point(point));
+        // }
 
         // for i0 in 0..self.facet_groups[0].len() {
         //     for i1 in 0..self.facet_groups[1].len() {
@@ -237,7 +266,7 @@ impl UnionBasis3 {
         // }        
     }
 
-    fn get_hit_points(&self) -> Vec<FacetHitPoint> { 
+    fn get_hit_points(&self) -> Vec<FacetHit> { 
         let mut facet_groups = vec![];
         for group in &self.facet_groups { 
             let mut facet_group = FacetGroup::default();

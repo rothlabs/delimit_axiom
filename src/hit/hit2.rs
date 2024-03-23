@@ -48,6 +48,38 @@ impl HitTester2 {
             center = (p0 + p1) / 2.;
             let (u0_t1, p0_t1) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
             let (u1_t1, p1_t1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
+
+            // let (u0_c, p0_c) = self.curves.0.get_u_and_point_from_target(u0, p1 - p0);
+            // let (u1_c, p1_c) = self.curves.1.get_u_and_point_from_target(u1, p0 - p1);
+
+            // let distances = vec![p0_t0.distance(p1_t0), p0_t1.distance(p1_t1), p1.distance(p0_c), p0.distance(p1_c)];
+            // let mut min_dist = 10000.;
+            // let mut i = 3;
+            // for k in 0..4 {
+            //     if min_dist > distances[k] {
+            //         min_dist = distances[k];
+            //         i = k;
+            //     }
+            // }
+
+            // if i < 1 {
+            //     p0 = p0_t0;
+            //     p1 = p1_t0;
+            //     u0 = u0_t0;
+            //     u1 = u1_t0;
+            // } else if i < 2 {
+            //     p0 = p0_t1;
+            //     p1 = p1_t1;
+            //     u0 = u0_t1;
+            //     u1 = u1_t1;
+            // } else if i < 3 {
+            //     p0 = p0_c;
+            //     u0 = u0_c;
+            // } else {
+            //     p1 = p1_c;
+            //     u1 = u1_c;
+            // }
+
             if p0_t0.distance(p1_t0) < p0_t1.distance(p1_t1) {
                 p0 = p0_t0;
                 p1 = p1_t0;

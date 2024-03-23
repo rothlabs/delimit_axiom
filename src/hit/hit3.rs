@@ -256,7 +256,7 @@ impl HitTester3 {
         if center_curve.controls.is_empty() {
             return None
         }
-        curve0.remove_doubles(self.tolerance * 2.);
+        curve0.remove_doubles(self.tolerance * 2.); // TODO: tolerance not valid in UV space!!!
         curve1.remove_doubles(self.tolerance * 2.);
         center_curve.remove_doubles(self.tolerance * 2.);
         curve0.set_knots_by_control_distance();

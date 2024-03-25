@@ -1,6 +1,7 @@
 mod utils;
 mod query;
 mod scene;
+mod gpu;
 mod nurbs;
 mod spatial;
 mod hit;
@@ -15,7 +16,6 @@ mod grid_pattern;
 mod radial_pattern;
 mod mirror;
 
-use memoize::memoize;
 use utils::*;
 use nurbs::{curve::*, facet::*};
 use spatial::{spatial2::*, spatial3::*};
@@ -79,17 +79,12 @@ impl Model {
             Model::Cuboid(m)    => m.get_shapes(),
             Model::Cylinder(m)  => m.get_shapes(),
             Model::Revolve(m)   => m.get_shapes(),
-            Model::Union(m)     => get_shapes_from_union(m),//m.get_shapes(),
+            Model::Union(m)     => m.get_shapes(),
             Model::GridPattern(m)   => m.get_shapes(),
             Model::RadialPattern(m) => m.get_shapes(),
             Model::Mirror(m)    => m.get_shapes(),
         }
     }
-}
-
-//#[memoize]
-fn get_shapes_from_union(union: &Union) -> Vec<Shape> {
-    union.get_shapes()
 }
 
 impl Default for Model {

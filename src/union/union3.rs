@@ -1,14 +1,19 @@
 use std::f32::EPSILON;
 
-use crate::{get_facet_hit_points, hit::Miss, log, Circle, Curve, CurveShape, Facet, FacetGroup, FacetShape, HitTester3, Model, Shape, Spatial3, Trim};
-use euclid::{box3d, Box3D};
+use crate::{get_facet_hit_points, hit::Miss, log, Curve, CurveShape, Facet, 
+    FacetGroup, FacetShape, HitTester3, Model, Shape, Spatial3, Trim,
+    gpu::{GPU, shader::COPY_FRAGMENT_SOURCE}
+};
 use glam::*;
 use serde::{Deserialize, Serialize};
-use super::union2::UnionBasis2;
+use crate::union::{union2::UnionBasis2};
 
-// macro_rules! console_log {
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
+use super::hone_prep::{HonePrep, get_hone_prep};
+
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
+
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "FacetHitPoint::default")]
@@ -71,7 +76,7 @@ impl UnionBasis3 {
     }
 
     pub fn build(&mut self, index: usize) -> (Vec<CurveShape>, Vec<FacetShape>) {
-        self.test_groups();
+        self.test_groups().unwrap(); //.expect("3D intersection failed");
         self.curves.extend(self.curve_groups[0].clone());
         self.curves.extend(self.curve_groups[1].clone());
         for g in 0..2 {
@@ -109,9 +114,6 @@ impl UnionBasis3 {
         //     }
         //     curves0.push(curve);
         // }
-
-        
-
         let mut union = Trim::new(self.facet_hits[g][i].clone(), 0.001);
         let curves1 = union.build();
         //let mut curves1 = self.facet_hits[g][i].clone();
@@ -201,69 +203,56 @@ impl UnionBasis3 {
         }
     }
 
-    fn test_groups(&mut self) {
-        let hits = self.get_hit_points();
-        // let mut g0 = 0;
-        // let mut g1 = 0;
-        // let mut f0 = 0;
-        // let mut f1 = 0;
-        for hit in hits {
-            let mut curve0 = CurveShape::default();
-            curve0.negate();
-            for point in hit.points0 {
-                curve0.controls.push(vec3(point[0], point[1], 0.));
-            }
-            if !curve0.controls.is_empty() {
-                self.facet_hits[hit.g0][hit.f0].push(curve0.get_valid());
-                //self.shapes.push(Shape::Curve(curve0.get_valid()));
-            }
-            let mut curve1 = CurveShape::default();
-            curve1.negate();
-            for point in hit.points1 {
-                curve1.controls.push(vec3(point[0], point[1], 0.));
-            }
-            if !curve1.controls.is_empty() {
-                self.facet_hits[hit.g1][hit.f1].push(curve1.get_valid());
-            }
-            let mut center_curve = CurveShape::default();
-            center_curve.negate();
-            for point in hit.centers {
-                center_curve.controls.push(Vec3::from_array(point));
-            }
-            if !center_curve.controls.is_empty() {
-                //curve0.remove_doubles(self.tester.tolerance * 2.);
-                //self.facet_hits[hit.g0][hit.f0].push(curve0.get_valid());
-                self.shapes.push(Shape::Curve(center_curve.get_valid()));
-            }
-        }
-        // for hit in hits {
-        //     //if hit.g0 != g0 || hit.g1 != g1 || hit.f0 != f0 || hit.f1 != f1 {
-        //         g0 = hit.g0;
-        //         g1 = hit.g1;
-        //         f0 = hit.f0;
-        //         f1 = hit.f1;
-        //         self.tester.facets.0 = self.facet_groups[g0][f0].clone();
-        //         self.tester.facets.1 = self.facet_groups[g1][f1].clone();
-        //     //     self.tester.spatial = Spatial3::new(self.tester.step);
-        //     // }
-        //     self.test_facets(hit.f0, hit.f1, Vec2::from_array(hit.uv0), Vec2::from_array(hit.uv1));
-        //     let point = self.facet_groups[hit.g0][hit.f0].get_point_at_uv(Vec2::from_array(hit.uv0));
-        //     self.shapes.push(Shape::Point(point));
-        // }
+    fn test_groups(&mut self) -> Result<(), String>{
+        let gpu = GPU::new().unwrap();
+        let copy_program = gpu.get_quad_program_from_source(COPY_FRAGMENT_SOURCE).unwrap();
+        let HonePrep{index_pairs, mut pair_texels, mut facet_texels, 
+            mut uv_texels, max_facet_length, max_knots} = get_hone_prep(self.facet_groups.to_vec());
+        gpu.texture.make_r32f(0, &mut facet_texels)?;
+        let (_, pair_buf_size0) = gpu.texture.make_rg32i(1, &mut pair_texels)?;
+        let point_buf_size0 = ivec2(pair_buf_size0.x*3, pair_buf_size0.y*2);
+        let point_buf0 = gpu.framebuffer.make_empty_rgba32f(2, point_buf_size0)?;
+        let uv_buf0 = gpu.framebuffer.make_rgba32f(3, &mut uv_texels)?;
+        let uv_buf1 = gpu.framebuffer.make_empty_rgba32f(2, pair_buf_size0)?;
 
-        // for i0 in 0..self.facet_groups[0].len() {
-        //     for i1 in 0..self.facet_groups[1].len() {
-        //         self.tester.facets.0 = self.facet_groups[0][i0].clone();
-        //         self.tester.facets.1 = self.facet_groups[1][i1].clone();
-        //         self.tester.points = vec![];
-        //         self.tester.spatial = Spatial3::new(self.tester.step);
-        //         for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
-        //             for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
-        //                 self.test_facets(i0, i1, uv0, uv1);
-        //             }
-        //         }
+        // gpu.framebuffer.make_rgba32f(2, &mut uv_texels)?;  // uv_framebuffer_at_2
+        // gpu.texture.make_empty_rgba32f(3, pair_size)?; // uv_tex3
+        // gpu.texture.make_empty_rgba32f(4, pair_size)?; // point_tex4
+        // gpu.texture.make_empty_rgba32f(5, pair_size)?; // point_tex5
+        // gpu.texture.make_empty_rgba32f(6, pair_size)?; // point_tex6
+
+
+        // let hits = self.get_hit_points();
+        // for hit in hits {
+        //     let mut curve0 = CurveShape::default();
+        //     curve0.negate();
+        //     for point in hit.points0 {
+        //         curve0.controls.push(vec3(point[0], point[1], 0.));
         //     }
-        // }        
+        //     if !curve0.controls.is_empty() {
+        //         self.facet_hits[hit.g0][hit.f0].push(curve0.get_valid());
+        //         //self.shapes.push(Shape::Curve(curve0.get_valid()));
+        //     }
+        //     let mut curve1 = CurveShape::default();
+        //     curve1.negate();
+        //     for point in hit.points1 {
+        //         curve1.controls.push(vec3(point[0], point[1], 0.));
+        //     }
+        //     if !curve1.controls.is_empty() {
+        //         self.facet_hits[hit.g1][hit.f1].push(curve1.get_valid());
+        //     }
+        //     let mut center_curve = CurveShape::default();
+        //     center_curve.negate();
+        //     for point in hit.centers {
+        //         center_curve.controls.push(Vec3::from_array(point));
+        //     }
+        //     if !center_curve.controls.is_empty() {
+        //         //curve0.remove_doubles(self.tester.tolerance * 2.);
+        //         //self.facet_hits[hit.g0][hit.f0].push(curve0.get_valid());
+        //         self.shapes.push(Shape::Curve(center_curve.get_valid()));
+        //     }
+        // }   
+        Ok(())     
     }
 
     fn get_hit_points(&self) -> Vec<FacetHit> { 
@@ -309,6 +298,36 @@ impl UnionBasis3 {
 //let start = Instant::now();
 //let elapsed = start.elapsed();
 //console_log!("timed: {:?}", elapsed);
+
+
+        // for hit in hits {
+        //     //if hit.g0 != g0 || hit.g1 != g1 || hit.f0 != f0 || hit.f1 != f1 {
+        //         g0 = hit.g0;
+        //         g1 = hit.g1;
+        //         f0 = hit.f0;
+        //         f1 = hit.f1;
+        //         self.tester.facets.0 = self.facet_groups[g0][f0].clone();
+        //         self.tester.facets.1 = self.facet_groups[g1][f1].clone();
+        //     //     self.tester.spatial = Spatial3::new(self.tester.step);
+        //     // }
+        //     self.test_facets(hit.f0, hit.f1, Vec2::from_array(hit.uv0), Vec2::from_array(hit.uv1));
+        //     let point = self.facet_groups[hit.g0][hit.f0].get_point_at_uv(Vec2::from_array(hit.uv0));
+        //     self.shapes.push(Shape::Point(point));
+        // }
+
+        // for i0 in 0..self.facet_groups[0].len() {
+        //     for i1 in 0..self.facet_groups[1].len() {
+        //         self.tester.facets.0 = self.facet_groups[0][i0].clone();
+        //         self.tester.facets.1 = self.facet_groups[1][i1].clone();
+        //         self.tester.points = vec![];
+        //         self.tester.spatial = Spatial3::new(self.tester.step);
+        //         for uv0 in self.facet_groups[0][i0].get_normalized_knots() {
+        //             for uv1 in self.facet_groups[1][i1].get_normalized_knots() {
+        //                 self.test_facets(i0, i1, uv0, uv1);
+        //             }
+        //         }
+        //     }
+        // }
 
 
         // //get_facet_hit_points(facet_groups[0].clone(), facet_groups[1].clone(), max_controls[0]*max_controls[1]);

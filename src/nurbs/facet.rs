@@ -5,7 +5,7 @@ use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::scene::Mesh;
 use crate::{get_curves, get_line_intersection2, get_vector_hash, log, CurveShape, Model, Rectangle, Shape};
-use euclid::{point3, Box3D, Point3D};
+//use euclid::{point3, Box3D, Point3D};
 use glam::*;
 use lyon::path::path::BuilderImpl;
 use serde::{Deserialize, Serialize};
@@ -153,16 +153,16 @@ impl FacetShape {
         facet
     }
 
-    pub fn get_box3(&self) -> Box3D<f32, f32> {
-        let mut points = vec![];
-        for curve in &self.controls {
-            for control in &curve.controls {
-                points.push(Point3D::from(control.to_array()));
-            }
-        }
-        let box3 = Box3D::from_points(points);
-        box3.inflate(0.01, 0.01, 0.01)
-    }
+    // pub fn get_box3(&self) -> Box3D<f32, f32> {
+    //     let mut points = vec![];
+    //     for curve in &self.controls {
+    //         for control in &curve.controls {
+    //             points.push(Point3D::from(control.to_array()));
+    //         }
+    //     }
+    //     let box3 = Box3D::from_points(points);
+    //     box3.inflate(0.01, 0.01, 0.01)
+    // }
 
     pub fn get_normalized_knots(&self) -> Vec<Vec2> {
         let mut knots = vec![];

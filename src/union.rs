@@ -1,5 +1,7 @@
 mod union2;
 mod union3;
+pub mod shader;
+mod hone_prep;
 
 use crate::{get_facet_hit_points, get_grouped_curves_and_facets, log, nurbs::curve, Curve, Facet, FacetGroup, FacetShape, Model, Reshape, Shape};
 use serde::{Deserialize, Serialize};
@@ -16,7 +18,7 @@ macro_rules! console_log {
 pub struct Union {
     pub parts:         Vec<Model>,
     pub negated_parts: Vec<Model>,
-    pub reshape:     Reshape,
+    pub reshape:       Reshape,
 }
 
 // pub struct UnionBasis {
@@ -27,8 +29,6 @@ pub struct Union {
 
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        
-
         let mut shapes = vec![];
         let tolerance = 0.005;
         //let duplication_tolerance = tolerance * 10.;

@@ -1,5 +1,5 @@
 use const_format::concatcp;
-use super::shader_parts::{FACET_CORE, FACET_PARTS, UV_POINT_CORE, UV_POINT_PARTS};
+use super::shader_parts::{FACET_CORE, FACET_PARTS, UV_POINT_CORE, UV_POINT_PARTS, HONE_PARTS};
 
 pub const CENTER_SOURCE: &str = r##"#version 300 es
 precision highp float;
@@ -64,8 +64,6 @@ pub const HONE_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
 precision highp isampler2D;
-
-float tolerance = 0.005;
 uniform isampler2D pair_tex;
 uniform sampler2D uv_tex;
 uniform sampler2D point_tex;
@@ -73,33 +71,18 @@ out vec4 outColor;
 "##,
 FACET_CORE, UV_POINT_CORE, 
 "void main() {",
-    FACET_PARTS, UV_POINT_PARTS, 
+    FACET_PARTS, UV_POINT_PARTS, HONE_PARTS, 
     r##"
-    vec3 center = get_point_between_facet_tangents(uv0, p0a, p0b, p0c, uv1, p1a, p1b, p1c);
-    vec2 uv0_a = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, center - p0a);
-    vec3 p0_a  = get_point_on_facet(facet_i.r, uv0_a);
-    vec2 uv1_a = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
-    vec3 p1_a  = get_point_on_facet(facet_i.g, uv1_a);
-
-    center = (p0a + p1a) / 2.;
-    vec2 uv0_b = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, center - p0a);
-    vec3 p0_b  = get_point_on_facet(facet_i.r, uv0_b);
-    vec2 uv1_b = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
-    vec3 p1_b  = get_point_on_facet(facet_i.g, uv1_b);
-
     vec2 uv0_c = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, p1a - p0a);
     vec3 p0_c  = get_point_on_facet(facet_i.r, uv0_c);
-
     vec2 uv1_c = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, p0a - p1a);
     vec3 p1_c  = get_point_on_facet(facet_i.g, uv1_c);
-
     vec4 lengths = vec4(
         length(p0_a - p1_a), 
         length(p0_b - p1_b),
         length(p1a  - p0_c),
         length(p0a  - p1_c)
     );
-
     float min_dist = 10000.;
     int i = 3;
     for(int k = 0; k < 4; k++){
@@ -108,7 +91,6 @@ FACET_CORE, UV_POINT_CORE,
             i = k;
         }
     }
-
     if(i < 1){
         outColor = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
     }else if(i < 2){
@@ -120,6 +102,66 @@ FACET_CORE, UV_POINT_CORE,
     }
 }
 "##);
+
+pub const HONE_TRACE_SOURCE: &str = concatcp!(r##"#version 300 es
+precision highp float;
+precision highp sampler2D;
+precision highp isampler2D;
+uniform isampler2D pair_tex;
+uniform sampler2D uv_tex;
+uniform sampler2D point_tex;
+uniform sampler2D box_tex;
+layout(location=0) out vec4 uv_pair;
+layout(location=1) out vec4 center;
+layout(location=2) out vec4 box;
+"##,
+FACET_CORE, UV_POINT_CORE, 
+"void main() {",
+    FACET_PARTS, UV_POINT_PARTS, HONE_PARTS, 
+    r##"
+    vec4 box = texelFetch(box_tex, pair_coord, 0);
+    vec2 uv = vec4(0, 0, 0, 0);
+    if(length(p0_a - p1_a) < length(p0_b - p1_b)){
+        uv_pair = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
+        center = (p0_a + p1_a) / 2.;
+        uv = uv0_a;
+    }else{
+        uv_pair = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
+        center = (p0_b + p1_b) / 2.;
+        uv = uv0_b;
+    }
+    box.x = min(box.x, uv.x);
+    box.y = min(box.y, uv.y);
+    box.z = max(box.z, uv.x);
+    box.w = max(box.w, uv.y);
+}
+"##);
+
+pub const BOX_SOURCE: &str = r##"#version 300 es
+precision highp float;
+precision highp sampler2D;
+uniform sampler2D uv_tex;
+uniform sampler2D box_tex;
+out vec4 output0;
+void main() {
+    ivec2 box_tex_size = textureSize(box_tex, 0);
+    ivec2 box_coord = ivec2(gl_FragCoord.x, gl_FragCoord.y);
+    vec4 box = texelFetch(box_tex, box_coord, 0);
+
+    vec2 uv_f  = texelFetch(uv_tex, box_coord, 0).rg;
+    box.x = min(box.x, uv_f.x);
+    box.y = min(box.y, uv_f.y);
+    box.z = max(box.z, uv_f.x);
+    box.w = max(box.w, uv_f.y);
+
+    ivec2 box_coord_r = ivec2(int(gl_FragCoord.x) + box_tex_size.x, gl_FragCoord.y);
+    vec2 uv_r  = texelFetch(uv_tex, box_coord_r, 0).rg;
+    output0.x = min(box.x, uv_r.x);
+    output0.y = min(box.y, uv_r.y);
+    output0.z = max(box.z, uv_r.x);
+    output0.w = max(box.w, uv_r.y);
+}
+"##;
 
 pub const HIT_MISS_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;
@@ -166,7 +208,7 @@ float tolerance = 0.005;
 uniform isampler2D pair_tex;
 uniform sampler2D uv_tex;
 uniform sampler2D point_tex;
-out vec4 outColor;
+layout(location=0) out vec4 output0;
 "##,
 FACET_CORE, UV_POINT_CORE, 
 "void main() {",
@@ -176,38 +218,12 @@ FACET_CORE, UV_POINT_CORE,
     if(pair_coord.x < pair_size.x/2){
         direction = 1.;
     }
-
     vec3 normal0 = get_facet_normal(uv0, p0a, p0b, p0c);
     vec3 normal1 = get_facet_normal(uv1, p1a, p1b, p1c);
     vec3 target = normalize(cross(normal0, normal1)) * direction * step;
     vec2 uv0a = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, target);
     vec2 uv1a = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, target);
-    outColor = vec4(uv0a.x, uv0a.y, uv1a.x, uv1a.y);
+    output0 = vec4(uv0a.x, uv0a.y, uv1a.x, uv1a.y);
 }
 "##);
 
-pub const BOX_SOURCE: &str = r##"#version 300 es
-precision highp float;
-precision highp sampler2D;
-uniform sampler2D uv_tex;
-uniform sampler2D box_tex;
-out vec4 outColor;
-void main() {
-    ivec2 box_tex_size = textureSize(box_tex, 0);
-    ivec2 box_coord = ivec2(gl_FragCoord.x, gl_FragCoord.y);
-    vec4 box = texelFetch(box_tex, box_coord, 0);
-
-    vec2 uv_f  = texelFetch(uv_tex, box_coord, 0).rg;
-    box.x = min(box.x, uv_f.x);
-    box.y = min(box.y, uv_f.y);
-    box.z = max(box.z, uv_f.x);
-    box.w = max(box.w, uv_f.y);
-
-    ivec2 box_coord_r = ivec2(int(gl_FragCoord.x) + box_tex_size.x, gl_FragCoord.y);
-    vec2 uv_r  = texelFetch(uv_tex, box_coord_r, 0).rg;
-    outColor.x = min(box.x, uv_r.x);
-    outColor.y = min(box.y, uv_r.y);
-    outColor.z = max(box.z, uv_r.x);
-    outColor.w = max(box.w, uv_r.y);
-}
-"##;

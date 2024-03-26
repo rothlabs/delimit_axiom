@@ -208,3 +208,16 @@ vec2 get_uv_from_3d_move_target(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 target)
     return uv1;
 }
 "##;
+
+pub const HONE_PARTS: &str = r##"
+    vec3 center = get_point_between_facet_tangents(uv0, p0a, p0b, p0c, uv1, p1a, p1b, p1c);
+    vec2 uv0_a = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, center - p0a);
+    vec3 p0_a  = get_point_on_facet(facet_i.r, uv0_a);
+    vec2 uv1_a = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
+    vec3 p1_a  = get_point_on_facet(facet_i.g, uv1_a);
+    center = (p0a + p1a) / 2.;
+    vec2 uv0_b = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, center - p0a);
+    vec3 p0_b  = get_point_on_facet(facet_i.r, uv0_b);
+    vec2 uv1_b = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
+    vec3 p1_b  = get_point_on_facet(facet_i.g, uv1_b);
+"##;

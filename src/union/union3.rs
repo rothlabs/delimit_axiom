@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use web_sys::{WebGl2RenderingContext as GL, WebGlProgram};
 use super::union2::UnionBasis2;
 use super::texel::TexelBasis;
-use super::shader::{CENTER_SOURCE, POINT_SOURCE, BOX_SOURCE, HIT_MISS_SOURCE, HONE_SOURCE, TRACE_SOURCE};
+use super::shader::{CENTER_SOURCE, POINT_SOURCE, BOX_SOURCE, HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, TRACE_SOURCE};
+use wasm_bindgen::JsValue;
+use js_sys::Array;
 
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
@@ -44,10 +46,11 @@ struct BasisBuffer {
 }
 
 struct TraceBuffer {
-    point: Framebuffer,
-    uv0:   Framebuffer,
-    uv1:   Framebuffer,
-    trace: Framebuffer,
+    point:  Framebuffer,
+    segment:    Framebuffer,
+    honed:    Framebuffer,
+    trace:  Framebuffer,
+    //center: Framebuffer,
 }
 
 //#[derive(Clone, Default)]
@@ -68,6 +71,7 @@ pub struct UnionBasis3 {
     hit_miss_program: WebGlProgram, 
     copy_program:     WebGlProgram,
     trace_program:    WebGlProgram, 
+    hone_trace_program:    WebGlProgram, 
     center_program:   WebGlProgram,
     box_program:      WebGlProgram,
     buffer:        Option<BasisBuffer>,
@@ -91,13 +95,14 @@ impl UnionBasis3 {
             facets: vec![],
             shapes: vec![],
             texel: TexelBasis::default(),
-            point_program:    gpu.get_quad_program_from_source(POINT_SOURCE).unwrap(),
-            hone_program:     gpu.get_quad_program_from_source(HONE_SOURCE).unwrap(),
-            hit_miss_program: gpu.get_quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
-            copy_program:     gpu.get_quad_program_from_source(COPY_FRAGMENT_SOURCE).unwrap(),
-            trace_program:    gpu.get_quad_program_from_source(TRACE_SOURCE).unwrap(),
-            center_program:   gpu.get_quad_program_from_source(CENTER_SOURCE).unwrap(),
-            box_program:      gpu.get_quad_program_from_source(BOX_SOURCE).unwrap(),
+            point_program:      gpu.get_quad_program_from_source(POINT_SOURCE).unwrap(),
+            hone_program:       gpu.get_quad_program_from_source(HONE_SOURCE).unwrap(),
+            hit_miss_program:   gpu.get_quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
+            copy_program:       gpu.get_quad_program_from_source(COPY_FRAGMENT_SOURCE).unwrap(),
+            trace_program:      gpu.get_quad_program_from_source(TRACE_SOURCE).unwrap(),
+            hone_trace_program: gpu.get_quad_program_from_source(HONE_TRACE_SOURCE).unwrap(),
+            center_program:     gpu.get_quad_program_from_source(CENTER_SOURCE).unwrap(),
+            box_program:        gpu.get_quad_program_from_source(BOX_SOURCE).unwrap(),
             buffer: None,
             trace_buffer: None,
             gpu,
@@ -255,8 +260,49 @@ impl UnionBasis3 {
         self.gpu.draw(&buff.uv1);
     }
 
+    // fn draw_center(&self, y: i32) {
+    //     self.gpu.gl.use_program(Some(&self.center_program));
+    //     self.gpu.set_uniform_1i(&self.center_program, "source_tex",  3);
+    //     self.gpu.set_uniform_2i(&self.center_program, "viewport_position",  IVec2::Y*y);
+    //     self.gpu.draw_rect(&self.trace_buffer.as_ref().unwrap().center, IVec2::Y*y, IVec2::Y);
+    // }
+
+    fn copy_trace(&self, y: i32) {
+        self.gpu.gl.use_program(Some(&self.copy_program));
+        self.gpu.set_uniform_1i(&self.copy_program, "source_tex0",  3);
+        self.gpu.set_uniform_1i(&self.copy_program, "source_tex1",  4);
+        self.gpu.set_uniform_2i(&self.copy_program, "viewport_position",  IVec2::Y*y);
+        self.gpu.draw_rect(&self.trace_buffer.as_ref().unwrap().trace, IVec2::Y*y, IVec2::Y);
+    }
+
+    fn trace_segment(&self) {
+        self.gpu.gl.use_program(Some(&self.trace_program));
+        self.set_uniform_basis(&self.trace_program);
+        self.gpu.set_uniform_1i(&self.trace_program, "point_tex",  2);
+        self.gpu.set_uniform_1i(&self.trace_program, "uv_tex",  3);
+        self.gpu.draw(&self.trace_buffer.as_ref().unwrap().honed);
+    }
+
+    fn hone_trace(&self) {
+        self.gpu.gl.use_program(Some(&self.hone_trace_program));
+        self.set_uniform_basis(&self.hone_trace_program);
+        self.gpu.set_uniform_1i(&self.hone_trace_program, "point_tex",  2);
+        self.gpu.set_uniform_1i(&self.hone_trace_program, "uv_tex",  6);
+        self.gpu.draw(&self.trace_buffer.as_ref().unwrap().segment);
+    }
+
+    fn trace(&self, length: i32){
+        //let buff = &self.trace_buffer.as_ref().unwrap();
+        for y in 0..length {
+            self.draw_points(3);
+            self.trace_segment();
+            self.draw_points(6);
+            self.hone_trace();
+            self.copy_trace(y);
+        }
+    }
+
     fn test_groups(&mut self) -> Result<(), String> {
-        console_log!("self.facet_groups.to_vec().len() {}", self.facet_groups.to_vec().len());
         let mut basis0 = TexelBasis::new(self.facet_groups.to_vec());
         self.gpu.texture.make_r32f(0, &mut basis0.facet_texels)?;
         let (_, pair_buf_size0) = self.gpu.texture.make_rg32i(1, &mut basis0.pair_texels)?;
@@ -270,7 +316,7 @@ impl UnionBasis3 {
 
         self.hone_to_hit_or_miss();
         let buff = &self.buffer.as_ref().unwrap();
-        let hit_miss = self.gpu.read(&buff.uv1);
+        let hit_miss = self.gpu.read(&buff.uv1, 0);
         for i in 0..hit_miss.len()/4 {
             if hit_miss[i*4] > -0.5 {
                 let IndexPair{g0, g1, f0, f1} = self.texel.index_pairs[i];
@@ -278,24 +324,19 @@ impl UnionBasis3 {
                 self.shapes.push(Shape::Point(point));
             }
         }
-        // let mut basis1 = TraceTexelBasis::new(&self.texel, hit_miss);
-        // let (_, pair_buf_size1) = self.gpu.texture.make_row_rg32i(1, &mut basis1.pair_texels)?;
-        // let point_buf_size1 = ivec2(pair_buf_size1.x*3, pair_buf_size1.y*2);
-        // let trace_length = 300;
-        // let trace_buf_size = ivec2(point_buf_size1.x, trace_length);
-        // self.trace_buffer = Some(TraceBuffer{
-        //     point: self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size1)?,
-        //     uv0:   self.gpu.framebuffer.make_row_rgba32f(3, &mut basis1.uv_texels)?,
-        //     uv1:   self.gpu.framebuffer.make_empty_rgba32f(4, pair_buf_size1)?,
-        //     trace: self.gpu.framebuffer.make_empty_rgba32f(5, trace_buf_size)?,
-        // });
-
-        // gpu.framebuffer.make_rgba32f(2, &mut uv_texels)?;  // uv_framebuffer_at_2
-        // gpu.texture.make_empty_rgba32f(3, pair_size)?; // uv_tex3
-        // gpu.texture.make_empty_rgba32f(4, pair_size)?; // point_tex4
-        // gpu.texture.make_empty_rgba32f(5, pair_size)?; // point_tex5
-        // gpu.texture.make_empty_rgba32f(6, pair_size)?; // point_tex6
-
+        let mut basis1 = TraceTexelBasis::new(&self.texel, hit_miss);
+        let (_, pair_buf_size1) = self.gpu.texture.make_row_rg32i(1, &mut basis1.pair_texels)?;
+        let point_buf_size1 = ivec2(pair_buf_size1.x*3, pair_buf_size1.y*2);
+        let trace_length = 300;
+        let trace_buf_size = ivec2(point_buf_size1.x, trace_length);
+        self.trace_buffer = Some(TraceBuffer{
+            point:   self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size1)?,
+            segment: self.gpu.framebuffer.make_row_rgba32f(3, &mut basis1.uv_box_texels)?,
+            honed:   self.gpu.framebuffer.make_empty_rgba32f(5, pair_buf_size1)?,
+            trace:   self.gpu.framebuffer.make_empty_rgba32f(8, trace_buf_size)?,
+            //center: self.gpu.framebuffer.make_empty_rgba32f(7, trace_buf_size, 0)?,
+        });
+        self.trace(trace_length);
         // let hits = self.get_hit_points();
         // for hit in hits {
         //     let mut curve0 = CurveShape::default();

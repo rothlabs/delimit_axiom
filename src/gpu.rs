@@ -13,6 +13,7 @@ pub struct GPU {
     pub pass_vertex_shader: Option<WebGlShader>,
     pub texture: TextureContext,
     pub framebuffer: FramebufferContext,
+    //pub program: WebGlProgram,
 }
 
 impl GPU {
@@ -48,26 +49,36 @@ impl GPU {
         gpu.gl.enable_vertex_attrib_array(position_attribute_location as u32);
         Ok(gpu)
     }
-    pub fn read(&self, buffer: &Framebuffer) -> Vec<f32> {
+    pub fn read(&self, buffer: &Framebuffer, attachment: u32) -> Vec<f32> {
         let pixels = js_sys::Float32Array::new_with_length((buffer.size.x * buffer.size.y * 4) as u32);
         self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer.content));
+        self.gl.read_buffer(attachment);
         self.gl.read_pixels_with_opt_array_buffer_view(
             0, 0, buffer.size.x, buffer.size.y, GL::RGBA, GL::FLOAT, Some(&pixels)).expect("Read pixels should not fail");
         pixels.to_vec()
     }
+    // pub fn draw_buffers(&self, attachments: Vec<u32>) {
+    //     let attach = JsValue::from(attachments.into_iter().map(|x| JsValue::from(x)).collect::<js_sys::Array>());
+    //     self.gl.draw_buffers(&attach);
+    // }
     pub fn draw(&self, buffer: &Framebuffer) {
         self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer.content));
         self.gl.viewport(0, 0, buffer.size.x, buffer.size.y);
         self.gl.draw_arrays(GL::TRIANGLES, 0, 6);
     }
-    pub fn draw_in_rect(&self, buffer: &Framebuffer, pos: IVec2, size: IVec2) {
+    pub fn draw_rect(&self, buffer: &Framebuffer, pos: IVec2, size: IVec2) {
         self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer.content));
+        //self.draw_buffers(attachments);
         self.gl.viewport(pos.x, pos.y, size.x, size.y);
         self.gl.draw_arrays(GL::TRIANGLES, 0, 6);
     }
     pub fn set_uniform_1i(&self, program: &WebGlProgram, name: &str, value: i32) {
         let location = self.gl.get_uniform_location(&program, name);
         self.gl.uniform1i(location.as_ref(), value);
+    }
+    pub fn set_uniform_2i(&self, program: &WebGlProgram, name: &str, value: IVec2) {
+        let location = self.gl.get_uniform_location(&program, name);
+        self.gl.uniform2i(location.as_ref(), value.x, value.y);
     }
     // pub fn set_uniform_texture(&self, program: &WebGlProgram, name: &str, index: i32) {
     //     let location = self.gl.get_uniform_location(&program, name);

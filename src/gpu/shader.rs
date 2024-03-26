@@ -8,11 +8,14 @@ void main() {
 pub const COPY_FRAGMENT_SOURCE: &str = r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
-uniform sampler2D uv_tex;
 uniform ivec2 viewport_position;
-out vec4 outColor;
+uniform sampler2D source_tex0;
+uniform sampler2D source_tex1;
+layout(location=0) out vec4 output0;
+layout(location=1) out vec4 output1;
 void main() {
     ivec2 coord = ivec2(gl_FragCoord.x, gl_FragCoord.y) - viewport_position;
-    outColor = texelFetch(uv_tex, coord, 0);
+    output0 = texelFetch(source_tex0, coord, 0);
+    output1 = texelFetch(source_tex1, coord, 0);
 }
 "##;

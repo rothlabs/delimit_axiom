@@ -2,11 +2,20 @@ use glam::{IVec2, ivec2};
 use web_sys::{WebGl2RenderingContext as GL, WebGlTexture};
 
 #[derive(Clone)]
-pub struct Texture {
+pub struct TextureContext {
     pub gl: GL,
 }
 
-impl Texture {
+impl TextureContext {
+    pub fn make_row_rg32i(&self, tex_i: u32, texels: &mut Vec<i32>) -> Result<(WebGlTexture, IVec2), String> {
+        let size = ivec2(texels.len() as i32 / 2, 1);
+        self.make_with_i32_and_size(tex_i, texels, size, 2, GL::RG32I, GL::RG_INTEGER, GL::INT)
+    }
+    pub fn make_row_rgba32f(&self, tex_i: u32, texels: &mut Vec<f32>) -> Result<(WebGlTexture, IVec2), String> {
+        let size = ivec2(texels.len() as i32 / 2, 1);
+        self.make_with_f32_and_size(tex_i, texels, size, 4, GL::RGBA32F, GL::RGBA, GL::FLOAT)
+    }
+
     pub fn make_rg32i(&self, tex_i: u32, texels: &mut Vec<i32>) -> Result<(WebGlTexture, IVec2), String> {
         let size = get_size(texels.len(), 2);
         self.make_with_i32_and_size(tex_i, texels, size, 2, GL::RG32I, GL::RG_INTEGER, GL::INT)

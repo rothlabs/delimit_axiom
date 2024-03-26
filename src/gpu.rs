@@ -3,16 +3,16 @@ pub mod texture;
 pub mod framebuffer;
 use glam::{IVec2};
 use wasm_bindgen::prelude::*;
-use web_sys::{WebGl2RenderingContext as GL, WebGlProgram, WebGlShader, WebGlTexture};
-use self::framebuffer::Framebuffer;
+use web_sys::{WebGl2RenderingContext as GL, WebGlFramebuffer, WebGlProgram, WebGlShader, WebGlTexture};
+use self::framebuffer::{Framebuffer, FramebufferContext};
 use self::shader::{PASS_VERTEX_SOURCE, COPY_FRAGMENT_SOURCE};
-use self::texture::Texture;
+use self::texture::TextureContext;
 
 pub struct GPU {
     pub gl: GL,
     pub pass_vertex_shader: Option<WebGlShader>,
-    pub texture: Texture,
-    pub framebuffer: Framebuffer,
+    pub texture: TextureContext,
+    pub framebuffer: FramebufferContext,
 }
 
 impl GPU {
@@ -32,12 +32,12 @@ impl GPU {
                 GL::STATIC_DRAW,
             );
         }
-        let texture = Texture{gl:gl.clone()};
+        let texture = TextureContext{gl:gl.clone()};
         let mut gpu = Self {
             gl: gl.clone(), 
             pass_vertex_shader: None, 
             texture: texture.clone(),
-            framebuffer: Framebuffer{gl, texture},
+            framebuffer: FramebufferContext{gl, texture},
         };
         gpu.pass_vertex_shader = Some(gpu.get_vertex_shader(PASS_VERTEX_SOURCE)?);
         let program = gpu.get_quad_program_from_source(COPY_FRAGMENT_SOURCE)?;
@@ -48,6 +48,31 @@ impl GPU {
         gpu.gl.enable_vertex_attrib_array(position_attribute_location as u32);
         Ok(gpu)
     }
+    pub fn read(&self, buffer: &Framebuffer) -> Vec<f32> {
+        let pixels = js_sys::Float32Array::new_with_length((buffer.size.x * buffer.size.y * 4) as u32);
+        self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer.content));
+        self.gl.read_pixels_with_opt_array_buffer_view(
+            0, 0, buffer.size.x, buffer.size.y, GL::RGBA, GL::FLOAT, Some(&pixels)).expect("Read pixels should not fail");
+        pixels.to_vec()
+    }
+    pub fn draw(&self, buffer: &Framebuffer) {
+        self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer.content));
+        self.gl.viewport(0, 0, buffer.size.x, buffer.size.y);
+        self.gl.draw_arrays(GL::TRIANGLES, 0, 6);
+    }
+    pub fn draw_in_rect(&self, buffer: &Framebuffer, pos: IVec2, size: IVec2) {
+        self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer.content));
+        self.gl.viewport(pos.x, pos.y, size.x, size.y);
+        self.gl.draw_arrays(GL::TRIANGLES, 0, 6);
+    }
+    pub fn set_uniform_1i(&self, program: &WebGlProgram, name: &str, value: i32) {
+        let location = self.gl.get_uniform_location(&program, name);
+        self.gl.uniform1i(location.as_ref(), value);
+    }
+    // pub fn set_uniform_texture(&self, program: &WebGlProgram, name: &str, index: i32) {
+    //     let location = self.gl.get_uniform_location(&program, name);
+    //     self.gl.
+    // }
     pub fn get_vertex_shader(&self, source: &str) -> Result<WebGlShader, String> {
         self.get_shader(GL::VERTEX_SHADER, source)
     }

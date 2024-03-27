@@ -52,7 +52,7 @@ impl GPU {
     pub fn read(&self, buffer: &Framebuffer, attachment: u32) -> Vec<f32> {
         let pixels = js_sys::Float32Array::new_with_length((buffer.size.x * buffer.size.y * 4) as u32);
         self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer.content));
-        self.gl.read_buffer(attachment);
+        self.gl.read_buffer(GL::COLOR_ATTACHMENT0 + attachment);
         self.gl.read_pixels_with_opt_array_buffer_view(
             0, 0, buffer.size.x, buffer.size.y, GL::RGBA, GL::FLOAT, Some(&pixels)).expect("Read pixels should not fail");
         pixels.to_vec()
@@ -66,10 +66,10 @@ impl GPU {
         self.gl.viewport(0, 0, buffer.size.x, buffer.size.y);
         self.gl.draw_arrays(GL::TRIANGLES, 0, 6);
     }
-    pub fn draw_rect(&self, buffer: &Framebuffer, pos: IVec2, size: IVec2) {
+    pub fn draw_at_pos(&self, buffer: &Framebuffer, pos: IVec2) {
         self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer.content));
         //self.draw_buffers(attachments);
-        self.gl.viewport(pos.x, pos.y, size.x, size.y);
+        self.gl.viewport(pos.x, pos.y, buffer.size.x, buffer.size.y);
         self.gl.draw_arrays(GL::TRIANGLES, 0, 6);
     }
     pub fn set_uniform_1i(&self, program: &WebGlProgram, name: &str, value: i32) {

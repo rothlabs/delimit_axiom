@@ -2,8 +2,8 @@ mod union2;
 mod union3;
 pub mod shader;
 mod texel;
-//mod trace_texel;
 mod shader_parts;
+mod traced;
 
 use crate::{get_facet_hit_points, get_grouped_curves_and_facets, log, nurbs::curve, Curve, Facet, FacetGroup, FacetShape, Model, Reshape, Shape};
 use serde::{Deserialize, Serialize};

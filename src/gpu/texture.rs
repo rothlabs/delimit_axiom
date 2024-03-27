@@ -20,7 +20,7 @@ impl TextureContext {
         let size = get_size(texels.len(), 2);
         self.make_with_i32_and_size(tex_i, texels, size, 2, GL::RG32I, GL::RG_INTEGER, GL::INT)
     }
-    pub fn make_empty_rgba32f(&self, tex_i: u32, size: IVec2) -> Result<(WebGlTexture, IVec2), String> {
+    pub fn make_empty_rgba32f(&self, tex_i: u32, size: IVec2) -> Result<WebGlTexture, String> {
         self.make_empty(tex_i, size, GL::RGBA32F, GL::RGBA, GL::FLOAT)
     }
     pub fn make_rgba32f(&self, tex_i: u32, texels: &mut Vec<f32>) -> Result<(WebGlTexture, IVec2), String> {
@@ -32,12 +32,12 @@ impl TextureContext {
         self.make_with_f32_and_size(tex_i, texels, size, 1, GL::R32F, GL::RED, GL::FLOAT)
     }
     fn make_empty(&self, tex_i: u32, size: IVec2, internal_format: u32, format: u32, type_: u32
-    ) -> Result<(WebGlTexture, IVec2), String> {
+    ) -> Result<WebGlTexture, String> {
         let texture = self.make(tex_i)?;
         self.gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_array_buffer_view(
             GL::TEXTURE_2D, 0, internal_format as i32, size.x, size.y, 0, format, type_, None
         ).expect("Could not set tex_image_2d with None");
-        Ok((texture, size))
+        Ok(texture)
     }
     fn make_with_i32_and_size(&self, tex_i: u32, texels: &mut Vec<i32>, 
         size: IVec2, item_size: i32, internal_format: u32, format: u32, type_: u32

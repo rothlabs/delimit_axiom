@@ -5,6 +5,7 @@ use crate::gpu::{shader::COPY_FRAGMENT_SOURCE, GPU};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use web_sys::{WebGl2RenderingContext as GL, WebGlProgram};
+use super::traced::{get_traced_curves, TracedCurve};
 use super::union2::UnionBasis2;
 use super::texel::TexelBasis;
 use super::shader::{CENTER_SOURCE, POINT_SOURCE, BOX_SOURCE, HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, TRACE_SOURCE};
@@ -267,38 +268,46 @@ impl UnionBasis3 {
     //     self.gpu.draw_rect(&self.trace_buffer.as_ref().unwrap().center, IVec2::Y*y, IVec2::Y);
     // }
 
-    fn copy_trace(&self, y: i32) {
-        self.gpu.gl.use_program(Some(&self.copy_program));
-        self.gpu.set_uniform_1i(&self.copy_program, "source_tex0",  3);
-        self.gpu.set_uniform_1i(&self.copy_program, "source_tex1",  4);
-        self.gpu.set_uniform_2i(&self.copy_program, "viewport_position",  IVec2::Y*y);
-        self.gpu.draw_rect(&self.trace_buffer.as_ref().unwrap().trace, IVec2::Y*y, IVec2::Y);
-    }
-
-    fn trace_segment(&self) {
-        self.gpu.gl.use_program(Some(&self.trace_program));
-        self.set_uniform_basis(&self.trace_program);
-        self.gpu.set_uniform_1i(&self.trace_program, "point_tex",  2);
-        self.gpu.set_uniform_1i(&self.trace_program, "uv_tex",  3);
-        self.gpu.draw(&self.trace_buffer.as_ref().unwrap().honed);
+    fn draw_trace_points(&self, uv_i: i32) {
+        self.gpu.gl.use_program(Some(&self.point_program));
+        self.set_uniform_basis(&self.point_program);
+        self.gpu.set_uniform_1i(&self.point_program, "uv_tex",  uv_i);
+        self.gpu.draw(&self.trace_buffer.as_ref().unwrap().point)
     }
 
     fn hone_trace(&self) {
         self.gpu.gl.use_program(Some(&self.hone_trace_program));
         self.set_uniform_basis(&self.hone_trace_program);
-        self.gpu.set_uniform_1i(&self.hone_trace_program, "point_tex",  2);
-        self.gpu.set_uniform_1i(&self.hone_trace_program, "uv_tex",  6);
+        self.gpu.set_uniform_1i(&self.hone_trace_program, "point_tex", 2);
+        self.gpu.set_uniform_1i(&self.hone_trace_program, "uv_tex",  3);
+        self.gpu.set_uniform_1i(&self.hone_trace_program, "box_tex", 4);
+        self.gpu.draw(&self.trace_buffer.as_ref().unwrap().honed);
+    }
+
+    fn copy_trace(&self, y: i32) {
+        self.gpu.gl.use_program(Some(&self.copy_program));
+        self.gpu.set_uniform_1i(&self.copy_program, "source_tex0",  5);
+        self.gpu.set_uniform_1i(&self.copy_program, "source_tex1",  7);
+        self.gpu.set_uniform_2i(&self.copy_program, "viewport_position",  IVec2::Y*y);
+        self.gpu.draw_at_pos(&self.trace_buffer.as_ref().unwrap().trace, IVec2::Y*y);
+    }
+
+    fn trace_segment(&self) {
+        self.gpu.gl.use_program(Some(&self.trace_program));
+        self.set_uniform_basis(&self.trace_program);
+        self.gpu.set_uniform_1i(&self.trace_program, "point_tex", 2);
+        self.gpu.set_uniform_1i(&self.trace_program, "uv_tex",  5);
+        self.gpu.set_uniform_1i(&self.trace_program, "box_tex", 6);
         self.gpu.draw(&self.trace_buffer.as_ref().unwrap().segment);
     }
 
     fn trace(&self, length: i32){
-        //let buff = &self.trace_buffer.as_ref().unwrap();
         for y in 0..length {
-            self.draw_points(3);
-            self.trace_segment();
-            self.draw_points(6);
+            self.draw_trace_points(3);
             self.hone_trace();
             self.copy_trace(y);
+            self.draw_trace_points(5);
+            self.trace_segment();
         }
     }
 
@@ -315,8 +324,8 @@ impl UnionBasis3 {
         self.texel = basis0;
 
         self.hone_to_hit_or_miss();
-        let buff = &self.buffer.as_ref().unwrap();
-        let hit_miss = self.gpu.read(&buff.uv1, 0);
+        let buff0 = &self.buffer.as_ref().unwrap();
+        let hit_miss = self.gpu.read(&buff0.uv1, 0);
         for i in 0..hit_miss.len()/4 {
             if hit_miss[i*4] > -0.5 {
                 let IndexPair{g0, g1, f0, f1} = self.texel.index_pairs[i];
@@ -325,19 +334,49 @@ impl UnionBasis3 {
             }
         }
         let mut basis1 = TraceTexelBasis::new(&self.texel, hit_miss);
+        //console_log!("basis1.pair_texels {}", basis1.pair_texels.len());
+        //console_log!("basis1.pair_texels {:?}", basis1.pair_texels);
         let (_, pair_buf_size1) = self.gpu.texture.make_row_rg32i(1, &mut basis1.pair_texels)?;
         let point_buf_size1 = ivec2(pair_buf_size1.x*3, pair_buf_size1.y*2);
         let trace_length = 300;
-        let trace_buf_size = ivec2(point_buf_size1.x, trace_length);
+        let trace_buf_size = ivec2(pair_buf_size1.x, trace_length);
+        //console_log!("trace_buf_size {:?}", trace_buf_size);
         self.trace_buffer = Some(TraceBuffer{
             point:   self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size1)?,
             segment: self.gpu.framebuffer.make_row_rgba32f(3, &mut basis1.uv_box_texels)?,
-            honed:   self.gpu.framebuffer.make_empty_rgba32f(5, pair_buf_size1)?,
-            trace:   self.gpu.framebuffer.make_empty_rgba32f(8, trace_buf_size)?,
-            //center: self.gpu.framebuffer.make_empty_rgba32f(7, trace_buf_size, 0)?,
+            honed:   self.gpu.framebuffer.make_multi_empty_rgba32f(5, pair_buf_size1, 3)?,
+            trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(8, trace_buf_size, 2)?,
         });
         self.trace(trace_length);
-        // let hits = self.get_hit_points();
+        let buff1 = &self.trace_buffer.as_ref().unwrap();
+        let traces  = self.gpu.read(&buff1.trace, 0);
+        let boxes   = self.gpu.read(&buff1.honed, 1);
+        //console_log!("boxes {:?}", boxes);
+        let centers = self.gpu.read(&buff1.trace, 1);
+        let traced_curves = get_traced_curves(basis1.index_pairs, trace_buf_size, traces, boxes, centers);
+        for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
+            let IndexPair{g0, g1, f0, f1} = index_pair;
+            //self.facet_hits[g0][f0].push(curve0);
+            //self.facet_hits[g1][f1].push(curve1);
+            self.shapes.push(Shape::Curve(center));
+        }   
+        Ok(())     
+    }
+}
+
+//use std::time::Instant;
+// use rand::{Rng, SeedableRng};
+// use rand::rngs::StdRng;
+//let seed: [u8; 32] = *b"seed_value_0123456789seed_value_";
+//self.rng = SmallRng::from_seed(seed);
+
+//console_log!("try face pairs: {}, {}", self.grouped_facets.len(), self.grouped_facets.len());
+//let start = Instant::now();
+//let elapsed = start.elapsed();
+//console_log!("timed: {:?}", elapsed);
+
+
+// let hits = self.get_hit_points();
         // for hit in hits {
         //     let mut curve0 = CurveShape::default();
         //     curve0.negate();
@@ -366,21 +405,7 @@ impl UnionBasis3 {
         //         //self.facet_hits[hit.g0][hit.f0].push(curve0.get_valid());
         //         self.shapes.push(Shape::Curve(center_curve.get_valid()));
         //     }
-        // }   
-        Ok(())     
-    }
-}
-
-//use std::time::Instant;
-// use rand::{Rng, SeedableRng};
-// use rand::rngs::StdRng;
-//let seed: [u8; 32] = *b"seed_value_0123456789seed_value_";
-//self.rng = SmallRng::from_seed(seed);
-
-//console_log!("try face pairs: {}, {}", self.grouped_facets.len(), self.grouped_facets.len());
-//let start = Instant::now();
-//let elapsed = start.elapsed();
-//console_log!("timed: {:?}", elapsed);
+        // } 
 
 // let point_buf0 = self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size0)?;
         // let uv_buf0 = self.gpu.framebuffer.make_rgba32f(3, &mut pack.uv_texels)?;

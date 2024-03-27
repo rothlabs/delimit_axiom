@@ -17,8 +17,8 @@ impl FramebufferContext {
     pub fn make_row_rgba32f(&self, tex_i: u32, texel_groups: &mut Vec<Vec<f32>>) -> Result<Framebuffer, String> {
         let mut textures = vec![];
         let mut size = IVec2::ZERO;
-        for texels in texel_groups {
-            let (texture, new_size) = self.texture.make_row_rgba32f(tex_i, texels)?;
+        for i in 0..texel_groups.len() {
+            let (texture, new_size) = self.texture.make_row_rgba32f(tex_i + i as u32, &mut texel_groups[i])?;
             textures.push(texture);
             size = new_size;
         } 
@@ -26,28 +26,25 @@ impl FramebufferContext {
     }
     pub fn make_multi_empty_rgba32f(&self, tex_i: u32, size: IVec2, count: usize) -> Result<Framebuffer, String> {
         let mut textures = vec![];
-        for _ 0..count {
-            let (texture, _) = self.texture.make_empty_rgba32f(tex_i, size)?;
-            textures.push(texture);
-            size = new_size;
+        for i in 0..count as u32{
+            textures.push(self.texture.make_empty_rgba32f(tex_i + i, size)?);
         } 
-        let (texture, _) = self.texture.make_empty_rgba32f(tex_i, size)?;
-        self.make(vec![texture], size)
+        self.make(textures, size)
     }
     pub fn make_empty_rgba32f(&self, tex_i: u32, size: IVec2) -> Result<Framebuffer, String> {
-        let (texture, _) = self.texture.make_empty_rgba32f(tex_i, size)?;
+        let texture = self.texture.make_empty_rgba32f(tex_i, size)?;
         self.make(vec![texture], size)
     }
     pub fn make_rgba32f(&self, tex_i: u32, texels: &mut Vec<f32>) -> Result<Framebuffer, String> {
         let (texture, size) = self.texture.make_rgba32f(tex_i, texels)?;
         self.make(vec![texture], size)
     }
-    fn make(&self, texture: Vec<WebGlTexture>, size:IVec2) -> Result<Framebuffer, String> {
+    fn make(&self, textures: Vec<WebGlTexture>, size:IVec2) -> Result<Framebuffer, String> {
         let buffer = self.gl.create_framebuffer().ok_or("Failed to create framebuffer")?;
         self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer));
         //self.gl.framebuffer_texture_2d(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::TEXTURE_2D, Some(&texture), 0);
-        let mut attachments = js_sys::Array::new(); // vec![];
-        for (i, tex) in texture.iter().enumerate() {
+        let attachments = js_sys::Array::new(); // vec![];
+        for (i, tex) in textures.iter().enumerate() {
             let attachment = GL::COLOR_ATTACHMENT0 + i as u32;
             attachments.push(&JsValue::from(attachment));
             self.gl.framebuffer_texture_2d(GL::FRAMEBUFFER, attachment, GL::TEXTURE_2D, Some(&tex), 0);

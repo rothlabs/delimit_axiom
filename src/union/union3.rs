@@ -322,17 +322,16 @@ impl UnionBasis3 {
             uv1:   self.gpu.framebuffer.make_empty_rgba32f(4, pair_buf_size0)?,
         });
         self.texel = basis0;
-
         self.hone_to_hit_or_miss();
         let buff0 = &self.buffer.as_ref().unwrap();
         let hit_miss = self.gpu.read(&buff0.uv1, 0);
-        for i in 0..hit_miss.len()/4 {
-            if hit_miss[i*4] > -0.5 {
-                let IndexPair{g0, g1, f0, f1} = self.texel.index_pairs[i];
-                let point = self.facet_groups[g0][f0].get_point_at_uv(vec2(hit_miss[i*4], hit_miss[i*4+1]));
-                self.shapes.push(Shape::Point(point));
-            }
-        }
+        // for i in 0..hit_miss.len()/4 {
+        //     if hit_miss[i*4] > -0.5 {
+        //         let IndexPair{g0, g1, f0, f1} = self.texel.index_pairs[i];
+        //         let point = self.facet_groups[g0][f0].get_point_at_uv(vec2(hit_miss[i*4], hit_miss[i*4+1]));
+        //         self.shapes.push(Shape::Point(point));
+        //     }
+        // }
         let mut basis1 = TraceTexelBasis::new(&self.texel, hit_miss);
         //console_log!("basis1.pair_texels {}", basis1.pair_texels.len());
         //console_log!("basis1.pair_texels {:?}", basis1.pair_texels);
@@ -356,8 +355,8 @@ impl UnionBasis3 {
         let traced_curves = get_traced_curves(basis1.index_pairs, trace_buf_size, traces, boxes, centers);
         for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
             let IndexPair{g0, g1, f0, f1} = index_pair;
-            //self.facet_hits[g0][f0].push(curve0);
-            //self.facet_hits[g1][f1].push(curve1);
+            self.facet_hits[g0][f0].push(curve0);
+            self.facet_hits[g1][f1].push(curve1);
             self.shapes.push(Shape::Curve(center));
         }   
         Ok(())     

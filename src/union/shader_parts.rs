@@ -215,9 +215,29 @@ pub const HONE_PARTS: &str = r##"
     vec3 p0_a  = get_point_on_facet(facet_i.r, uv0_a);
     vec2 uv1_a = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
     vec3 p1_a  = get_point_on_facet(facet_i.g, uv1_a);
+    
     center = (p0a + p1a) / 2.;
     vec2 uv0_b = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, center - p0a);
     vec3 p0_b  = get_point_on_facet(facet_i.r, uv0_b);
     vec2 uv1_b = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
     vec3 p1_b  = get_point_on_facet(facet_i.g, uv1_b);
+    
+    vec2 uv0_c = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, p1a - p0a);
+    vec3 p0_c  = get_point_on_facet(facet_i.r, uv0_c);
+    vec2 uv1_c = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, p0a - p1a);
+    vec3 p1_c  = get_point_on_facet(facet_i.g, uv1_c);
+    vec4 lengths = vec4(
+        length(p0_a - p1_a), 
+        length(p0_b - p1_b),
+        length(p1a  - p0_c),
+        length(p0a  - p1_c)
+    );
+    float min_dist = 10000.;
+    int i = 3;
+    for(int k = 0; k < 4; k++){
+        if(min_dist > lengths[k]){
+            min_dist = lengths[k];
+            i = k;
+        }
+    }
 "##;

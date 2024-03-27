@@ -67,38 +67,38 @@ precision highp isampler2D;
 uniform isampler2D pair_tex;
 uniform sampler2D uv_tex;
 uniform sampler2D point_tex;
-out vec4 outColor;
+out vec4 uvs;
 "##,
 FACET_CORE, UV_POINT_CORE, 
 "void main() {",
     FACET_PARTS, UV_POINT_PARTS, HONE_PARTS, 
     r##"
-    vec2 uv0_c = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, p1a - p0a);
-    vec3 p0_c  = get_point_on_facet(facet_i.r, uv0_c);
-    vec2 uv1_c = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, p0a - p1a);
-    vec3 p1_c  = get_point_on_facet(facet_i.g, uv1_c);
-    vec4 lengths = vec4(
-        length(p0_a - p1_a), 
-        length(p0_b - p1_b),
-        length(p1a  - p0_c),
-        length(p0a  - p1_c)
-    );
-    float min_dist = 10000.;
-    int i = 3;
-    for(int k = 0; k < 4; k++){
-        if(min_dist > lengths[k]){
-            min_dist = lengths[k];
-            i = k;
-        }
-    }
+    // vec2 uv0_c = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, p1a - p0a);
+    // vec3 p0_c  = get_point_on_facet(facet_i.r, uv0_c);
+    // vec2 uv1_c = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, p0a - p1a);
+    // vec3 p1_c  = get_point_on_facet(facet_i.g, uv1_c);
+    // vec4 lengths = vec4(
+    //     length(p0_a - p1_a), 
+    //     length(p0_b - p1_b),
+    //     length(p1a  - p0_c),
+    //     length(p0a  - p1_c)
+    // );
+    // float min_dist = 10000.;
+    // int i = 3;
+    // for(int k = 0; k < 4; k++){
+    //     if(min_dist > lengths[k]){
+    //         min_dist = lengths[k];
+    //         i = k;
+    //     }
+    // }
     if(i < 1){
-        outColor = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
+        uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
     }else if(i < 2){
-        outColor = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
+        uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
     }else if(i < 3){
-        outColor = vec4(uv0_c.x, uv0_c.y, uv1.x, uv1.y);
+        uvs = vec4(uv0_c.x, uv0_c.y, uv1.x, uv1.y);
     }else{
-        outColor = vec4(uv0.x, uv0.y, uv1_c.x, uv1_c.y);
+        uvs = vec4(uv0.x, uv0.y, uv1_c.x, uv1_c.y);
     }
 }
 "##);
@@ -156,14 +156,31 @@ FACET_CORE, UV_POINT_CORE,
     r##"
     box = texelFetch(box_tex, pair_coord, 0);
     vec2 uv = vec2(0, 0);
-    if(length(p0_a - p1_a) < length(p0_b - p1_b)){
+    // if(length(p0_a - p1_a) < length(p0_b - p1_b)){
+    //     uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
+    //     point = (p0_a + p1_a) / 2.;
+    //     uv = uv0_a;
+    // }else{
+    //     uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
+    //     point = (p0_b + p1_b) / 2.;
+    //     uv = uv0_b;
+    // }
+    if(i < 1){
         uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
         point = (p0_a + p1_a) / 2.;
         uv = uv0_a;
-    }else{
+    }else if(i < 2){
         uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
         point = (p0_b + p1_b) / 2.;
         uv = uv0_b;
+    }else if(i < 3){
+        uvs = vec4(uv0_c.x, uv0_c.y, uv1.x, uv1.y);
+        point = (p0_c + p1a) / 2.;
+        uv = uv0_c;
+    }else{
+        uvs = vec4(uv0.x, uv0.y, uv1_c.x, uv1_c.y);
+        point = (p0a + p1_c) / 2.;
+        uv = uv0;
     }
     box.x = min(box.x, uv.x);
     box.y = min(box.y, uv.y);
@@ -171,6 +188,7 @@ FACET_CORE, UV_POINT_CORE,
     box.w = max(box.w, uv.y);
 }
 "##);
+
 
 pub const TRACE_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;

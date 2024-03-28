@@ -23,11 +23,11 @@ macro_rules! console_log {
 //#[wasm_bindgen(js_name = Curve)]
 pub struct Curve {
     pub controls: Vec<Model>,
+    pub min:  f32,
+    pub max:  f32,
     pub knots:    Vec<f32>,    // knot_count = order + control_count
     pub weights:  Vec<f32>,    // weight_count = control_count
     pub order:    usize,       // order = polynomial_degree + 1
-    pub min:  f32,
-    pub max:  f32,
     pub sign: f32,
 }
 

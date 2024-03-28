@@ -1,20 +1,6 @@
 use const_format::concatcp;
 use super::shader_parts::{FACET_CORE, FACET_PARTS, UV_POINT_CORE, UV_POINT_PARTS, HONE_PARTS};
 
-pub const CENTER_SOURCE: &str = r##"#version 300 es
-precision highp float;
-precision highp sampler2D;
-uniform sampler2D point_tex;
-uniform ivec2 viewport_position;
-out vec4 outColor;
-void main() {
-    ivec2 coord = ivec2(gl_FragCoord.x, gl_FragCoord.y) - viewport_position;
-    vec4 p0 = texelFetch(point_tex, coord, 0);
-    vec4 p1 = texelFetch(point_tex, coord + ivec2(0,1), 0);
-    outColor = (p0 + p1) / 2.;
-}
-"##;
-
 pub const POINT_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
@@ -73,24 +59,6 @@ FACET_CORE, UV_POINT_CORE,
 "void main() {",
     FACET_PARTS, UV_POINT_PARTS, HONE_PARTS, 
     r##"
-    // vec2 uv0_c = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, p1a - p0a);
-    // vec3 p0_c  = get_point_on_facet(facet_i.r, uv0_c);
-    // vec2 uv1_c = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, p0a - p1a);
-    // vec3 p1_c  = get_point_on_facet(facet_i.g, uv1_c);
-    // vec4 lengths = vec4(
-    //     length(p0_a - p1_a), 
-    //     length(p0_b - p1_b),
-    //     length(p1a  - p0_c),
-    //     length(p0a  - p1_c)
-    // );
-    // float min_dist = 10000.;
-    // int i = 3;
-    // for(int k = 0; k < 4; k++){
-    //     if(min_dist > lengths[k]){
-    //         min_dist = lengths[k];
-    //         i = k;
-    //     }
-    // }
     if(i < 1){
         uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
     }else if(i < 2){
@@ -107,7 +75,6 @@ pub const HIT_MISS_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
 precision highp isampler2D;
-
 float tolerance = 0.005;
 uniform isampler2D pair_tex;
 uniform sampler2D uv_tex;
@@ -156,15 +123,6 @@ FACET_CORE, UV_POINT_CORE,
     r##"
     box = texelFetch(box_tex, pair_coord, 0);
     vec2 uv = vec2(0, 0);
-    // if(length(p0_a - p1_a) < length(p0_b - p1_b)){
-    //     uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
-    //     point = (p0_a + p1_a) / 2.;
-    //     uv = uv0_a;
-    // }else{
-    //     uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
-    //     point = (p0_b + p1_b) / 2.;
-    //     uv = uv0_b;
-    // }
     if(i < 1){
         uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
         point = (p0_a + p1_a) / 2.;
@@ -195,7 +153,7 @@ precision highp float;
 precision highp sampler2D;
 precision highp isampler2D;
 
-float step = 1.;
+float step = 0.8;
 float tolerance = 0.005;
 uniform isampler2D pair_tex;
 uniform sampler2D point_tex;
@@ -223,29 +181,56 @@ FACET_CORE, UV_POINT_CORE,
 "##);
 
 
-pub const BOX_SOURCE: &str = r##"#version 300 es
-precision highp float;
-precision highp sampler2D;
-uniform sampler2D uv_tex;
-uniform sampler2D box_tex;
-out vec4 output0;
-void main() {
-    ivec2 box_tex_size = textureSize(box_tex, 0);
-    ivec2 box_coord = ivec2(gl_FragCoord.x, gl_FragCoord.y);
-    vec4 box = texelFetch(box_tex, box_coord, 0);
 
-    vec2 uv_f  = texelFetch(uv_tex, box_coord, 0).rg;
-    box.x = min(box.x, uv_f.x);
-    box.y = min(box.y, uv_f.y);
-    box.z = max(box.z, uv_f.x);
-    box.w = max(box.w, uv_f.y);
 
-    ivec2 box_coord_r = ivec2(int(gl_FragCoord.x) + box_tex_size.x, gl_FragCoord.y);
-    vec2 uv_r  = texelFetch(uv_tex, box_coord_r, 0).rg;
-    output0.x = min(box.x, uv_r.x);
-    output0.y = min(box.y, uv_r.y);
-    output0.z = max(box.z, uv_r.x);
-    output0.w = max(box.w, uv_r.y);
-}
-"##;
+                            // if(length(p0_a - p1_a) < length(p0_b - p1_b)){
+                            //     uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
+                            //     point = (p0_a + p1_a) / 2.;
+                            //     uv = uv0_a;
+                            // }else{
+                            //     uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
+                            //     point = (p0_b + p1_b) / 2.;
+                            //     uv = uv0_b;
+                            // }
+
+
+// pub const CENTER_SOURCE: &str = r##"#version 300 es
+// precision highp float;
+// precision highp sampler2D;
+// uniform sampler2D point_tex;
+// uniform ivec2 viewport_position;
+// out vec4 outColor;
+// void main() {
+//     ivec2 coord = ivec2(gl_FragCoord.x, gl_FragCoord.y) - viewport_position;
+//     vec4 p0 = texelFetch(point_tex, coord, 0);
+//     vec4 p1 = texelFetch(point_tex, coord + ivec2(0,1), 0);
+//     outColor = (p0 + p1) / 2.;
+// }
+// "##;
+
+// pub const BOX_SOURCE: &str = r##"#version 300 es
+// precision highp float;
+// precision highp sampler2D;
+// uniform sampler2D uv_tex;
+// uniform sampler2D box_tex;
+// out vec4 output0;
+// void main() {
+//     ivec2 box_tex_size = textureSize(box_tex, 0);
+//     ivec2 box_coord = ivec2(gl_FragCoord.x, gl_FragCoord.y);
+//     vec4 box = texelFetch(box_tex, box_coord, 0);
+
+//     vec2 uv_f  = texelFetch(uv_tex, box_coord, 0).rg;
+//     box.x = min(box.x, uv_f.x);
+//     box.y = min(box.y, uv_f.y);
+//     box.z = max(box.z, uv_f.x);
+//     box.w = max(box.w, uv_f.y);
+
+//     ivec2 box_coord_r = ivec2(int(gl_FragCoord.x) + box_tex_size.x, gl_FragCoord.y);
+//     vec2 uv_r  = texelFetch(uv_tex, box_coord_r, 0).rg;
+//     output0.x = min(box.x, uv_r.x);
+//     output0.y = min(box.y, uv_r.y);
+//     output0.z = max(box.z, uv_r.x);
+//     output0.w = max(box.w, uv_r.y);
+// }
+// "##;
 

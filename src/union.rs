@@ -71,18 +71,20 @@ impl Union {
                 curve_groups.push(curve_group);
                 facet_groups.push(facet_group);
             }
-            let mut curves0 = curve_groups.first().unwrap_or(&vec![]).clone();
-            let mut facets0 = facet_groups.first().unwrap_or(&vec![]).clone();
-            //self.get_hit_points(facet_groups.clone());
-            for i in 1..facet_groups.len() {
-                let curves1 = curve_groups[i].clone();
-                let facets1 = facet_groups[i].clone();
-                let mut basis = UnionBasis3::new(curves0, curves1, facets0, facets1, tolerance, step);
-                (curves0, facets0) = basis.build(i);
-                shapes.extend(basis.shapes);
-            }
-            shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
-            shapes.extend(facets0.iter().map(|f| Shape::Facet(f.clone())));
+            let mut basis = UnionBasis3::new(curve_groups, facet_groups, tolerance, step);
+            shapes.extend(basis.make_shapes(0));
+            // let mut curves0 = curve_groups.first().unwrap_or(&vec![]).clone();
+            // let mut facets0 = facet_groups.first().unwrap_or(&vec![]).clone();
+            // //self.get_hit_points(facet_groups.clone());
+            // for i in 1..facet_groups.len() {
+            //     let curves1 = curve_groups[i].clone();
+            //     let facets1 = facet_groups[i].clone();
+            //     let mut basis = UnionBasis3::new(curves0, curves1, facets0, facets1, tolerance, step);
+            //     (curves0, facets0) = basis.build(i);
+            //     shapes.extend(basis.shapes);
+            // }
+            // shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
+            // shapes.extend(facets0.iter().map(|f| Shape::Facet(f.clone())));
         }
         shapes
     }

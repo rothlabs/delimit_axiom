@@ -1,5 +1,5 @@
 use glam::{vec2, vec3, IVec2, Vec2, Vec3};
-use crate::CurveShape;
+use crate::{log, CurveShape};
 use super::texel::IndexPair;
 use std::collections::HashMap;
 
@@ -45,10 +45,10 @@ pub fn get_traced_curves(
         curve1.negate();
         center.negate();
         let mut points1 = vec![];
-        for y in 1..buf_size.y as usize{
+        for y in 0..buf_size.y as usize{
             let j = (y * buf_size.x as usize + i) * 4;
             let point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
-            if prev_point.distance(point) < 0.01 {break;}
+            if prev_point.distance(point) < 0.05 {break;}
             prev_point = point;
             curve0.controls.push(vec3(traces[j+0], traces[j+1], 0.));
             points1.push(vec3(traces[j+2], traces[j+3], 0.));
@@ -56,22 +56,35 @@ pub fn get_traced_curves(
         }
         points1.reverse();
         curve1.controls.splice(0..0, points1);
-        prev_point = vec3(100000., 100000., 100000.);
-        let mut points0 = vec![];
-        let mut centers1 = vec![];
-        for y in 1..buf_size.y as usize{
-            let j = (y * buf_size.x as usize + i + half) * 4;
-            let point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
-            if prev_point.distance(point) < 0.01 {break;}
-            prev_point = point;
-            points0.push(vec3(traces[j+0], traces[j+1], 0.));
-            curve1.controls.push(vec3(traces[j+2], traces[j+3], 0.));
-            centers1.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
-        }
-        points0.reverse();
-        centers1.reverse();
-        curve0.controls.splice(0..0, points0);
-        center.controls.splice(0..0, centers1);
+        //let j = (buf_size.x as usize + half + i) * 4;
+        let j = i * 4;
+        prev_point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
+        // let dist = vec3(centers0[i*4], centers0[i*4+1], centers0[i*4+2]).distance(prev_point);
+        // if dist > 0.01  {
+            let mut points0 = vec![];
+            let mut centers1 = vec![];
+            // points0.push(vec3(traces[j+0], traces[j+1], 0.));
+            // curve1.controls.push(vec3(traces[j+2], traces[j+3], 0.));
+            // centers1.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
+            for y in 1..buf_size.y as usize{
+                let j = (y * buf_size.x as usize + half + i) * 4;
+                let point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
+                if prev_point.distance(point) < 0.05 {break;}
+                prev_point = point;
+                points0.push(vec3(traces[j+0], traces[j+1], 0.));
+                curve1.controls.push(vec3(traces[j+2], traces[j+3], 0.));
+                centers1.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
+            }
+            points0.reverse();
+            centers1.reverse();
+            curve0.controls.splice(0..0, points0);
+            center.controls.splice(0..0, centers1);
+        //}
+        // for t in 0..center.controls.len()-1 {
+        //     if center.controls[t].distance(center.controls[t+1]) < 0.05 {
+        //         log("double point on center!!!");
+        //     }
+        // }
         traced_curves.push(TracedCurve{
             index_pair: index_pairs[i].clone(),
             curve0: curve0.get_valid(),

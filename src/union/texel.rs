@@ -26,7 +26,7 @@ pub struct TexelBasis{
 }
 
 impl TexelBasis {
-    pub fn new(groups: Vec<Vec<FacetShape>>) -> Self{
+    pub fn new(groups: &Vec<Vec<FacetShape>>) -> Self{
         let mut max_facet_length = 0;
         let mut max_knot_count = 0;
         let mut index_pairs: Vec<IndexPair> = vec![];
@@ -104,13 +104,14 @@ impl TexelBasis {
 }
 
 #[derive(Default)]
-pub struct TraceTexelBasis{
-    pub index_pairs: Vec<IndexPair>,
-    pub pair_texels: Vec<i32>,
-    pub uv_box_texels:   Vec<Vec<f32>>,
+pub struct TraceBasis{
+    pub index_pairs:   Vec<IndexPair>,
+    pub pair_texels:   Vec<i32>,
+    pub uv_box_texels: Vec<Vec<f32>>,
+    //pub misses: Vec<>
 }
 
-impl TraceTexelBasis {
+impl TraceBasis {
     pub fn new(basis: &TexelBasis, hit_miss: Vec<f32>) -> Self {
         let mut index_pairs: Vec<IndexPair> = vec![];
         let mut pair_texels: Vec<i32> = vec![];
@@ -122,21 +123,24 @@ impl TraceTexelBasis {
                     if k < 1 {
                         index_pairs.push(basis.index_pairs[i].clone());
                     }
-                    pair_texels.extend([basis.pair_texels[i*2+0], basis.pair_texels[i*2+1]]);
-                    uv_texels.extend([hit_miss[i*4+0], hit_miss[i*4+1], hit_miss[i*4+2], hit_miss[i*4+3]]); // use .slice of uv_pairs
+                    pair_texels.extend([basis.pair_texels[i*2], basis.pair_texels[i*2+1]]);
+                    uv_texels.extend([hit_miss[i*4+0], hit_miss[i*4+1], hit_miss[i*4+2], hit_miss[i*4+3]]); // use .slice of tex
                     box_texels.extend([1., 1., 0., 0.]);
-                    // hit_points.push({
-                    //     ...group_facet_indices0[i],
-                    //     uv0: [hit_miss[i*4+0], hit_miss[i*4+1]],
-                    //     uv1: [hit_miss[i*4+2], hit_miss[i*4+3]],
-                    // });
+                }else{
+                    
                 }
             }
         }
-        TraceTexelBasis {
+        TraceBasis {
             index_pairs, 
             pair_texels,
             uv_box_texels: vec![uv_texels, box_texels],
         }
     }
 }
+
+// hit_points.push({
+//     ...group_facet_indices0[i],
+//     uv0: [hit_miss[i*4+0], hit_miss[i*4+1]],
+//     uv1: [hit_miss[i*4+2], hit_miss[i*4+3]],
+// });

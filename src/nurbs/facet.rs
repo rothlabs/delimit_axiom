@@ -1,30 +1,16 @@
 use std::f32::{EPSILON, INFINITY};
-use std::ops::DivAssign;
-
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::scene::Mesh;
-use crate::{get_curves, get_line_intersection2, get_vector_hash, log, CurveShape, Model, Rectangle, Shape};
+use crate::{get_curves, get_line_intersection2, get_vector_hash, Curve, Model, Rectangle, Shape};
 //use euclid::{point3, Box3D, Point3D};
 use glam::*;
-use lyon::path::path::BuilderImpl;
 use serde::{Deserialize, Serialize};
 use lyon::tessellation::*;
-use lyon::geom::{point, Box2D, Point};
+use lyon::geom::{Box2D, Point};
 use lyon::path::Winding;
-use lyon::path::builder::NoAttributes;
-
-
-
-//use wasm_bindgen_test::console_log;
-
-//use rayon::prelude::*;
 
 // ((a % b) + b) % b)  ->  a modulo b
-
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
 
 // #[derive(Clone, Default, Serialize, Deserialize)]
 // #[serde(default = "BasicFacet::default")]
@@ -35,11 +21,11 @@ macro_rules! console_log {
 //     //pub box_3d: Box3D<f32, f32>,
 // }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "FacetGroup::default")]
-pub struct FacetGroup {
-    pub facets: Vec<Facet>,
-}
+// #[derive(Clone, Default, Serialize, Deserialize)]
+// #[serde(default = "FacetGroup::default")]
+// pub struct FacetGroup {
+//     pub facets: Vec<Facet>,
+// }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Facet::default")]
@@ -77,8 +63,8 @@ impl Facet {
 #[derive(Clone)]
 pub struct FacetShape {
     pub nurbs:      Nurbs,
-    pub controls:   Vec<CurveShape>,
-    pub boundaries: Vec<CurveShape>,
+    pub controls:   Vec<Curve>,
+    pub boundaries: Vec<Curve>,
     //pub box_3d: Box3D<f32, f32>,
 }
 

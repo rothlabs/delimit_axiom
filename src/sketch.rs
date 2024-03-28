@@ -1,11 +1,11 @@
 use std::f32::consts::{FRAC_PI_2, PI};
-use crate::{get_shapes, CurveShape, Reshape, Model, Revolve, Shape};
+use crate::{get_shapes, Curve, Reshape, Model, Revolve, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "Sketch::default")]
+#[serde(default)]
 pub struct Sketch {
     pub parts:   Vec<Model>,
     pub reshape: Reshape,
@@ -78,7 +78,7 @@ impl SketchShape {
         //self.actions.push(Action::Start([x, y]));
     }
     fn line_to(&mut self, point: Vec2) -> &mut Self {
-        let mut curve = CurveShape::default();
+        let mut curve = Curve::default();
         // curve.nurbs.knots = vec![0., 0., 1., 1.];
         // curve.nurbs.weights = vec![1., 1.];
         curve.controls = vec![self.turtle.pos.extend(0.), point.extend(0.)]; 
@@ -96,7 +96,7 @@ impl SketchShape {
         let start_point = self.turtle.pos;
         self.turtle.jump_forward(length);
         let end_point = self.turtle.pos;
-        let mut curve = CurveShape::default();
+        let mut curve = Curve::default();
         // curve.nurbs.knots = vec![0., 0., 1., 1.];
         // curve.nurbs.weights = vec![1., 1.];
         curve.controls = vec![start_point.extend(0.), end_point.extend(0.)]; 
@@ -108,7 +108,7 @@ impl SketchShape {
         let center = self.turtle.pos + self.turtle.dir.perp() * radius * angle.signum(); 
         if radius > 0. {
             let revolve = Revolve {
-                parts: vec![Model::Point([self.turtle.pos.x, self.turtle.pos.y, 0.])],
+                parts: vec![Model::Point(self.turtle.pos.extend(0.))], // [self.turtle.pos.x, self.turtle.pos.y, 0.]
                 center: center.extend(0.),//[center.x, center.y, 0.],
                 axis: vec3(0., 0., angle.signum()),//[0., 0., angle.signum()],
                 angle: angle.abs(),
@@ -153,16 +153,16 @@ impl Turtle {
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Circle::default")]
 pub struct Circle {
-    pub center: [f32; 2], 
-    pub radius: f32,
+    pub center:  Vec2,//[f32; 2], 
+    pub radius:  f32,
     pub reverse: bool,
 }
 
 impl Circle {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut revolve = Revolve {
-            parts: vec![Model::Point([self.center[0] + self.radius, self.center[1], 0.])],
-            center: vec3(self.center[0], self.center[1], 0.),//[self.center[0], self.center[1], 0.],
+            parts: vec![Model::Point(vec3(self.center.x + self.radius, self.center.y, 0.))], // [self.center[0] + self.radius, self.center[1], 0.]
+            center: self.center.extend(0.),//[self.center[0], self.center[1], 0.],
             axis: Vec3::Z,//[0., 0., 1.],
             angle: PI*2.,
             reshape: Reshape::default(),
@@ -207,7 +207,7 @@ impl Rectangle {
             .turn(FRAC_PI_2, self.radius)
             .get_shapes()
     }
-    pub fn unit() -> Vec<CurveShape> {
+    pub fn unit() -> Vec<Curve> {
         let mut curves = vec![];
         let mut rect = Rectangle::default();
         rect.point_a = [0., 0.];

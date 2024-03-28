@@ -1,15 +1,11 @@
 mod union2;
 mod union3;
 
-use crate::{get_facet_hit_points, get_grouped_curves_and_facets, log, nurbs::curve, Curve, Facet, FacetGroup, FacetShape, Model, Reshape, Shape};
+use crate::{get_grouped_curves_and_facets, Model, Reshape, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
 use self::{union2::UnionBasis2, union3::UnionBasis3};
-
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Union::default")]
@@ -18,12 +14,6 @@ pub struct Union {
     pub negated_parts: Vec<Model>,
     pub reshape:       Reshape,
 }
-
-// pub struct UnionBasis {
-//     pub parts:         Vec<Model>,
-//     pub negated_parts: Vec<Model>,
-//     pub transform:     Group,
-// }
 
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {

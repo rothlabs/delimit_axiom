@@ -1,3 +1,19 @@
+#[wasm_bindgen]
+pub fn enable_panic_messages() {
+    set_panic_hook();
+}
+
+#[wasm_bindgen]
+extern "C" {
+    //pub fn alert(s: &str);
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
+
 mod utils;
 mod query;
 mod scene;
@@ -7,7 +23,7 @@ mod spatial;
 mod hit;
 mod union;
 mod trim;
-mod reshape;
+mod reshape; 
 mod sketch;
 mod area;
 mod extrude;
@@ -18,7 +34,7 @@ mod mirror;
 
 use utils::*;
 use nurbs::{curve::*, facet::*};
-use spatial::{spatial2::*, spatial3::*};
+use spatial::spatial3::*;
 use hit::{hit2::*, hit3::*};
 use union::*;
 use trim::*;
@@ -35,14 +51,12 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use glam::*;
 
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 
 //use crate::hit::FacetHit;
 
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
-    Point([f32; 3]),
+    Point(Vec3), // [f32; 3]
     Curve(Curve),
     Facet(Facet),
     Sketch(Sketch),
@@ -65,7 +79,7 @@ pub enum Model {
 impl Model {
     pub fn get_shapes(&self) -> Vec<Shape> {
         match self {
-            Model::Point(m)     => vec![Shape::Point(Vec3::from_array(*m))],
+            Model::Point(m)     => vec![Shape::Point(*m)], // Vec3::from_array(*m)
             Model::Curve(m)     => m.get_shapes(),
             Model::Facet(m)     => m.get_shapes(),
             Model::Sketch(m)    => m.get_shapes(),
@@ -89,14 +103,14 @@ impl Model {
 
 impl Default for Model {
     fn default() -> Self { 
-        Model::Point([0.; 3]) 
+        Model::Point(Vec3::ZERO) // [0.; 3] 
     }
 }
 
 #[derive(Clone)] 
 pub enum Shape {
     Point(Vec3),
-    Curve(CurveShape),
+    Curve(Curve),
     Facet(FacetShape),
 }
 
@@ -161,7 +175,7 @@ pub fn get_points(parts: &Vec<Model>) -> Vec<Vec3> {
     result
 }
 
-pub fn get_curves(parts: &Vec<Model>) -> Vec<CurveShape> {
+pub fn get_curves(parts: &Vec<Model>) -> Vec<Curve> {
     let mut result = vec![];
     for part in parts {
         for shape in part.get_shapes() {
@@ -185,7 +199,7 @@ pub fn get_facets(parts: &Vec<Model>) -> Vec<FacetShape> {
     result
 }
 
-pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>) {
+pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<Curve>, Vec<FacetShape>) {
     let mut curves = vec![];
     let mut facets = vec![];
     for part in parts {
@@ -200,7 +214,7 @@ pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetS
     (curves, facets)
 }
 
-pub fn get_grouped_curves(parts: &Vec<Model>) -> Vec<Vec<CurveShape>> {
+pub fn get_grouped_curves(parts: &Vec<Model>) -> Vec<Vec<Curve>> {
     let mut curves = vec![];
     for part in parts {
         let mut group = vec![];
@@ -230,7 +244,7 @@ pub fn get_grouped_facets(parts: &Vec<Model>) -> Vec<Vec<FacetShape>> {
     facets
 }
 
-pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>, Vec<Vec<CurveShape>>, Vec<Vec<FacetShape>>) {
+pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<Curve>, Vec<FacetShape>, Vec<Vec<Curve>>, Vec<Vec<FacetShape>>) {
     let mut curves = vec![];
     let mut facets = vec![];
     let mut curve_groups = vec![];
@@ -307,18 +321,6 @@ pub fn get_vector_hash(vecf32: &Vec<f32>) -> u64 {
     // hasher.finish()
 }
 
-#[wasm_bindgen]
-pub fn enable_panic_messages() {
-    set_panic_hook();
-}
-
-#[wasm_bindgen]
-extern "C" {
-    pub fn alert(s: &str);
-    
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
 
 #[wasm_bindgen(module = "facet_tester")]
 extern "C" {

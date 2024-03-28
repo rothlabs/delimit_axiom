@@ -1,4 +1,4 @@
-use glam::{IVec2, ivec2};
+use glam::*;
 use web_sys::{WebGl2RenderingContext as GL, WebGlTexture};
 
 #[derive(Clone)]

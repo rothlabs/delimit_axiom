@@ -1,25 +1,25 @@
-use crate::{log, hit::Miss, CurveHit, CurveShape, HitTester2, Shape, Spatial3};
+use crate::{hit::Miss, CurveHit, Curve, HitTester2, Shape, Spatial3};
 use glam::*;
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
+// macro_rules! console_log {
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }
 
 pub struct Trim {
     pub tester: HitTester2,
-    pub group:  Vec<CurveShape>,
+    pub group:  Vec<Curve>,
     pub hits:   Vec<Vec<CurveHit>>, 
     pub miss:   Vec<Vec<Miss>>, 
-    pub curves: Vec<CurveShape>,
+    pub curves: Vec<Curve>,
     pub shapes: Vec<Shape>,
 }
 
 impl Trim { 
-    pub fn new(curves0: Vec<CurveShape>, tolerance: f32) -> Self {
+    pub fn new(curves0: Vec<Curve>, tolerance: f32) -> Self {
         let duplication_tolerance = tolerance * 5.; 
         Trim {
             tester: HitTester2 {
-                curves: (CurveShape::default(), CurveShape::default()),
+                curves: (Curve::default(), Curve::default()),
                 spatial: Spatial3::new(duplication_tolerance), 
                 points:  vec![],
                 tolerance,
@@ -33,7 +33,7 @@ impl Trim {
         }
     }
 
-    pub fn build(&mut self) -> Vec<CurveShape> {
+    pub fn build(&mut self) -> Vec<Curve> {
         self.test_groups();
         for i in 0..self.group.len() {
             if self.hits[i].is_empty() {

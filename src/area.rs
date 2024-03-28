@@ -1,5 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{log, get_curves, get_points, CurveShape, FacetShape, Reshape, Model, Shape};
+use crate::{log, get_curves, get_points, Curve, FacetShape, Reshape, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -31,8 +31,8 @@ impl Area {
             }
         }
         let mut facet  = FacetShape::default();
-        let mut curve0 = CurveShape::default();
-        let mut curve1 = CurveShape::default();
+        let mut curve0 = Curve::default();
+        let mut curve1 = Curve::default();
 
         curve0.controls.push(vec3(min.x, min.y, 0.));
         curve0.controls.push(vec3(max.x, min.y, 0.));

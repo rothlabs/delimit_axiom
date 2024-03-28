@@ -2,20 +2,31 @@ pub mod curve;
 pub mod facet;
 
 use glam::*;
+use serde::{Deserialize, Serialize};
 
+// use crate::log;
+// macro_rules! console_log {
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }
 
-use crate::log;
-
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
-
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Nurbs {
     pub sign:     f32,
     pub order:    usize,       // order = polynomial_degree + 1
     pub knots:    Vec<f32>,    // knot_count = order + control_count
     pub weights:  Vec<f32>,    // weight_count = control_count
+}
+
+impl Default for Nurbs {
+    fn default() -> Self {
+        Nurbs {
+            sign:    1.,
+            order:   2,
+            knots:   vec![],
+            weights: vec![],    
+        }
+    }
 }
 
 impl Nurbs {
@@ -119,16 +130,7 @@ impl Nurbs {
     }
 }
 
-impl Default for Nurbs {
-    fn default() -> Self {
-        Nurbs {
-            sign: 1.,
-            order:   2,
-            knots:   vec![],
-            weights: vec![],    
-        }
-    }
-}
+
 
 
 

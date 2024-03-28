@@ -1,69 +1,32 @@
-use crate::gpu::framebuffer::Framebuffer;
-use crate::nurbs::curve;
-//use crate::union::texel::{IndexPair, TraceBasis};
-use crate::HitBasis3;
-use crate::{get_facet_hit_points, hit::Miss, log, Curve, CurveShape, Facet, FacetGroup, FacetShape, Model, Shape, Trim};
-use crate::gpu::{shader::COPY_FRAGMENT_SOURCE, GPU};
 use glam::*;
-use serde::{Deserialize, Serialize};
-use web_sys::{WebGl2RenderingContext as GL, WebGlProgram};
-//use super::traced::{get_traced_curves, TracedCurve};
+use crate::HitBasis3;
+use crate::{hit::Miss, Curve, FacetShape, Shape, Trim};
 use super::union2::UnionBasis2;
-//use super::texel::TexelBasis;
-//use super::shader::{POINT_SOURCE, HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, TRACE_SOURCE};
-use wasm_bindgen::JsValue;
-use js_sys::Array;
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
+// macro_rules! console_log {
+//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+// }
 
 
-#[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "FacetHitPoint::default")]
-pub struct FacetHitPoint {
-    g0: usize,
-    g1: usize,
-    f0: usize,
-    f1: usize,
-    uv0: [f32; 2],
-    uv1: [f32; 2],
-}
-
-#[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "FacetHit::default")]
-pub struct FacetHit {
-    g0: usize,
-    g1: usize,
-    f0: usize,
-    f1: usize,
-    points0: Vec<[f32; 2]>,
-    points1: Vec<[f32; 2]>,
-    centers: Vec<[f32; 3]>,
-}
-
-//#[derive(Clone, Default)]
 pub struct UnionBasis3 {
     pub hit_basis: HitBasis3,
-    pub curve_groups: Vec<Vec<CurveShape>>,
+    pub curve_groups: Vec<Vec<Curve>>,
     pub facet_groups: Vec<Vec<FacetShape>>,
-    pub facet_hits: Vec<Vec<Vec<Vec<CurveShape>>>>, 
+    pub facet_hits: Vec<Vec<Vec<Vec<Curve>>>>, 
     pub facet_miss: Vec<Vec<Vec<Vec<Miss>>>>, 
     pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis3 { 
     pub fn new(
-        curve_groups: Vec<Vec<CurveShape>>, facet_groups: Vec<Vec<FacetShape>>, tolerance: f32, step: f32,
+        curve_groups: Vec<Vec<Curve>>, facet_groups: Vec<Vec<FacetShape>>, tolerance: f32, step: f32,
     ) -> Self {
-        
-        //let gpu = GPU::new().unwrap();
         UnionBasis3 {
             hit_basis: HitBasis3::new(facet_groups.clone()),
             facet_hits: vec![],
             facet_miss: vec![],
             curve_groups,
-            facet_groups,//: vec![],
+            facet_groups,
             shapes: vec![],
         }
     }

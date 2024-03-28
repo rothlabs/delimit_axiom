@@ -1,5 +1,5 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{get_reshaped_point, get_shapes, get_vec3_or, nurbs::Nurbs, CurveShape, FacetShape, Reshape, Model, Rectangle, Shape};
+use crate::{get_reshaped_point, get_shapes, get_vec3_or, nurbs::Nurbs, Curve, FacetShape, Reshape, Model, Rectangle, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -47,7 +47,7 @@ impl Revolve {
             }
             match &shape {
                 Shape::Point(point) => {
-                    let mut curve = CurveShape {
+                    let mut curve = Curve {
                         nurbs: basis.nurbs.clone(),
                         controls: vec![*point], 
                         min: 0.,

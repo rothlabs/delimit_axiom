@@ -1,76 +1,44 @@
 
 use std::f32::EPSILON;
-
-use crate::{log, get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, scene::Polyline, Model, Shape};
+use crate::{get_reshaped_point, get_vector_hash, query::DiscreteQuery, scene::Polyline, Shape};
 use glam::*;
-//use js_sys::wasm_bindgen;
 use serde::{Deserialize, Serialize};
-
 use super::Nurbs;
-//use rayon::prelude::*;
-//use wasm_bindgen::prelude::*;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
-
-//static default_boundary: BoundaryV = BoundaryV::default();
-
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)] 
-//#[wasm_bindgen(js_name = Curve)]
 pub struct Curve {
-    pub controls: Vec<Model>,
+    pub controls: Vec<Vec3>,
+    pub nurbs: Nurbs,
     pub min:  f32,
     pub max:  f32,
-    pub knots:    Vec<f32>,    // knot_count = order + control_count
-    pub weights:  Vec<f32>,    // weight_count = control_count
-    pub order:    usize,       // order = polynomial_degree + 1
-    pub sign: f32,
 }
 
-impl Curve {
-    pub fn get_shapes(&self) -> Vec<Shape> {
-        let mut sign = self.sign;
-        if sign == 0. {sign = 1.;}
-        let mut max = self.max;
-        if max == 0. {max = 1.;}
-        vec![Shape::Curve(CurveShape{
-            nurbs: Nurbs {
-                sign,
-                order:   self.order,
-                knots:   self.knots.clone(),
-                weights: self.weights.clone(),
-            },
-            controls: get_points(&self.controls),
-            min: self.min, 
-            max, 
-        }.get_valid())]
-    }
-}
-
-#[derive(Clone)]
-pub struct CurveShape {
-    pub nurbs:    Nurbs,
-    pub controls: Vec<Vec3>, // [f32; 3]
-    pub min:      f32,
-    pub max:      f32,
-}
-
-impl Default for CurveShape {
+impl Default for Curve {
     fn default() -> Self {
-        Self {
+        Curve {
+            controls: vec![],  
             nurbs: Nurbs::default(),
-            controls: vec![],
             min: 0.,
-            max: 1.,
+            max: 1.,  
         }
     }
 }
 
-impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
+impl Curve {
+    pub fn get_shapes(&self) -> Vec<Shape> {
+        vec![Shape::Curve(Curve{
+            controls: self.controls.clone(),//get_points(&self.controls),
+            nurbs: self.nurbs.clone(),
+            min: self.min, 
+            max: self.max, 
+        }.get_valid())]
+    }
+}
+
+impl Curve {
     pub fn negate(&mut self) -> &mut Self {
         self.nurbs.sign = -self.nurbs.sign;
         self
@@ -298,8 +266,8 @@ impl CurveShape { // impl<T: Default + IntoIterator<Item=f32>> Curve<T> {
         self.max = min_basis*(1.-u) + self.max*u;
     }
 
-    pub fn get_valid(&self) -> CurveShape {
-        CurveShape {
+    pub fn get_valid(&self) -> Curve {
+        Curve {
             nurbs: self.nurbs.get_valid(self.controls.len()),
             controls: self.controls.clone(), 
             min: self.min,

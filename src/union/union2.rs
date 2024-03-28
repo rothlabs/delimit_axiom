@@ -1,4 +1,4 @@
-use crate::{log, hit::Miss, CurveHit, CurveShape, HitTester2, Shape, Spatial3};
+use crate::{log, hit::Miss, CurveHit, Curve, HitTester2, Shape, Spatial3};
 use glam::*;
 
 macro_rules! console_log {
@@ -7,20 +7,20 @@ macro_rules! console_log {
 
 pub struct UnionBasis2 {
     pub tester: HitTester2,
-    pub groups: [Vec<CurveShape>; 2],
+    pub groups: [Vec<Curve>; 2],
     pub hits:   [Vec<Vec<CurveHit>>; 2], 
     pub miss:   [Vec<Vec<Miss>>; 2], 
-    pub curves: Vec<CurveShape>,
+    pub curves: Vec<Curve>,
     pub shapes: Vec<Shape>,
     pub same_groups: bool,
 }
 
 impl UnionBasis2 { 
-    pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>, tolerance: f32, same_groups: bool) -> Self {
+    pub fn new(curves0: Vec<Curve>, curves1: Vec<Curve>, tolerance: f32, same_groups: bool) -> Self {
         let duplication_tolerance = tolerance * 5.; 
         UnionBasis2 {
             tester: HitTester2 {
-                curves: (CurveShape::default(), CurveShape::default()),
+                curves: (Curve::default(), Curve::default()),
                 spatial: Spatial3::new(duplication_tolerance), 
                 points:  vec![],
                 tolerance,
@@ -35,7 +35,7 @@ impl UnionBasis2 {
         }
     }
 
-    pub fn build(&mut self) -> Vec<CurveShape> {
+    pub fn build(&mut self) -> Vec<Curve> {
         self.test_groups();
         let mut group_start = 2;
         if self.same_groups {

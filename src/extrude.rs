@@ -1,6 +1,6 @@
 use crate::{get_reshaped_point, get_shapes, get_vec3_or, 
     nurbs::Nurbs, Area, Circle, 
-    CurveShape, FacetShape, Reshape, Model, Rectangle, Shape
+    Curve, FacetShape, Reshape, Model, Rectangle, Shape
 };
 use serde::{Deserialize, Serialize};
 use glam::*;
@@ -42,7 +42,7 @@ impl Extrude {
             }
             match &shape {
                 Shape::Point(point) => {
-                    let mut curve = CurveShape {
+                    let mut curve = Curve {
                         nurbs: basis.nurbs.clone(),
                         controls: vec![*point, get_reshaped_point(point, basis.mat4)], 
                         min: 0.,
@@ -127,7 +127,7 @@ impl Cuboid {
 pub struct Cylinder {
     pub radius: f32,
     pub length: f32,
-    pub center: [f32; 2],
+    pub center: Vec2,//[f32; 2],
     pub reshape: Reshape,
 }
 

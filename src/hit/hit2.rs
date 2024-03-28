@@ -1,6 +1,6 @@
 use std::f32::{EPSILON, INFINITY};
 
-use crate::{log, get_point_between_lines, CurveShape, Spatial3};
+use crate::{log, get_point_between_lines, Curve, Spatial3};
 use glam::*;
 
 use super::Miss;
@@ -11,7 +11,7 @@ macro_rules! console_log {
 
 //#[derive(Clone)]
 pub struct HitTester2 {
-    pub curves: (CurveShape, CurveShape),
+    pub curves: (Curve, Curve),
     pub spatial:      Spatial3,
     pub points:       Vec<Vec3>,
     pub tolerance:    f32,

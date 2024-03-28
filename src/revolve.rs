@@ -7,23 +7,33 @@ use glam::*;
 //     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 // }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
-#[serde(default = "Revolve::default")]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)] //  = "Revolve::default"
 pub struct Revolve {
     pub parts:  Vec<Model>,
     pub reshape: Reshape,
-    pub center: [f32; 3],
-    pub axis:   [f32; 3],
+    pub center: Vec3,//[f32; 3],
+    pub axis:   Vec3,//[f32; 3],
     pub angle:  f32,
+}
+
+impl Default for Revolve {
+    fn default() -> Self {
+        Self {
+            parts: vec![],
+            reshape: Reshape::default(),
+            center:  Vec3::ZERO,
+            axis:    Vec3::Z,
+            angle:   PI,
+        }
+    }
 }
 
 impl Revolve {
     pub fn get_shapes(&self) -> Vec<Shape> { // , query: &DiscreteQuery
         let mut angle = self.angle;
         if angle == 0. {angle = PI*2.};
-        let center = get_vec3_or(&self.center, Vec3::ZERO);
-        let axis = get_vec3_or(&self.axis, Vec3::Y).normalize(); 
-        let mut basis = RevolveBasis::new(center, axis, angle);
+        let mut basis = RevolveBasis::new(self.center, self.axis, angle);
         basis.add_intermediate_turn_if_needed(FRAC_PI_2,    FRAC_PI_4,    angle);
         basis.add_intermediate_turn_if_needed(PI,           FRAC_PI_4*3., angle);
         basis.add_intermediate_turn_if_needed(FRAC_PI_2*3., FRAC_PI_4*5., angle);

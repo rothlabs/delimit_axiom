@@ -5,19 +5,30 @@ use crate::{get_reshaped_point, get_shapes, get_vec3_or,
 use serde::{Deserialize, Serialize};
 use glam::*;
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
-#[serde(default = "Extrude::default")]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)] //  = "Extrude::default"
 pub struct Extrude {
-    pub parts:  Vec<Model>,
-    pub axis:   [f32; 3],
-    pub length: f32,
+    pub parts:   Vec<Model>,
     pub reshape: Reshape,
+    pub axis:    Vec3,//[f32; 3],
+    pub length:  f32,
+}
+
+impl Default for Extrude {
+    fn default() -> Self {
+        Self {
+            parts:   vec![],
+            reshape: Reshape::default(),
+            axis:    Vec3::Z,
+            length:  1.,
+        }
+    }
 }
 
 impl Extrude {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        let axis = get_vec3_or(&self.axis, Vec3::Z).normalize(); 
-        let basis = ExtrudeBasis::new(axis * self.length);
+        //let axis = self.axis;//get_vec3_or(&self.axis, Vec3::Z).normalize(); 
+        let basis = ExtrudeBasis::new(self.axis * self.length);
         let mut shapes = vec![];
         for shape in get_shapes(&self.parts) {
             if let Shape::Facet(facet) = &shape { 
@@ -95,7 +106,7 @@ impl ExtrudeBasis {
 }
 
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Cuboid::default")]
 pub struct Cuboid {
     pub lengths: [f32; 3],
@@ -111,7 +122,7 @@ impl Cuboid {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Cylinder::default")]
 pub struct Cylinder {
     pub radius: f32,

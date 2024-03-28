@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 
 pub mod hit2;
 pub mod hit3;
+mod basis3;
+mod shader;
+mod shader_parts;
+mod traced;
 
 // #[derive(Clone, Default, Serialize, Deserialize)]
 // #[serde(default = "FacetHit::default")]

@@ -3,10 +3,12 @@ use std::f32::EPSILON;
 
 use crate::{log, get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, scene::Polyline, Model, Shape};
 use glam::*;
+//use js_sys::wasm_bindgen;
 use serde::{Deserialize, Serialize};
 
 use super::Nurbs;
 //use rayon::prelude::*;
+//use wasm_bindgen::prelude::*;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
@@ -16,15 +18,16 @@ macro_rules! console_log {
 
 //static default_boundary: BoundaryV = BoundaryV::default();
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
-#[serde(default = "Curve::default")]
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(default)] 
+//#[wasm_bindgen(js_name = Curve)]
 pub struct Curve {
     pub controls: Vec<Model>,
     pub knots:    Vec<f32>,    // knot_count = order + control_count
     pub weights:  Vec<f32>,    // weight_count = control_count
     pub order:    usize,       // order = polynomial_degree + 1
-    pub min: f32,
-    pub max: f32,
+    pub min:  f32,
+    pub max:  f32,
     pub sign: f32,
 }
 

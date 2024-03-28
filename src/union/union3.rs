@@ -1,15 +1,16 @@
 use crate::gpu::framebuffer::Framebuffer;
 use crate::nurbs::curve;
-use crate::union::texel::{IndexPair, TraceBasis};
+//use crate::union::texel::{IndexPair, TraceBasis};
+use crate::HitBasis3;
 use crate::{get_facet_hit_points, hit::Miss, log, Curve, CurveShape, Facet, FacetGroup, FacetShape, Model, Shape, Trim};
 use crate::gpu::{shader::COPY_FRAGMENT_SOURCE, GPU};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use web_sys::{WebGl2RenderingContext as GL, WebGlProgram};
-use super::traced::{get_traced_curves, TracedCurve};
+//use super::traced::{get_traced_curves, TracedCurve};
 use super::union2::UnionBasis2;
-use super::texel::TexelBasis;
-use super::shader::{POINT_SOURCE, HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, TRACE_SOURCE};
+//use super::texel::TexelBasis;
+//use super::shader::{POINT_SOURCE, HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, TRACE_SOURCE};
 use wasm_bindgen::JsValue;
 use js_sys::Array;
 
@@ -41,84 +42,41 @@ pub struct FacetHit {
     centers: Vec<[f32; 3]>,
 }
 
-struct BasisBuffer {
-    point: Framebuffer,
-    uv0:   Framebuffer,
-    uv1:   Framebuffer,
-}
-
-struct TraceBuffer {
-    point:  Framebuffer,
-    segment:    Framebuffer,
-    honed:    Framebuffer,
-    trace:  Framebuffer,
-    //center: Framebuffer,
-}
-
 //#[derive(Clone, Default)]
 pub struct UnionBasis3 {
-    //pub tester: HitTester3,
+    pub hit_basis: HitBasis3,
     pub curve_groups: Vec<Vec<CurveShape>>,
     pub facet_groups: Vec<Vec<FacetShape>>,
     pub facet_hits: Vec<Vec<Vec<Vec<CurveShape>>>>, 
     pub facet_miss: Vec<Vec<Vec<Vec<Miss>>>>, 
-    //pub curves: Vec<CurveShape>,
-    //pub facets: Vec<FacetShape>,
     pub shapes: Vec<Shape>,
-    //pub curve_hits: Vec<Vec<CurveHit>>,
-    gpu: GPU,
-    texel: TexelBasis,
-    point_program:    WebGlProgram,   
-    hone_program:     WebGlProgram,
-    hit_miss_program: WebGlProgram, 
-    copy_program:     WebGlProgram,
-    trace_program:    WebGlProgram, 
-    hone_trace_program:    WebGlProgram, 
-    //center_program:   WebGlProgram,
-    //box_program:      WebGlProgram,
-    buffer:        Option<BasisBuffer>,
-    trace_buffer:  Option<TraceBuffer>,
 }
 
 impl UnionBasis3 { 
     pub fn new(
         curve_groups: Vec<Vec<CurveShape>>, facet_groups: Vec<Vec<FacetShape>>, tolerance: f32, step: f32,
     ) -> Self {
-        let mut facet_hits = vec![];
-        let mut facet_miss = vec![];
-        for (gi, facet_group) in facet_groups.iter().enumerate() {
-            facet_hits.push(facet_group.iter().map(|_| vec![vec![]; facet_groups.len()-gi+1]).collect());
-            facet_miss.push(facet_group.iter().map(|_| vec![vec![]; facet_groups.len()-gi+1]).collect());
-        }
-        let gpu = GPU::new().unwrap();
+        
+        //let gpu = GPU::new().unwrap();
         UnionBasis3 {
-            facet_hits,
-            facet_miss,
+            hit_basis: HitBasis3::new(facet_groups.clone()),
+            facet_hits: vec![],
+            facet_miss: vec![],
             curve_groups,
-            facet_groups,
-            //curves: vec![],
-            //facets: vec![],
+            facet_groups,//: vec![],
             shapes: vec![],
-            texel: TexelBasis::default(),
-            point_program:      gpu.get_quad_program_from_source(POINT_SOURCE).unwrap(),
-            hone_program:       gpu.get_quad_program_from_source(HONE_SOURCE).unwrap(),
-            hit_miss_program:   gpu.get_quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
-            copy_program:       gpu.get_quad_program_from_source(COPY_FRAGMENT_SOURCE).unwrap(),
-            trace_program:      gpu.get_quad_program_from_source(TRACE_SOURCE).unwrap(),
-            hone_trace_program: gpu.get_quad_program_from_source(HONE_TRACE_SOURCE).unwrap(),
-            //center_program:     gpu.get_quad_program_from_source(CENTER_SOURCE).unwrap(),
-            //box_program:        gpu.get_quad_program_from_source(BOX_SOURCE).unwrap(),
-            buffer: None,
-            trace_buffer: None,
-            gpu,
         }
     }
 
     pub fn make_shapes(&mut self, index: usize) -> Vec<Shape> {//-> (Vec<CurveShape>, Vec<FacetShape>) {
-        self.test_groups().unwrap(); //.expect("3D intersection failed");
+        //self.test_groups().unwrap(); //.expect("3D intersection failed");
         // self.curves.extend(self.curve_groups[0].clone());
         // self.curves.extend(self.curve_groups[1].clone());
         //let mut facet_indices: Vec<(usize, usize)> = vec![];
+        self.hit_basis.build().unwrap();
+        self.facet_hits = self.hit_basis.facet_hits.clone();
+        self.facet_miss = self.hit_basis.facet_miss.clone();
+        self.shapes = self.hit_basis.shapes.clone();
         for gi in 0..self.facet_groups.len() {
             for fi in 0..self.facet_groups[gi].len() {
                 let mut collect_facet = false;
@@ -259,133 +217,8 @@ impl UnionBasis3 {
         //self.facets.push(facet);
     }
 
-    fn test_groups(&mut self) -> Result<(), String> {
-        let mut basis0 = TexelBasis::new(&self.facet_groups);
-        self.gpu.texture.make_r32f(0, &mut basis0.facet_texels)?;
-        let (_, pair_buf_size0) = self.gpu.texture.make_rg32i(1, &mut basis0.pair_texels)?;
-        let point_buf_size0 = ivec2(pair_buf_size0.x*3, pair_buf_size0.y*2);
-        self.buffer = Some(BasisBuffer{
-            point: self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size0)?,
-            uv0:   self.gpu.framebuffer.make_rgba32f(3, &mut basis0.uv_texels)?,
-            uv1:   self.gpu.framebuffer.make_empty_rgba32f(4, pair_buf_size0)?,
-        });
-        self.texel = basis0;
-        self.hone_to_hit_or_miss();
-        let buff0 = &self.buffer.as_ref().unwrap();
-        let hit_miss = self.gpu.read(&buff0.uv1, 0);
-        // for i in 0..hit_miss.len()/4 {
-        //     if hit_miss[i*4] > -0.5 {
-        //         let IndexPair{g0, g1, f0, f1} = self.texel.index_pairs[i];
-        //         let point = self.facet_groups[g0][f0].get_point_at_uv(vec2(hit_miss[i*4], hit_miss[i*4+1]));
-        //         self.shapes.push(Shape::Point(point));
-        //     }
-        // }
-        let mut basis1 = TraceBasis::new(&self.texel, hit_miss);
-        let (_, pair_buf_size1) = self.gpu.texture.make_row_rg32i(1, &mut basis1.pair_texels)?;
-        let point_buf_size1 = ivec2(pair_buf_size1.x*3, pair_buf_size1.y*2);
-        let trace_length = 300;
-        let trace_buf_size = ivec2(pair_buf_size1.x, trace_length);
-        self.trace_buffer = Some(TraceBuffer{
-            point:   self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size1)?,
-            segment: self.gpu.framebuffer.make_row_rgba32f(3, &mut basis1.uv_box_texels)?,
-            honed:   self.gpu.framebuffer.make_multi_empty_rgba32f(5, pair_buf_size1, 3)?,
-            trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(8, trace_buf_size, 2)?,
-        });
-        self.trace(trace_length);
-        let buff1 = &self.trace_buffer.as_ref().unwrap();
-        let traces  = self.gpu.read(&buff1.trace, 0);
-        let boxes   = self.gpu.read(&buff1.honed, 1);
-        let centers = self.gpu.read(&buff1.trace, 1);
-        let traced_curves = get_traced_curves(basis1.index_pairs, trace_buf_size, traces, boxes, centers);
-        for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
-            let IndexPair{g0, g1, f0, f1} = index_pair;
-            self.facet_hits[g0][f0][g1-g0-1].push(curve0);
-            self.facet_hits[g1][f1][g1-g0-1].push(curve1);
-            self.shapes.push(Shape::Curve(center));
-        }   
-        Ok(())     
-    }
-
-    fn hone_to_hit_or_miss(&self) {
-        let buff = &self.buffer.as_ref().unwrap();
-        for _ in 0..6 {
-            self.draw_points(3);
-            self.set_hone_program(3);
-            self.gpu.draw(&buff.uv1);
-            self.draw_points(4);
-            self.set_hone_program(4);
-            self.gpu.draw(&buff.uv0);
-        }
-        self.gpu.gl.use_program(Some(&self.hit_miss_program));
-        self.set_uniform_basis(&self.hit_miss_program);
-        self.gpu.set_uniform_1i(&self.hit_miss_program, "point_tex",  2);
-        self.gpu.set_uniform_1i(&self.hit_miss_program, "uv_tex",  3);
-        self.gpu.draw(&buff.uv1);
-    }
-
-    fn trace(&self, length: i32){
-        for y in 0..length {
-            self.draw_trace_points(3);
-            self.hone_trace();
-            self.copy_trace(y);
-            self.draw_trace_points(5);
-            self.trace_segment();
-        }
-    }
-
-    fn set_uniform_basis(&self, program: &WebGlProgram) {
-        self.gpu.set_uniform_1i(program, "max_facet_length", self.texel.max_facet_length);
-        self.gpu.set_uniform_1i(program, "max_knot_count",   self.texel.max_knot_count);
-        self.gpu.set_uniform_1i(program, "facet_tex", 0);
-        self.gpu.set_uniform_1i(program, "pair_tex",  1);
-    }
-
-    fn set_hone_program(&self, uv_i: i32) {
-        self.gpu.gl.use_program(Some(&self.hone_program));
-        self.set_uniform_basis(&self.hone_program);
-        self.gpu.set_uniform_1i(&self.hone_program, "point_tex",  2);
-        self.gpu.set_uniform_1i(&self.hone_program, "uv_tex",  uv_i);
-    }
-
-    fn draw_points(&self, uv_i: i32) {
-        self.gpu.gl.use_program(Some(&self.point_program));
-        self.set_uniform_basis(&self.point_program);
-        self.gpu.set_uniform_1i(&self.point_program, "uv_tex",  uv_i);
-        self.gpu.draw(&self.buffer.as_ref().unwrap().point)
-    }
-
-    fn draw_trace_points(&self, uv_i: i32) {
-        self.gpu.gl.use_program(Some(&self.point_program));
-        self.set_uniform_basis(&self.point_program);
-        self.gpu.set_uniform_1i(&self.point_program, "uv_tex",  uv_i);
-        self.gpu.draw(&self.trace_buffer.as_ref().unwrap().point)
-    }
-
-    fn hone_trace(&self) {
-        self.gpu.gl.use_program(Some(&self.hone_trace_program));
-        self.set_uniform_basis(&self.hone_trace_program);
-        self.gpu.set_uniform_1i(&self.hone_trace_program, "point_tex", 2);
-        self.gpu.set_uniform_1i(&self.hone_trace_program, "uv_tex",  3);
-        self.gpu.set_uniform_1i(&self.hone_trace_program, "box_tex", 4);
-        self.gpu.draw(&self.trace_buffer.as_ref().unwrap().honed);
-    }
-
-    fn copy_trace(&self, y: i32) {
-        self.gpu.gl.use_program(Some(&self.copy_program));
-        self.gpu.set_uniform_1i(&self.copy_program, "source_tex0",  5);
-        self.gpu.set_uniform_1i(&self.copy_program, "source_tex1",  7);
-        self.gpu.set_uniform_2i(&self.copy_program, "viewport_position",  IVec2::Y*y);
-        self.gpu.draw_at_pos(&self.trace_buffer.as_ref().unwrap().trace, IVec2::Y*y);
-    }
-
-    fn trace_segment(&self) {
-        self.gpu.gl.use_program(Some(&self.trace_program));
-        self.set_uniform_basis(&self.trace_program);
-        self.gpu.set_uniform_1i(&self.trace_program, "point_tex", 2);
-        self.gpu.set_uniform_1i(&self.trace_program, "uv_tex",  5);
-        self.gpu.set_uniform_1i(&self.trace_program, "box_tex", 6);
-        self.gpu.draw(&self.trace_buffer.as_ref().unwrap().segment);
-    }
+    //fn test_groups(&mut self) -> Result<(), String> {
+        
 }
 
 //use std::time::Instant;

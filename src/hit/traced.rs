@@ -1,6 +1,6 @@
 use glam::{vec2, vec3, IVec2, Vec2, Vec3};
 use crate::{log, CurveShape};
-use super::texel::IndexPair;
+use super::basis3::IndexPair;
 use std::collections::HashMap;
 
 //pub struct Traced

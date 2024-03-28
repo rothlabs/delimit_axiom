@@ -1,9 +1,5 @@
 mod union2;
 mod union3;
-pub mod shader;
-mod texel;
-mod shader_parts;
-mod traced;
 
 use crate::{get_facet_hit_points, get_grouped_curves_and_facets, log, nurbs::curve, Curve, Facet, FacetGroup, FacetShape, Model, Reshape, Shape};
 use serde::{Deserialize, Serialize};
@@ -15,7 +11,7 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Union::default")]
 pub struct Union {
     pub parts:         Vec<Model>,

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use glam::*;
 
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Sketch::default")]
 pub struct Sketch {
     pub parts:   Vec<Model>,
@@ -12,7 +12,7 @@ pub struct Sketch {
     pub actions: Vec<Action>,
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Action {
     JumpTo([f32; 2]),
     LineTo([f32; 2]),
@@ -20,7 +20,7 @@ pub enum Action {
     Close(bool),
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Turn::default")]
 pub struct Turn {
     pub angle:  f32,
@@ -109,8 +109,8 @@ impl SketchShape {
         if radius > 0. {
             let revolve = Revolve {
                 parts: vec![Model::Point([self.turtle.pos.x, self.turtle.pos.y, 0.])],
-                center: [center.x, center.y, 0.],
-                axis: [0., 0., angle.signum()],
+                center: center.extend(0.),//[center.x, center.y, 0.],
+                axis: vec3(0., 0., angle.signum()),//[0., 0., angle.signum()],
                 angle: angle.abs(),
                 reshape: Reshape::default(),
             };
@@ -150,7 +150,7 @@ impl Turtle {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Circle::default")]
 pub struct Circle {
     pub center: [f32; 2], 
@@ -162,8 +162,8 @@ impl Circle {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut revolve = Revolve {
             parts: vec![Model::Point([self.center[0] + self.radius, self.center[1], 0.])],
-            center: [self.center[0], self.center[1], 0.],
-            axis: [0., 0., 1.],
+            center: vec3(self.center[0], self.center[1], 0.),//[self.center[0], self.center[1], 0.],
+            axis: Vec3::Z,//[0., 0., 1.],
             angle: PI*2.,
             reshape: Reshape::default(),
         };
@@ -172,7 +172,7 @@ impl Circle {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Rectangle::default")]
 pub struct Rectangle {
     pub half_lengths: [f32; 2],
@@ -219,7 +219,7 @@ impl Rectangle {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Slot::default")]
 pub struct Slot {
     pub length:      f32,
@@ -254,7 +254,7 @@ impl Slot {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Arc::default")]
 pub struct Arc {
     pub center: [f32; 2], 

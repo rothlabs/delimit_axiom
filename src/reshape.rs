@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use glam::*;
 
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Reshape::default")]
 pub struct Reshape {
     pub parts:    Vec<Model>,

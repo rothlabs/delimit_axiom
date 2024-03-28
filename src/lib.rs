@@ -40,7 +40,7 @@ use std::hash::{Hash, Hasher};
 
 //use crate::hit::FacetHit;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)] 
+#[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
     Point([f32; 3]),
     Curve(Curve),

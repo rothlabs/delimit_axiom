@@ -16,7 +16,7 @@ pub struct IndexPair {
 }
 
 #[derive(Default)]
-pub struct TexelBasis{
+pub struct HoneBasis{
     pub index_pairs: Vec<IndexPair>,
     pub pair_texels: Vec<i32>,
     pub facet_texels: Vec<f32>,
@@ -25,7 +25,7 @@ pub struct TexelBasis{
     pub max_knot_count: i32,
 }
 
-impl TexelBasis {
+impl HoneBasis {
     pub fn new(groups: &Vec<Vec<FacetShape>>) -> Self{
         let mut max_facet_length = 0;
         let mut max_knot_count = 0;
@@ -92,7 +92,7 @@ impl TexelBasis {
                 }   
             }
         }
-        TexelBasis {
+        HoneBasis {
             index_pairs,
             pair_texels,
             facet_texels,
@@ -112,7 +112,7 @@ pub struct TraceBasis{
 }
 
 impl TraceBasis {
-    pub fn new(basis: &TexelBasis, hit_miss: Vec<f32>) -> Self {
+    pub fn new(basis: &HoneBasis, hit_miss: Vec<f32>) -> Self {
         let mut index_pairs: Vec<IndexPair> = vec![];
         let mut pair_texels: Vec<i32> = vec![];
         let mut uv_texels:   Vec<f32> = vec![];

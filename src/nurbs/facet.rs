@@ -26,7 +26,7 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-// #[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+// #[derive(Clone, Default, Serialize, Deserialize)]
 // #[serde(default = "BasicFacet::default")]
 // pub struct BasicFacet {
 //     pub nurbs:      Nurbs,
@@ -35,13 +35,13 @@ macro_rules! console_log {
 //     //pub box_3d: Box3D<f32, f32>,
 // }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "FacetGroup::default")]
 pub struct FacetGroup {
     pub facets: Vec<Facet>,
 }
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Facet::default")]
 pub struct Facet {
     pub controls:    Vec<Model>,

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use glam::*;
 
 
-#[derive(Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "GridPattern::default")]
 pub struct GridPattern {
     pub parts:    Vec<Model>,

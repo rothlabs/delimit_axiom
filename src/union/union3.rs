@@ -1,25 +1,19 @@
-use glam::*;
 use crate::HitBasis3;
-use crate::{hit::Miss, Curve, FacetShape, Shape, Trim};
+use crate::{hit::Miss, CurveShape, FacetShape, Shape, Trim};
 use super::union2::UnionBasis2;
-
-// macro_rules! console_log {
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
-
 
 pub struct UnionBasis3 {
     pub hit_basis: HitBasis3,
-    pub curve_groups: Vec<Vec<Curve>>,
+    pub curve_groups: Vec<Vec<CurveShape>>,
     pub facet_groups: Vec<Vec<FacetShape>>,
-    pub facet_hits: Vec<Vec<Vec<Vec<Curve>>>>, 
+    pub facet_hits: Vec<Vec<Vec<Vec<CurveShape>>>>, 
     pub facet_miss: Vec<Vec<Vec<Vec<Miss>>>>, 
     pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis3 { 
     pub fn new(
-        curve_groups: Vec<Vec<Curve>>, facet_groups: Vec<Vec<FacetShape>>, tolerance: f32, step: f32,
+        curve_groups: Vec<Vec<CurveShape>>, facet_groups: Vec<Vec<FacetShape>>,
     ) -> Self {
         UnionBasis3 {
             hit_basis: HitBasis3::new(facet_groups.clone()),

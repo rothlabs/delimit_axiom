@@ -2,7 +2,7 @@ use std::f32::{EPSILON, INFINITY};
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::scene::Mesh;
-use crate::{get_curves, get_line_intersection2, get_vector_hash, Curve, Model, Rectangle, Shape};
+use crate::{get_curves, get_line_intersection2, get_vector_hash, CurveShape, Model, Rectangle, Shape};
 //use euclid::{point3, Box3D, Point3D};
 use glam::*;
 use serde::{Deserialize, Serialize};
@@ -12,60 +12,29 @@ use lyon::path::Winding;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
-// #[derive(Clone, Default, Serialize, Deserialize)]
-// #[serde(default = "BasicFacet::default")]
-// pub struct BasicFacet {
-//     pub nurbs:      Nurbs,
-//     pub controls:   Vec<CurveShape>,
-//     pub boundaries: Vec<CurveShape>,
-//     //pub box_3d: Box3D<f32, f32>,
-// }
-
-// #[derive(Clone, Default, Serialize, Deserialize)]
-// #[serde(default = "FacetGroup::default")]
-// pub struct FacetGroup {
-//     pub facets: Vec<Facet>,
-// }
-
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "Facet::default")]
+#[serde(default)]
 pub struct Facet {
-    pub controls:    Vec<Model>,
-    pub boundaries:  Vec<Model>,
-    pub order:       usize,       // order = polynomial_degree + 1
-    pub knots:       Vec<f32>,    // knot_count = order + control_count
-    pub weights:     Vec<f32>,    // weight_count = control_count
-    pub sign: f32,
+    pub controls:   Vec<Model>,
+    pub boundaries: Vec<Model>,
+    pub nurbs:      Nurbs,
 }
 
 impl Facet {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        let mut sign = self.sign;
-        if sign == 0. {sign = 1.;}
-        let mut boundaries = get_curves(&self.boundaries); 
-        if boundaries.is_empty() {
-            boundaries = Rectangle::unit();
-        }
         vec![Shape::Facet(FacetShape{
-            nurbs: Nurbs {
-                sign,
-                order:   self.order,
-                knots:   self.knots.clone(),
-                weights: self.weights.clone(),
-                //box_3d: 
-            },
-            controls:   get_curves(&self.controls),
-            boundaries,
-        })]
+            controls: get_curves(&self.controls),
+            boundaries: get_curves(&self.boundaries.clone()),
+            nurbs: self.nurbs.clone(),
+        }.get_valid())]
     }
 }
 
 #[derive(Clone)]
 pub struct FacetShape {
     pub nurbs:      Nurbs,
-    pub controls:   Vec<Curve>,
-    pub boundaries: Vec<Curve>,
-    //pub box_3d: Box3D<f32, f32>,
+    pub controls:   Vec<CurveShape>,
+    pub boundaries: Vec<CurveShape>,
 }
 
 impl Default for FacetShape {
@@ -332,24 +301,28 @@ impl FacetShape {
     }
 
     pub fn get_valid(&self) -> FacetShape {
+        let mut boundaries = self.boundaries.clone(); 
+        if boundaries.is_empty() {
+            boundaries = Rectangle::unit();
+        }
         FacetShape {
             nurbs: self.nurbs.get_valid(self.controls.len()),
             controls: self.controls.iter().map(|c| c.get_valid()).collect(), // self.controls.clone(), //
-            boundaries: self.boundaries.clone(),
+            boundaries,
         }
     }
 }
 
 
-#[derive(Clone, Serialize, Deserialize)] 
-pub enum Parameter {
-    U(f32),
-    V(f32),
-}
+// #[derive(Clone, Serialize, Deserialize)] 
+// pub enum Parameter {
+//     U(f32),
+//     V(f32),
+// }
 
-impl Default for Parameter {
-    fn default() -> Self { Parameter::U(0.) }
-}
+// impl Default for Parameter {
+//     fn default() -> Self { Parameter::U(0.) }
+// }
 
 
 

@@ -1,7 +1,7 @@
 use glam::IVec2;
 use wasm_bindgen::JsValue;
 use web_sys::{WebGl2RenderingContext as GL, WebGlFramebuffer, WebGlTexture};
-use super::texture::{self, TextureContext};
+use super::texture::TextureContext;
 
 pub struct Framebuffer {
     pub content: WebGlFramebuffer,

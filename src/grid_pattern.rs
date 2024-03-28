@@ -1,4 +1,4 @@
-use crate::{get_shapes, get_reshapes, get_vec3_or, Reshape, Model, Shape};
+use crate::{get_shapes, get_reshapes, Reshape, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 

@@ -1,5 +1,5 @@
 use std::f32::consts::{FRAC_PI_2, PI};
-use crate::{get_shapes, Curve, Reshape, Model, Revolve, Shape};
+use crate::{get_shapes, CurveShape, Reshape, Model, Revolve, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -78,7 +78,7 @@ impl SketchShape {
         //self.actions.push(Action::Start([x, y]));
     }
     fn line_to(&mut self, point: Vec2) -> &mut Self {
-        let mut curve = Curve::default();
+        let mut curve = CurveShape::default();
         // curve.nurbs.knots = vec![0., 0., 1., 1.];
         // curve.nurbs.weights = vec![1., 1.];
         curve.controls = vec![self.turtle.pos.extend(0.), point.extend(0.)]; 
@@ -96,7 +96,7 @@ impl SketchShape {
         let start_point = self.turtle.pos;
         self.turtle.jump_forward(length);
         let end_point = self.turtle.pos;
-        let mut curve = Curve::default();
+        let mut curve = CurveShape::default();
         // curve.nurbs.knots = vec![0., 0., 1., 1.];
         // curve.nurbs.weights = vec![1., 1.];
         curve.controls = vec![start_point.extend(0.), end_point.extend(0.)]; 
@@ -207,7 +207,7 @@ impl Rectangle {
             .turn(FRAC_PI_2, self.radius)
             .get_shapes()
     }
-    pub fn unit() -> Vec<Curve> {
+    pub fn unit() -> Vec<CurveShape> {
         let mut curves = vec![];
         let mut rect = Rectangle::default();
         rect.point_a = [0., 0.];

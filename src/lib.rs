@@ -56,7 +56,7 @@ use glam::*;
 
 #[derive(Clone, Serialize, Deserialize)] 
 pub enum Model {
-    Point(Vec3), // [f32; 3]
+    Point(Vec3), 
     Curve(Curve),
     Facet(Facet),
     Sketch(Sketch),
@@ -79,7 +79,7 @@ pub enum Model {
 impl Model {
     pub fn get_shapes(&self) -> Vec<Shape> {
         match self {
-            Model::Point(m)     => vec![Shape::Point(*m)], // Vec3::from_array(*m)
+            Model::Point(m)     => vec![Shape::Point(*m)], 
             Model::Curve(m)     => m.get_shapes(),
             Model::Facet(m)     => m.get_shapes(),
             Model::Sketch(m)    => m.get_shapes(),
@@ -96,7 +96,7 @@ impl Model {
             Model::Union(m)     => m.get_shapes(),
             Model::GridPattern(m)   => m.get_shapes(),
             Model::RadialPattern(m) => m.get_shapes(),
-            Model::Mirror(m)    => m.get_shapes(),
+            Model::Mirror(m)        => m.get_shapes(),
         }
     }
 }
@@ -110,7 +110,7 @@ impl Default for Model {
 #[derive(Clone)] 
 pub enum Shape {
     Point(Vec3),
-    Curve(Curve),
+    Curve(CurveShape),
     Facet(FacetShape),
 }
 
@@ -175,7 +175,7 @@ pub fn get_points(parts: &Vec<Model>) -> Vec<Vec3> {
     result
 }
 
-pub fn get_curves(parts: &Vec<Model>) -> Vec<Curve> {
+pub fn get_curves(parts: &Vec<Model>) -> Vec<CurveShape> {
     let mut result = vec![];
     for part in parts {
         for shape in part.get_shapes() {
@@ -199,7 +199,7 @@ pub fn get_facets(parts: &Vec<Model>) -> Vec<FacetShape> {
     result
 }
 
-pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<Curve>, Vec<FacetShape>) {
+pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>) {
     let mut curves = vec![];
     let mut facets = vec![];
     for part in parts {
@@ -214,7 +214,7 @@ pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<Curve>, Vec<FacetShape>
     (curves, facets)
 }
 
-pub fn get_grouped_curves(parts: &Vec<Model>) -> Vec<Vec<Curve>> {
+pub fn get_grouped_curves(parts: &Vec<Model>) -> Vec<Vec<CurveShape>> {
     let mut curves = vec![];
     for part in parts {
         let mut group = vec![];
@@ -244,7 +244,7 @@ pub fn get_grouped_facets(parts: &Vec<Model>) -> Vec<Vec<FacetShape>> {
     facets
 }
 
-pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<Curve>, Vec<FacetShape>, Vec<Vec<Curve>>, Vec<Vec<FacetShape>>) {
+pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>, Vec<Vec<CurveShape>>, Vec<Vec<FacetShape>>) {
     let mut curves = vec![];
     let mut facets = vec![];
     let mut curve_groups = vec![];

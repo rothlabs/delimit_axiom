@@ -1,11 +1,7 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{log, get_curves, get_points, Curve, FacetShape, Reshape, Model, Shape};
+use crate::{get_curves, get_points, CurveShape, FacetShape, Reshape, Model, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
-
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Area::default")]
@@ -31,8 +27,8 @@ impl Area {
             }
         }
         let mut facet  = FacetShape::default();
-        let mut curve0 = Curve::default();
-        let mut curve1 = Curve::default();
+        let mut curve0 = CurveShape::default();
+        let mut curve1 = CurveShape::default();
 
         curve0.controls.push(vec3(min.x, min.y, 0.));
         curve0.controls.push(vec3(max.x, min.y, 0.));

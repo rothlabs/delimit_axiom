@@ -1,5 +1,4 @@
 use glam::Vec3;
-use serde::{Deserialize, Serialize};
 
 pub mod hit2;
 pub mod hit3;

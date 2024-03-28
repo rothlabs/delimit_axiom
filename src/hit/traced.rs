@@ -1,5 +1,5 @@
-use glam::{vec2, vec3, IVec2, Vec2, Vec3};
-use crate::{log, Curve};
+use glam::*;
+use crate::CurveShape;
 use super::basis3::IndexPair;
 use std::collections::HashMap;
 
@@ -7,9 +7,9 @@ use std::collections::HashMap;
 
 pub struct TracedCurve {
     pub index_pair: IndexPair,
-    pub curve0: Curve,
-    pub curve1: Curve,
-    pub center: Curve,
+    pub curve0: CurveShape,
+    pub curve1: CurveShape,
+    pub center: CurveShape,
 }
 
 //impl TracedCurve {
@@ -38,9 +38,9 @@ pub fn get_traced_curves(
             vec.push((min, max));
         }
         let mut prev_point = vec3(100000., 100000., 100000.);
-        let mut curve0 = Curve::default();
-        let mut curve1 = Curve::default();
-        let mut center = Curve::default();
+        let mut curve0 = CurveShape::default();
+        let mut curve1 = CurveShape::default();
+        let mut center = CurveShape::default();
         curve0.negate();
         curve1.negate();
         center.negate();

@@ -1,17 +1,13 @@
 use std::f32::{EPSILON, INFINITY};
 
-use crate::{log, get_point_between_lines, Curve, Spatial3};
+use crate::{log, get_point_between_lines, CurveShape, Spatial3};
 use glam::*;
 
 use super::Miss;
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
-
 //#[derive(Clone)]
 pub struct HitTester2 {
-    pub curves: (Curve, Curve),
+    pub curves: (CurveShape, CurveShape),
     pub spatial:      Spatial3,
     pub points:       Vec<Vec3>,
     pub tolerance:    f32,
@@ -36,16 +32,16 @@ impl HitTester2 {
         let mut u1 = start_u1;
         let mut p0 = self.curves.0.get_point_at_u(u0);
         let mut p1 = self.curves.1.get_point_at_u(u1);
-        let mut center = Vec3::ZERO;
-        let mut distance = INFINITY;
+        //let mut center = Vec3::ZERO;
+        //let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
-        let mut u0_prev = u0;
-        let mut u1_prev = u1;
+        // let mut u0_prev = u0;
+        // let mut u1_prev = u1;
         for _ in 0..20 {
             let target = self.get_tangent_intersection(u0, u1, p0, p1);
             let (u0_t0, p0_t0) = self.curves.0.get_u_and_point_from_target(u0, target - p0);
             let (u1_t0, p1_t0) = self.curves.1.get_u_and_point_from_target(u1, target - p1);
-            center = (p0 + p1) / 2.;
+            let center = (p0 + p1) / 2.;
             let (u0_t1, p0_t1) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
             let (u1_t1, p1_t1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
 
@@ -91,12 +87,12 @@ impl HitTester2 {
                 u0 = u0_t1;
                 u1 = u1_t1;
             }
-            distance = p0.distance(p1);
+            let distance = p0.distance(p1);
             if distance < self.tolerance  {
-                center = (p0 + p1) / 2.;
+                let center = (p0 + p1) / 2.;
                 (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
                 (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
-                center = (p0 + p1) / 2.;
+                let center = (p0 + p1) / 2.;
                 let mut duplicate = false;
                     for i in self.spatial.get(&center) {
                         if self.points[i].distance(center) < self.duplication_tolerance {
@@ -151,8 +147,8 @@ impl HitTester2 {
             // p0 = self.curves.0.get_point_at_u(u0);
             // p1 = self.curves.1.get_point_at_u(u1);
             distance_basis = distance;
-            u0_prev = u0;
-            u1_prev = u1;
+            // u0_prev = u0;
+            // u1_prev = u1;
         }
         let tangent0 = self.curves.0.get_tangent_at_u(u0);
         let tangent1 = self.curves.1.get_tangent_at_u(u1);
@@ -182,7 +178,7 @@ impl HitTester2 {
         } else if u1 > 1.-EPSILON {
             p1 -= tangent1 * self.tolerance * 2.;
         }
-        distance = p0.distance(p1);
+        let distance = p0.distance(p1);
 
 
         Err((

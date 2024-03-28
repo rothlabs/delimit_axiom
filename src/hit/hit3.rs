@@ -1,12 +1,8 @@
-use crate::{get_point_between_lines, gpu::{framebuffer::Framebuffer, shader::COPY_FRAGMENT_SOURCE, GPU}, log, Curve, FacetShape, Shape, Spatial3};
+use crate::{gpu::{framebuffer::Framebuffer, shader::COPY_FRAGMENT_SOURCE, GPU}, CurveShape, FacetShape, Shape};
 use glam::*;
 use web_sys::WebGlProgram;
-
 use super::{basis3::{HoneBasis, IndexPair, TraceBasis}, shader::{HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, POINT_SOURCE, TRACE_SOURCE}, traced::{get_traced_curves, TracedCurve}, Miss};
 
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
 
 struct BasisBuffer {
     point: Framebuffer,
@@ -27,7 +23,7 @@ pub struct HitBasis3 {
     pub tolerance: f32,
     pub step:      f32,
     pub length:    usize,
-    pub facet_hits: Vec<Vec<Vec<Vec<Curve>>>>, 
+    pub facet_hits: Vec<Vec<Vec<Vec<CurveShape>>>>, 
     pub facet_miss: Vec<Vec<Vec<Vec<Miss>>>>, 
     pub shapes: Vec<Shape>,
     hone_basis: HoneBasis,

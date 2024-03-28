@@ -8,7 +8,7 @@ use glam::*;
 use self::{union2::UnionBasis2, union3::UnionBasis3};
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "Union::default")]
+#[serde(default)]
 pub struct Union {
     pub parts:         Vec<Model>,
     pub negated_parts: Vec<Model>,
@@ -19,7 +19,6 @@ impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut shapes = vec![];
         let tolerance = 0.005;
-        //let duplication_tolerance = tolerance * 10.;
         let (_, facets, curve_groups_basis, facet_groups_basis) = get_grouped_curves_and_facets(&self.parts);
         let (_, neg_facets, neg_curve_groups, neg_facet_groups) = get_grouped_curves_and_facets(&self.negated_parts);
         if facets.is_empty() && neg_facets.is_empty() {
@@ -40,7 +39,6 @@ impl Union {
             }
             shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
         }else{
-            let step = 2.;
             let mut curve_groups = curve_groups_basis;
             let mut facet_groups = facet_groups_basis;
             for i in 0..neg_curve_groups.len() {
@@ -57,9 +55,19 @@ impl Union {
                 curve_groups.push(curve_group);
                 facet_groups.push(facet_group);
             }
-            let mut basis = UnionBasis3::new(curve_groups, facet_groups, tolerance, step);
+            let mut basis = UnionBasis3::new(curve_groups, facet_groups);
             shapes.extend(basis.make_shapes(0));
-            // let mut curves0 = curve_groups.first().unwrap_or(&vec![]).clone();
+        }
+        shapes
+    }
+}
+
+
+//let seed: [u8; 32] = *b"01234567891234560123456789123456";
+//rng: StdRng::from_seed(seed),
+
+
+// let mut curves0 = curve_groups.first().unwrap_or(&vec![]).clone();
             // let mut facets0 = facet_groups.first().unwrap_or(&vec![]).clone();
             // //self.get_hit_points(facet_groups.clone());
             // for i in 1..facet_groups.len() {
@@ -71,14 +79,6 @@ impl Union {
             // }
             // shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
             // shapes.extend(facets0.iter().map(|f| Shape::Facet(f.clone())));
-        }
-        shapes
-    }
-}
-
-
-//let seed: [u8; 32] = *b"01234567891234560123456789123456";
-//rng: StdRng::from_seed(seed),
 
 
 // let mut idx_texture: Vec<usize> = vec![];

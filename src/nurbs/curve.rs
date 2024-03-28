@@ -1,6 +1,6 @@
 
 use std::f32::EPSILON;
-use crate::{get_reshaped_point, get_vector_hash, query::DiscreteQuery, scene::Polyline, Shape};
+use crate::{get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, scene::Polyline, Model, Shape};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use super::Nurbs;
@@ -10,7 +10,7 @@ use super::Nurbs;
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)] 
 pub struct Curve {
-    pub controls: Vec<Vec3>,
+    pub controls: Vec<Model>,
     pub nurbs: Nurbs,
     pub min:  f32,
     pub max:  f32,
@@ -18,7 +18,7 @@ pub struct Curve {
 
 impl Default for Curve {
     fn default() -> Self {
-        Curve {
+        Self {
             controls: vec![],  
             nurbs: Nurbs::default(),
             min: 0.,
@@ -29,8 +29,8 @@ impl Default for Curve {
 
 impl Curve {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        vec![Shape::Curve(Curve{
-            controls: self.controls.clone(),//get_points(&self.controls),
+        vec![Shape::Curve(CurveShape{
+            controls: get_points(&self.controls),
             nurbs: self.nurbs.clone(),
             min: self.min, 
             max: self.max, 
@@ -38,7 +38,26 @@ impl Curve {
     }
 }
 
-impl Curve {
+#[derive(Clone)]
+pub struct CurveShape {
+    pub controls: Vec<Vec3>,
+    pub nurbs: Nurbs,
+    pub min:  f32,
+    pub max:  f32,
+}
+
+impl Default for CurveShape {
+    fn default() -> Self {
+        Self {
+            controls: vec![],  
+            nurbs: Nurbs::default(),
+            min: 0.,
+            max: 1.,  
+        }
+    }
+}
+
+impl CurveShape {
     pub fn negate(&mut self) -> &mut Self {
         self.nurbs.sign = -self.nurbs.sign;
         self
@@ -266,8 +285,8 @@ impl Curve {
         self.max = min_basis*(1.-u) + self.max*u;
     }
 
-    pub fn get_valid(&self) -> Curve {
-        Curve {
+    pub fn get_valid(&self) -> CurveShape {
+        CurveShape {
             nurbs: self.nurbs.get_valid(self.controls.len()),
             controls: self.controls.clone(), 
             min: self.min,

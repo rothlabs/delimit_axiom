@@ -1,9 +1,9 @@
 pub mod shader;
 pub mod texture;
 pub mod framebuffer;
-use glam::{IVec2};
+use glam::*;
 use wasm_bindgen::prelude::*;
-use web_sys::{WebGl2RenderingContext as GL, WebGlFramebuffer, WebGlProgram, WebGlShader, WebGlTexture};
+use web_sys::{WebGl2RenderingContext as GL, WebGlProgram, WebGlShader};
 use self::framebuffer::{Framebuffer, FramebufferContext};
 use self::shader::{PASS_VERTEX_SOURCE, COPY_FRAGMENT_SOURCE};
 use self::texture::TextureContext;
@@ -87,9 +87,9 @@ impl GPU {
     pub fn get_vertex_shader(&self, source: &str) -> Result<WebGlShader, String> {
         self.get_shader(GL::VERTEX_SHADER, source)
     }
-    pub fn get_fragment_shader(&self, source: &str) -> Result<WebGlShader, String> {
-        self.get_shader(GL::FRAGMENT_SHADER, source)
-    }
+    // pub fn get_fragment_shader(&self, source: &str) -> Result<WebGlShader, String> {
+    //     self.get_shader(GL::FRAGMENT_SHADER, source)
+    // }
     pub fn get_shader(&self, shader_type: u32, source: &str) -> Result<WebGlShader, String> {
         let shader = self.gl.create_shader(shader_type)
             .ok_or_else(|| String::from("Unable to create shader object"))?;

@@ -38,6 +38,7 @@ impl Union {
                 shapes.extend(basis.shapes);
             }
             shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
+            shapes
         }else{
             let mut curve_groups = curve_groups_basis;
             let mut facet_groups = facet_groups_basis;
@@ -55,10 +56,8 @@ impl Union {
                 curve_groups.push(curve_group);
                 facet_groups.push(facet_group);
             }
-            let mut basis = UnionBasis3::new(curve_groups, facet_groups);
-            shapes.extend(basis.make_shapes(0));
+            UnionBasis3::get_shapes(curve_groups, facet_groups)
         }
-        shapes
     }
 }
 

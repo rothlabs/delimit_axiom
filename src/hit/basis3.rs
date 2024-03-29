@@ -1,19 +1,14 @@
-use glam::{vec2, Vec2};
+use glam::*;
 use crate::FacetShape;
+use super::{IndexPair, MissPair};
 
 struct IndexedUV {
     facet_i: usize,
-    texel_i:   usize,
-    uv: Vec2
+    texel_i: usize,
+    uv:      Vec2
 }
 
-#[derive(Clone)]
-pub struct IndexPair {
-    pub g0: usize,
-    pub g1: usize,
-    pub f0: usize,
-    pub f1: usize,
-}
+
 
 #[derive(Default)]
 pub struct HoneBasis{
@@ -83,7 +78,7 @@ impl HoneBasis {
             for g0 in 0..g1{
                 for IndexedUV{facet_i:f0, texel_i:t0, uv:uv0} in &indexed_uv_groups[g0]{
                     for IndexedUV{facet_i:f1, texel_i:t1, uv:uv1} in &indexed_uv_groups[g1]{
-                        index_pairs.push(IndexPair{g0, g1, f0:*f0, f1:*f1});
+                        index_pairs.push(IndexPair{g0, g1, i0:*f0, i1:*f1});
                         pair_texels.push(*t0 as i32);
                         pair_texels.push(*t1 as i32);
                         uv_texels.extend(uv0.to_array());
@@ -108,15 +103,16 @@ pub struct TraceBasis{
     pub index_pairs:   Vec<IndexPair>,
     pub pair_texels:   Vec<i32>,
     pub uv_box_texels: Vec<Vec<f32>>,
-    //pub misses: Vec<>
+    pub misses: Vec<MissPair>
 }
 
 impl TraceBasis {
     pub fn new(basis: &HoneBasis, hit_miss: Vec<f32>) -> Self {
-        let mut index_pairs: Vec<IndexPair> = vec![];
-        let mut pair_texels: Vec<i32> = vec![];
-        let mut uv_texels:   Vec<f32> = vec![];
-        let mut box_texels:  Vec<f32> = vec![];
+        let mut index_pairs = vec![];
+        let mut pair_texels = vec![];
+        let mut uv_texels   = vec![];
+        let mut box_texels  = vec![];
+        let mut misses      = vec![];
         for k in 0..2 {
             for i in 0..basis.index_pairs.len() {
                 if hit_miss[i*4] > -0.5 { // it's a hit
@@ -127,7 +123,15 @@ impl TraceBasis {
                     uv_texels.extend([hit_miss[i*4+0], hit_miss[i*4+1], hit_miss[i*4+2], hit_miss[i*4+3]]); // use .slice of tex
                     box_texels.extend([1., 1., 0., 0.]);
                 }else{
-                    
+                    if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() || hit_miss[i*4+2].abs() < 0.011 {
+                        continue;
+                    }
+                    misses.push(MissPair { 
+                        index:    basis.index_pairs[i].clone(),
+                        distance: hit_miss[i*4+1],
+                        dot0:     hit_miss[i*4+2], 
+                        dot1:     hit_miss[i*4+3], 
+                    });
                 }
             }
         }
@@ -135,6 +139,7 @@ impl TraceBasis {
             index_pairs, 
             pair_texels,
             uv_box_texels: vec![uv_texels, box_texels],
+            misses,
         }
     }
 }

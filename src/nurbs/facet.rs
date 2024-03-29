@@ -257,14 +257,12 @@ impl FacetShape {
             vector.extend(facet.get_vector_at_uv(u, v));
         }
         let mut trivec = geometry.indices;
-        //if self.sign > 0. { 
-            for k in 0..trivec.len()/3 {
-                let i = k * 3;
-                let index = trivec[i];
-                trivec[i] = trivec[i+1];
-                trivec[i+1] = index;
-            }
-        //}
+        for k in 0..trivec.len()/3 {
+            let i = k * 3;
+            let index = trivec[i];
+            trivec[i] = trivec[i+1];
+            trivec[i+1] = index;
+        }
         Mesh {
             digest: get_vector_hash(&vector), 
             vector, 

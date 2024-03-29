@@ -92,7 +92,7 @@ FACET_CORE, UV_POINT_CORE,
         if(abs(dot(normal0, normal1)) < 0.995){     
             outColor = vec4(uv0.x, uv0.y, uv1.x, uv1.y);
         }else{
-            outColor = vec4(-1, 0, 1, 1);
+            outColor = vec4(-1, 0, 0, 0); // outColor = vec4(-1, 0, 1, 1);
         }
     }else{
         outColor = vec4(

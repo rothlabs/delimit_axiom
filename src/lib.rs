@@ -199,50 +199,50 @@ pub fn get_facets(parts: &Vec<Model>) -> Vec<FacetShape> {
     result
 }
 
-pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>) {
-    let mut curves = vec![];
-    let mut facets = vec![];
-    for part in parts {
-        for shape in part.get_shapes() {
-            match shape {
-                Shape::Curve(s) => curves.push(s),
-                Shape::Facet(s) => facets.push(s),
-                _ => (),
-            }
-        }
-    }
-    (curves, facets)
-}
+// pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>) {
+//     let mut curves = vec![];
+//     let mut facets = vec![];
+//     for part in parts {
+//         for shape in part.get_shapes() {
+//             match shape {
+//                 Shape::Curve(s) => curves.push(s),
+//                 Shape::Facet(s) => facets.push(s),
+//                 _ => (),
+//             }
+//         }
+//     }
+//     (curves, facets)
+// }
 
-pub fn get_grouped_curves(parts: &Vec<Model>) -> Vec<Vec<CurveShape>> {
-    let mut curves = vec![];
-    for part in parts {
-        let mut group = vec![];
-        for shape in part.get_shapes() {
-            match shape {
-                Shape::Curve(s) => group.push(s),
-                _ => (),
-            }
-        }
-        curves.push(group);
-    }
-    curves
-}
+// pub fn get_grouped_curves(parts: &Vec<Model>) -> Vec<Vec<CurveShape>> {
+//     let mut curves = vec![];
+//     for part in parts {
+//         let mut group = vec![];
+//         for shape in part.get_shapes() {
+//             match shape {
+//                 Shape::Curve(s) => group.push(s),
+//                 _ => (),
+//             }
+//         }
+//         curves.push(group);
+//     }
+//     curves
+// }
 
-pub fn get_grouped_facets(parts: &Vec<Model>) -> Vec<Vec<FacetShape>> {
-    let mut facets = vec![];
-    for part in parts {
-        let mut group = vec![];
-        for shape in part.get_shapes() {
-            match shape {
-                Shape::Facet(s) => group.push(s),
-                _ => (),
-            }
-        }
-        facets.push(group);
-    }
-    facets
-}
+// pub fn get_grouped_facets(parts: &Vec<Model>) -> Vec<Vec<FacetShape>> {
+//     let mut facets = vec![];
+//     for part in parts {
+//         let mut group = vec![];
+//         for shape in part.get_shapes() {
+//             match shape {
+//                 Shape::Facet(s) => group.push(s),
+//                 _ => (),
+//             }
+//         }
+//         facets.push(group);
+//     }
+//     facets
+// }
 
 pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>, Vec<Vec<CurveShape>>, Vec<Vec<FacetShape>>) {
     let mut curves = vec![];
@@ -271,14 +271,14 @@ pub fn get_reshaped_point(point: &Vec3, mat4: Mat4) -> Vec3 { // [f32; 3] {
     mat4.mul_vec4(point.extend(1.)).truncate() //mat4.mul_vec4(Vec3::from_slice(point).extend(1.)).truncate().to_array()
 }
 
-pub fn get_vec3_or(slice: &[f32; 3], alt: Vec3) -> Vec3 {
-    let vec3 = Vec3::from_slice(slice);
-    if vec3.length() > 0. {
-        vec3
-    } else {
-        alt
-    }
-}
+// pub fn get_vec3_or(slice: &[f32; 3], alt: Vec3) -> Vec3 {
+//     let vec3 = Vec3::from_slice(slice);
+//     if vec3.length() > 0. {
+//         vec3
+//     } else {
+//         alt
+//     }
+// }
 
 pub fn get_line_intersection2(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<Vec2> {
     // let t = ((p1.x - p3.x)*(p3.y - p4.y) - (p1.y - p3.y)*(p3.x - p4.x)) 

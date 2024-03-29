@@ -115,8 +115,8 @@ impl HitTester2 {
                     }
                     if tangent0.dot(tangent1).abs() > 0.995 {
                         return Err((
-                            Miss{dot:self.curves.0.nurbs.sign, distance:0., point: p0}, 
-                            Miss{dot:self.curves.1.nurbs.sign, distance:0., point: p1},
+                            Miss{dot:self.curves.0.nurbs.sign, distance:0.}, // , point: p0 
+                            Miss{dot:self.curves.1.nurbs.sign, distance:0.}, // , point: p1
                         ))
                     }
                     let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
@@ -182,8 +182,8 @@ impl HitTester2 {
 
 
         Err((
-            Miss{dot:cross0.dot(-tangent1), distance, point: p0}, 
-            Miss{dot:cross1.dot(-tangent0), distance, point: p1},
+            Miss{dot:cross0.dot(-tangent1), distance}, // , point: p0 
+            Miss{dot:cross1.dot(-tangent0), distance}, // , point: p1
         ))
     }
 

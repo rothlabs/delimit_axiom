@@ -1,50 +1,46 @@
 use crate::HitBasis3;
-use crate::{hit::Miss, CurveShape, FacetShape, Shape, Trim};
+use crate::{CurveShape, FacetShape, Shape, Trim};
 use super::union2::UnionBasis2;
 
 pub struct UnionBasis3 {
     pub hit_basis: HitBasis3,
     pub curve_groups: Vec<Vec<CurveShape>>,
     pub facet_groups: Vec<Vec<FacetShape>>,
-    pub facet_hits: Vec<Vec<Vec<Vec<CurveShape>>>>, 
-    pub facet_miss: Vec<Vec<Vec<Vec<Miss>>>>, 
     pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis3 { 
-    pub fn new(
+    pub fn get_shapes(
         curve_groups: Vec<Vec<CurveShape>>, facet_groups: Vec<Vec<FacetShape>>,
-    ) -> Self {
+    ) -> Vec<Shape> {
         UnionBasis3 {
             hit_basis: HitBasis3::new(facet_groups.clone()),
-            facet_hits: vec![],
-            facet_miss: vec![],
             curve_groups,
             facet_groups,
             shapes: vec![],
-        }
+        }.make_shapes()
     }
 
-    pub fn make_shapes(&mut self, index: usize) -> Vec<Shape> {//-> (Vec<CurveShape>, Vec<FacetShape>) {
+    pub fn make_shapes(&mut self) -> Vec<Shape> {//-> (Vec<CurveShape>, Vec<FacetShape>) {
         //self.test_groups().unwrap(); //.expect("3D intersection failed");
         // self.curves.extend(self.curve_groups[0].clone());
         // self.curves.extend(self.curve_groups[1].clone());
         //let mut facet_indices: Vec<(usize, usize)> = vec![];
-        self.hit_basis.build().unwrap();
-        self.facet_hits = self.hit_basis.facet_hits.clone();
-        self.facet_miss = self.hit_basis.facet_miss.clone();
+        self.hit_basis.make().expect("Facet intersection should succeed for union3 to work.");
+        let hits = self.hit_basis.facet_hits.clone();
+        let mut misses = self.hit_basis.facet_miss.clone();
         self.shapes = self.hit_basis.shapes.clone();
         for gi in 0..self.facet_groups.len() {
             for fi in 0..self.facet_groups[gi].len() {
                 let mut collect_facet = false;
-                for hi in 0..self.facet_hits[gi][fi].len() {
-                    if self.facet_hits[gi][fi][hi].is_empty() {
+                for hi in 0..hits[gi][fi].len() {
+                    if hits[gi][fi][hi].is_empty() {
                         //if !collect_facet {
-                            self.facet_miss[gi][fi][hi] = self.facet_miss[gi][fi][hi].clone().into_iter().filter(
-                                |a| !a.distance.is_nan() && !a.dot.is_nan() && a.dot.abs() > 0.01
-                            ).collect();
-                            self.facet_miss[gi][fi][hi].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                            if self.facet_miss[gi][fi][hi].is_empty() || self.facet_miss[gi][fi][hi][0].dot > -0.01 {
+                            // misses[gi][fi][hi] = misses[gi][fi][hi].clone().into_iter().filter(
+                            //     |a| !a.distance.is_nan() && !a.dot.is_nan() && a.dot.abs() > 0.01
+                            // ).collect();
+                            misses[gi][fi][hi].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+                            if misses[gi][fi][hi].is_empty() || misses[gi][fi][hi][0].dot * self.facet_groups[gi][fi].nurbs.sign > -0.01 {
                                 //self.facets.push(self.facet_groups[gi][fi].clone());
                                 //self.shapes.push(Shape::Facet(self.facet_groups[gi][fi].clone()));
                                 //facet_indices.push((gi, fi));
@@ -55,7 +51,7 @@ impl UnionBasis3 {
                             }
                         //}
                     }else{
-                        self.union_facet_with_hits(gi, fi, hi, index);  
+                        self.union_facet_with_hits(gi, fi, hi, gi);  
                         //self.shapes.push(Shape::Facet(self.facet_groups[gi][fi].clone()));
                         //facet_indices.push((gi, fi));
                         collect_facet = true;
@@ -100,8 +96,8 @@ impl UnionBasis3 {
         //     }
         //     curves0.push(curve);
         // }
-        let mut union = Trim::new(self.facet_hits[gi][fi][hi].clone(), 0.001);
-        let curves1 = union.build();
+        let mut trim = Trim::new(self.hit_basis.facet_hits[gi][fi][hi].clone(), 0.001);
+        let curves1 = trim.build();
         //let mut curves1 = self.facet_hits[g][i].clone();
         // let circle = Circle{center:[0.2, 0.2], radius:0.05, reverse:true}.get_shapes();
         // if let Shape::Curve(mut circle) = circle[0].clone() {

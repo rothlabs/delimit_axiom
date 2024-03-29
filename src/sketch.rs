@@ -112,7 +112,7 @@ impl SketchShape {
                 center: center.extend(0.),//[center.x, center.y, 0.],
                 axis: vec3(0., 0., angle.signum()),//[0., 0., angle.signum()],
                 angle: angle.abs(),
-                reshape: Reshape::default(),
+                ..Default::default()//reshape: Reshape::default(),
             };
             self.shapes.extend(revolve.get_shapes());
         }

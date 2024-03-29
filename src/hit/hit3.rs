@@ -1,10 +1,14 @@
-use crate::{gpu::{framebuffer::Framebuffer, shader::COPY_FRAGMENT_SOURCE, GPU}, CurveShape, FacetShape, Shape};
+use crate::{CurveShape, FacetShape, Shape};
+use crate::gpu::{framebuffer::Framebuffer, shader::COPY_FRAGMENT_SOURCE, GPU};
 use glam::*;
 use web_sys::WebGlProgram;
-use super::{basis3::{HoneBasis, IndexPair, TraceBasis}, shader::{HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, POINT_SOURCE, TRACE_SOURCE}, traced::{get_traced_curves, TracedCurve}, Miss};
+use super::basis3::{HoneBasis, TraceBasis};
+use super::shader::{HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, POINT_SOURCE, TRACE_SOURCE};
+use super::traced::{get_traced_curves, TracedCurve};
+use super::{IndexPair, Miss, MissPair};
 
 
-struct BasisBuffer {
+struct HoneBuffer {
     point: Framebuffer,
     uv0:   Framebuffer,
     uv1:   Framebuffer,
@@ -33,7 +37,7 @@ pub struct HitBasis3 {
     copy_program:     WebGlProgram,
     trace_program:    WebGlProgram, 
     hone_trace_program: WebGlProgram, 
-    hone_buffer:   Option<BasisBuffer>,
+    hone_buffer:   Option<HoneBuffer>,
     trace_buffer:  Option<TraceBuffer>,
     gpu: GPU,
 }
@@ -67,17 +71,17 @@ impl HitBasis3 {
             gpu,
         }
     }
-    pub fn build(&mut self) -> Result<(), String> { 
-        let mut basis0 = HoneBasis::new(&self.facet_groups);
-        self.gpu.texture.make_r32f(0, &mut basis0.facet_texels)?;
-        let (_, pair_buf_size0) = self.gpu.texture.make_rg32i(1, &mut basis0.pair_texels)?;
+    pub fn make(&mut self) -> Result<(), String> { 
+        let mut hone_basis = HoneBasis::new(&self.facet_groups);
+        self.gpu.texture.make_r32f(0, &mut hone_basis.facet_texels)?;
+        let (_, pair_buf_size0) = self.gpu.texture.make_rg32i(1, &mut hone_basis.pair_texels)?;
         let point_buf_size0 = ivec2(pair_buf_size0.x*3, pair_buf_size0.y*2);
-        self.hone_buffer = Some(BasisBuffer{
+        self.hone_buffer = Some(HoneBuffer{
             point: self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size0)?,
-            uv0:   self.gpu.framebuffer.make_rgba32f(3, &mut basis0.uv_texels)?,
+            uv0:   self.gpu.framebuffer.make_rgba32f(3, &mut hone_basis.uv_texels)?,
             uv1:   self.gpu.framebuffer.make_empty_rgba32f(4, pair_buf_size0)?,
         });
-        self.hone_basis = basis0;
+        self.hone_basis = hone_basis;
         self.hone_to_hit_or_miss();
         let buff0 = &self.hone_buffer.as_ref().unwrap();
         let hit_miss = self.gpu.read(&buff0.uv1, 0);
@@ -88,14 +92,14 @@ impl HitBasis3 {
         //         self.shapes.push(Shape::Point(point));
         //     }
         // }
-        let mut basis1 = TraceBasis::new(&self.hone_basis, hit_miss);
-        let (_, pair_buf_size1) = self.gpu.texture.make_row_rg32i(1, &mut basis1.pair_texels)?;
+        let mut trace_basis = TraceBasis::new(&self.hone_basis, hit_miss);
+        let (_, pair_buf_size1) = self.gpu.texture.make_row_rg32i(1, &mut trace_basis.pair_texels)?;
         let point_buf_size1 = ivec2(pair_buf_size1.x*3, pair_buf_size1.y*2);
         let trace_length = 300;
         let trace_buf_size = ivec2(pair_buf_size1.x, trace_length);
         self.trace_buffer = Some(TraceBuffer{
             point:   self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size1)?,
-            segment: self.gpu.framebuffer.make_row_rgba32f(3, &mut basis1.uv_box_texels)?,
+            segment: self.gpu.framebuffer.make_row_rgba32f(3, &mut trace_basis.uv_box_texels)?,
             honed:   self.gpu.framebuffer.make_multi_empty_rgba32f(5, pair_buf_size1, 3)?,
             trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(8, trace_buf_size, 2)?,
         });
@@ -104,13 +108,18 @@ impl HitBasis3 {
         let traces  = self.gpu.read(&buff1.trace, 0);
         let boxes   = self.gpu.read(&buff1.honed, 1);
         let centers = self.gpu.read(&buff1.trace, 1);
-        let traced_curves = get_traced_curves(basis1.index_pairs, trace_buf_size, traces, boxes, centers);
+        let traced_curves = get_traced_curves(trace_basis.index_pairs, trace_buf_size, traces, boxes, centers);
         for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
-            let IndexPair{g0, g1, f0, f1} = index_pair;
-            self.facet_hits[g0][f0][g1-g0-1].push(curve0);
-            self.facet_hits[g1][f1][g1-g0-1].push(curve1);
+            let IndexPair{g0, g1, i0, i1} = index_pair;
+            self.facet_hits[g0][i0][g1-g0-1].push(curve0);
+            self.facet_hits[g1][i1][0].push(curve1);
             self.shapes.push(Shape::Curve(center));
-        }   
+        }  
+        for MissPair{index, distance, dot0, dot1} in trace_basis.misses {
+            let IndexPair{g0, g1, i0, i1} = index;
+            self.facet_miss[g0][i0][g1-g0-1].push(Miss{distance, dot:dot0});
+            self.facet_miss[g1][i1][0].push(Miss{distance, dot:dot1});
+        }  
         Ok(())     
     }
 

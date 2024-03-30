@@ -99,16 +99,17 @@ impl HitBasis3 {
         let trace_buf_size = ivec2(pair_buf_size1.x, trace_length);
         self.trace_buffer = Some(TraceBuffer{
             point:   self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size1)?,
-            segment: self.gpu.framebuffer.make_row_rgba32f(3, &mut trace_basis.uv_box_texels)?, // uv, box, direction
-            honed:   self.gpu.framebuffer.make_multi_empty_rgba32f(5, pair_buf_size1, 3)?, // uv, box, point
-            trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(8, trace_buf_size, 2)?, // uvs, points, directions
+            segment: self.gpu.framebuffer.make_row_rgba32f(3, &mut trace_basis.uv_box_dir_texels)?, // uv, box, direction
+            honed:   self.gpu.framebuffer.make_multi_empty_rgba32f(6, pair_buf_size1, 3)?, // uv, box, point
+            trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(9, trace_buf_size, 3)?, // uvs, points, directions
         });
         self.trace(trace_length);
         let buff1 = &self.trace_buffer.as_ref().unwrap();
         let boxes   = self.gpu.read(&buff1.honed, 1);
         let traces  = self.gpu.read(&buff1.trace, 0);
         let centers = self.gpu.read(&buff1.trace, 1);
-        let traced_curves = get_traced_curves(trace_basis.index_pairs, trace_buf_size, traces, boxes, centers);
+        let directions = self.gpu.read(&buff1.trace, 2);
+        let traced_curves = get_traced_curves(trace_basis.index_pairs, trace_buf_size, traces, boxes, centers, directions);
         for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
             let IndexPair{g0, g1, i0, i1} = index_pair;
             self.facet_hits[g0][i0][g1-g0-1].push(curve0);
@@ -144,7 +145,7 @@ impl HitBasis3 {
         for y in 0..length {
             self.draw_trace_points(3);
             self.hone_trace();
-            self.draw_trace_points(5);
+            self.draw_trace_points(6); // 5
             self.trace_segment();
             self.copy_trace(y);
         }
@@ -189,8 +190,9 @@ impl HitBasis3 {
 
     fn copy_trace(&self, y: i32) {
         self.gpu.gl.use_program(Some(&self.copy_program));
-        self.gpu.set_uniform_1i(&self.copy_program, "source_tex0",  5);
-        self.gpu.set_uniform_1i(&self.copy_program, "source_tex1",  7);
+        self.gpu.set_uniform_1i(&self.copy_program, "source_tex0",  6); // 5
+        self.gpu.set_uniform_1i(&self.copy_program, "source_tex1",  8); // 7
+        self.gpu.set_uniform_1i(&self.copy_program, "source_tex2",  5); 
         self.gpu.set_uniform_2i(&self.copy_program, "viewport_position",  IVec2::Y*y);
         self.gpu.draw_at_pos(&self.trace_buffer.as_ref().unwrap().trace, IVec2::Y*y);
     }
@@ -199,8 +201,8 @@ impl HitBasis3 {
         self.gpu.gl.use_program(Some(&self.trace_program));
         self.set_uniform_basis(&self.trace_program);
         self.gpu.set_uniform_1i(&self.trace_program, "point_tex", 2);
-        self.gpu.set_uniform_1i(&self.trace_program, "uv_tex",  5);
-        self.gpu.set_uniform_1i(&self.trace_program, "box_tex", 6);
+        self.gpu.set_uniform_1i(&self.trace_program, "uv_tex",  6); // 5
+        self.gpu.set_uniform_1i(&self.trace_program, "box_tex", 7); // 6
         self.gpu.draw(&self.trace_buffer.as_ref().unwrap().segment);
     }
 }

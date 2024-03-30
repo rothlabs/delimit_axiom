@@ -242,7 +242,6 @@ pub fn get_line_intersection2(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<
     Some(vec2(x, y))
 }
 
-
 #[derive(Default, Clone)]
 pub struct Ray {
     pub origin: Vec3,
@@ -254,11 +253,20 @@ impl Ray {
         Self {origin, vector}
     }
     pub fn middle(&self, ray: &Ray) -> Vec3 {
-        if self.vector.cross(ray.vector).length() < 0.0001 { // parallel case
+        if self.vector.cross(ray.vector).length() < 0.001 { // parallel case
             return (self.origin + ray.origin) / 2.;
         }
-        let p0 = self.origin + self.vector * self.vector.dot(ray.origin - self.origin);
-        let p1 = ray.origin + ray.vector * ray.vector.dot(self.origin - ray.origin);
+        let a = self.vector.dot(self.vector);
+        let b = self.vector.dot(ray.vector);
+        let c =  ray.vector.dot(ray.vector);
+        let delta = self.origin - ray.origin;
+        let d = self.vector.dot(delta);
+        let e =  ray.vector.dot(delta);
+        let denom = a * c - b * b;
+        let u0 = (b * e - c * d) / denom;
+        let u1 = (a * e - b * d) / denom;
+        let p0 = self.origin + self.vector * u0;
+        let p1 = ray.origin  + ray.vector  * u1;
         (p0 + p1) / 2.
     }
 }
@@ -347,4 +355,14 @@ pub fn get_vector_hash(vecf32: &Vec<f32>) -> u64 {
 //     } else {
 //         alt
 //     }
+// }
+
+
+// pub fn middle(&self, ray: &Ray) -> Vec3 {
+//     if self.vector.cross(ray.vector).length() < 0.0001 { // parallel case
+//         return (self.origin + ray.origin) / 2.;
+//     }
+//     let p0 = self.origin + self.vector * self.vector.dot(ray.origin - self.origin);
+//     let p1 = ray.origin + ray.vector * ray.vector.dot(self.origin - ray.origin);
+//     (p0 + p1) / 2.
 // }

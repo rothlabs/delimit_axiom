@@ -1,6 +1,6 @@
 use std::f32::{EPSILON, INFINITY};
 
-use crate::{log, get_point_between_lines, CurveShape, Spatial3};
+use crate::{log, Ray, CurveShape, Spatial3};
 use glam::*;
 
 use super::Miss;
@@ -188,11 +188,9 @@ impl HitTester2 {
     }
 
     pub fn get_tangent_intersection(&self, u0: f32, u1: f32, p0: Vec3, p1: Vec3) -> Vec3 {
-        //let curve0 = self.curves.0.clone(); //&self.groups.0[self.index.0];
-        //let curve1 = self.curves.1.clone(); //&self.groups.1[self.index.1];
-        let tangent0 = self.curves.0.get_tangent_at_u(u0);
-        let tangent1 = self.curves.1.get_tangent_at_u(u1);
-        get_point_between_lines(p0, tangent0, p1, tangent1) // get_line_intersection(p0, tangent0, p1, tangent1)
+        let ray0 = Ray::new(p0, self.curves.0.get_tangent_at_u(u0));
+        let ray1 = Ray::new(p1, self.curves.1.get_tangent_at_u(u1));
+        ray0.middle(&ray1)
     }
 }
 

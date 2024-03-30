@@ -7,7 +7,7 @@ precision highp sampler2D;
 precision highp isampler2D;
 uniform isampler2D pair_tex;
 uniform sampler2D uv_tex;
-out vec3 outColor;
+out vec3 point;
 "##,
 FACET_CORE,
 "void main() {",
@@ -33,15 +33,15 @@ FACET_CORE,
         uv = texelFetch(uv_tex, pair_coord, 0).ba;
     }
     if(tile_x == 0){
-        outColor = get_point_on_facet(facet_i, uv);
+        point = get_point_on_facet(facet_i, uv);
     }else if(tile_x == 1){
         if(uv.x > 0.5){uv = uv - vec2(uv_shift, 0.);}
         else{uv = uv + vec2(uv_shift, 0.);}
-        outColor = get_point_on_facet(facet_i, uv);
+        point = get_point_on_facet(facet_i, uv);
     }else if(tile_x == 2){
         if(uv.y > 0.5){uv = uv - vec2(0., uv_shift);}
         else{uv = uv + vec2(0., uv_shift);}
-        outColor = get_point_on_facet(facet_i, uv);
+        point = get_point_on_facet(facet_i, uv);
     }
 }
 "##);
@@ -161,18 +161,20 @@ uniform sampler2D uv_tex;
 uniform sampler2D box_tex;
 layout(location=0) out vec4 uvs;
 layout(location=1) out vec4 box;
+layout(location=2) out vec3 direction;
 "##,
 FACET_CORE, UV_POINT_CORE, 
 "void main() {",
     FACET_PARTS, UV_POINT_PARTS, 
     r##"
-    float direction = -1.;
+    float sign = -1.;
     if(pair_coord.x < pair_size.x/2){
-        direction = 1.;
+        sign = 1.;
     }
     vec3 normal0 = get_facet_normal(uv0, p0a, p0b, p0c);
     vec3 normal1 = get_facet_normal(uv1, p1a, p1b, p1c);
-    vec3 target = normalize(cross(normal0, normal1)) * direction * step;
+    direction = normalize(cross(normal0, normal1));
+    vec3 target = direction * sign * step;
     vec2 uv0a = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, target);
     vec2 uv1a = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, target);
     uvs = vec4(uv0a.x, uv0a.y, uv1a.x, uv1a.y);

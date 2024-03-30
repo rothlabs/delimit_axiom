@@ -99,14 +99,14 @@ impl HitBasis3 {
         let trace_buf_size = ivec2(pair_buf_size1.x, trace_length);
         self.trace_buffer = Some(TraceBuffer{
             point:   self.gpu.framebuffer.make_empty_rgba32f(2, point_buf_size1)?,
-            segment: self.gpu.framebuffer.make_row_rgba32f(3, &mut trace_basis.uv_box_texels)?,
-            honed:   self.gpu.framebuffer.make_multi_empty_rgba32f(5, pair_buf_size1, 3)?,
-            trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(8, trace_buf_size, 2)?,
+            segment: self.gpu.framebuffer.make_row_rgba32f(3, &mut trace_basis.uv_box_texels)?, // uv, box, direction
+            honed:   self.gpu.framebuffer.make_multi_empty_rgba32f(5, pair_buf_size1, 3)?, // uv, box, point
+            trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(8, trace_buf_size, 2)?, // uvs, points, directions
         });
         self.trace(trace_length);
         let buff1 = &self.trace_buffer.as_ref().unwrap();
-        let traces  = self.gpu.read(&buff1.trace, 0);
         let boxes   = self.gpu.read(&buff1.honed, 1);
+        let traces  = self.gpu.read(&buff1.trace, 0);
         let centers = self.gpu.read(&buff1.trace, 1);
         let traced_curves = get_traced_curves(trace_basis.index_pairs, trace_buf_size, traces, boxes, centers);
         for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
@@ -144,9 +144,9 @@ impl HitBasis3 {
         for y in 0..length {
             self.draw_trace_points(3);
             self.hone_trace();
-            self.copy_trace(y);
             self.draw_trace_points(5);
             self.trace_segment();
+            self.copy_trace(y);
         }
     }
 

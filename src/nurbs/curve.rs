@@ -2,6 +2,7 @@
 use std::f32::EPSILON;
 use crate::{get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, scene::Polyline, Model, Shape};
 use glam::*;
+use lyon::geom::euclid::default;
 use serde::{Deserialize, Serialize};
 use super::Nurbs;
 
@@ -58,6 +59,13 @@ impl Default for CurveShape {
 }
 
 impl CurveShape {
+    pub fn from_order(order: usize) -> Self {
+        let mut curve = Self::default();
+        curve.nurbs.order = order;
+        curve.nurbs.knots.extend(vec![0.; order]);
+        curve
+    }
+
     pub fn negate(&mut self) -> &mut Self {
         self.nurbs.sign = -self.nurbs.sign;
         self

@@ -12,13 +12,16 @@ uniform ivec2 viewport_position;
 uniform sampler2D source_tex0;
 uniform sampler2D source_tex1;
 uniform sampler2D source_tex2;
+uniform sampler2D source_tex3;
 layout(location=0) out vec4 output0;
 layout(location=1) out vec4 output1;
 layout(location=2) out vec4 output2;
+layout(location=3) out vec4 output3;
 void main() {
     ivec2 coord = ivec2(gl_FragCoord.x, gl_FragCoord.y) - viewport_position;
     output0 = texelFetch(source_tex0, coord, 0);
     output1 = texelFetch(source_tex1, coord, 0);
     output2 = texelFetch(source_tex2, coord, 0);
+    output3 = texelFetch(source_tex3, coord, 0);
 }
 "##;

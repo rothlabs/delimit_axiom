@@ -119,17 +119,17 @@ impl FacetShape {
     //     box3.inflate(0.01, 0.01, 0.01)
     // }
 
-    pub fn get_normalized_knots(&self) -> Vec<Vec2> {
-        let mut knots = vec![];
-        //let last_knot = self.nurbs.knots.last().unwrap();
-        for i in 0..self.controls.len() {
-            let v = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
-            for u in self.controls[i].get_inflection_params(){
-                knots.push(vec2(u, v));
-            }
-        }
-        knots
-    }
+    // pub fn get_normalized_knots(&self) -> Vec<Vec2> {
+    //     let mut knots = vec![];
+    //     //let last_knot = self.nurbs.knots.last().unwrap();
+    //     for i in 0..self.controls.len() {
+    //         let v = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
+    //         for u in self.controls[i].get_inflection_params(){
+    //             knots.push(vec2(u, v));
+    //         }
+    //     }
+    //     knots
+    // }
 
     pub fn get_normal_at_uv(&self, uv: Vec2) -> Vec3 {
         let mut step_u = 0.0001;

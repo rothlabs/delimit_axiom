@@ -120,51 +120,51 @@ impl CurveShape {
         self.controls = controls;
     }
 
-    pub fn set_knots_by_control_distance(&mut self) {
-        self.nurbs.knots = vec![0.; self.nurbs.order];
-        let mut distance = 0.;
-        for i in 1..self.controls.len() {
-            distance += self.controls[i-1].distance(self.controls[i]);
-            self.nurbs.knots.push(distance);
-        }
-        self.nurbs.knots.extend(vec![distance as f32; self.nurbs.order-1]);
-    }
+    // pub fn set_knots_by_control_distance(&mut self) {
+    //     self.nurbs.knots = vec![0.; self.nurbs.order];
+    //     let mut distance = 0.;
+    //     for i in 1..self.controls.len() {
+    //         distance += self.controls[i-1].distance(self.controls[i]);
+    //         self.nurbs.knots.push(distance);
+    //     }
+    //     self.nurbs.knots.extend(vec![distance as f32; self.nurbs.order-1]);
+    // }
 
-    pub fn get_inflection_params(&self) -> Vec<f32> {
-        if self.nurbs.order == 2 && self.controls.len() == 2 {
-            return vec![0., 0.5, 1.];
-        }
-        let mut knots = vec![0.];
-        //let last_knot = self.nurbs.knots.last().unwrap();
-        if self.controls.len() > 1 {
-            let mut direction_basis = (self.controls[1].truncate() - self.controls[0].truncate()).normalize();
-            let mut turn_basis = 0.;
-            for i in 1..self.controls.len()-1 {
-                let dir = (self.controls[i+1].truncate() - self.controls[i].truncate()).normalize();
-                let turn = direction_basis.angle_between(dir);
-                if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
-                    let u0 = self.nurbs.knots[self.nurbs.order + i - 2];// / last_knot;
-                    let u1 = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
-                    let u = (u0 + u1) / 2.;
-                    if u >= self.min && u <= self.max {
-                        knots.push(u);
-                    }
-                }
-                direction_basis = dir;
-                turn_basis = turn;
-            }
-        }
-        //knots.push(0.3);
-        knots.push(0.5);
-        //knots.push(0.8);
-        knots.push(1.);
-        // console_log!("full knots! {:?}", self.nurbs.knots);
-        //console_log!("knots! {:?}", knots);
-        knots
-    }
+    // pub fn get_inflection_params(&self) -> Vec<f32> {
+    //     if self.nurbs.order == 2 && self.controls.len() == 2 {
+    //         return vec![0., 0.5, 1.];
+    //     }
+    //     let mut knots = vec![0.];
+    //     //let last_knot = self.nurbs.knots.last().unwrap();
+    //     if self.controls.len() > 1 {
+    //         let mut direction_basis = (self.controls[1].truncate() - self.controls[0].truncate()).normalize();
+    //         let mut turn_basis = 0.;
+    //         for i in 1..self.controls.len()-1 {
+    //             let dir = (self.controls[i+1].truncate() - self.controls[i].truncate()).normalize();
+    //             let turn = direction_basis.angle_between(dir);
+    //             if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
+    //                 let u0 = self.nurbs.knots[self.nurbs.order + i - 2];// / last_knot;
+    //                 let u1 = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
+    //                 let u = (u0 + u1) / 2.;
+    //                 if u >= self.min && u <= self.max {
+    //                     knots.push(u);
+    //                 }
+    //             }
+    //             direction_basis = dir;
+    //             turn_basis = turn;
+    //         }
+    //     }
+    //     //knots.push(0.3);
+    //     knots.push(0.5);
+    //     //knots.push(0.8);
+    //     knots.push(1.);
+    //     // console_log!("full knots! {:?}", self.nurbs.knots);
+    //     //console_log!("knots! {:?}", knots);
+    //     knots
+    // }
 
     pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
-        let mut step = 0.0001;
+        let mut step = 0.0001; // 0.0001
         if u + step > 1. {step = -step;}
         let p0 = self.get_point_at_u(u);
         let p1 = self.get_point_at_u(u + step);

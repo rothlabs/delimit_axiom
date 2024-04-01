@@ -140,7 +140,7 @@ impl TraceBasis {
         TraceBasis {
             index_pairs, 
             pair_texels,
-            uv_box_dir_texels: vec![uv_texels, box_texels, vec![0.; length]],
+            uv_box_dir_texels: vec![uv_texels, box_texels, vec![0.; length], vec![0.; length]],
             misses,
         }
     }

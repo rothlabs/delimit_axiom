@@ -107,9 +107,9 @@ impl UnionBasis2 {
                 }
                 self.tester.curves.0 = self.groups[0][i0].clone();
                 self.tester.curves.1 = self.groups[1][i1].clone();
-                for u0 in self.groups[0][i0].get_inflection_params() {
-                    for u1 in self.groups[1][i1].get_inflection_params() {
-                        self.test_curves(i0, i1, u0, u1);
+                for u0 in 0..10 {//self.groups[0][i0].get_inflection_params() {
+                    for u1 in 0..10 {//vec![0., 0.25, 0.5, 0.75, 0.85, 1.] {//self.groups[1][i1].get_inflection_params() {
+                        self.test_curves(i0, i1, u0 as f32 / 10., u1 as f32 / 10.);
                     }
                 }
             }

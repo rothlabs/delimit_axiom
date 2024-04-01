@@ -1,3 +1,4 @@
+use glam::*;
 use crate::HitBasis3;
 use crate::{CurveShape, FacetShape, Shape, Trim};
 use super::union2::UnionBasis2;
@@ -89,52 +90,21 @@ impl UnionBasis3 {
                 curve.negate();
             }
         }
-        // let mut curves0 = vec![];
-        // for mut curve in facet.boundaries.clone() {
-        //     if facet.nurbs.sign < 0. {
-        //         curve.negate();
-        //     }
-        //     curves0.push(curve);
-        // }
         let mut trim = Trim::new(self.hit_basis.facet_hits[gi][fi][hi].clone(), 0.001);
         let curves1 = trim.build();
-        //let mut curves1 = self.facet_hits[g][i].clone();
-        // let circle = Circle{center:[0.2, 0.2], radius:0.05, reverse:true}.get_shapes();
-        // if let Shape::Curve(mut circle) = circle[0].clone() {
-        //     circle.negate();
-        //     curves1 = vec![circle];//curves1.push(circle);
-        // }
-
-        // if index > 1 {
-        //     for j in 0..facet.boundaries.len() {
-        //         let mut bndry = facet.boundaries[j].clone();
-        //         bndry.controls.clear();
-        //         for k in 0..facet.boundaries[j].controls.len() {
-        //             bndry.controls.push(facet.boundaries[j].controls[k] + vec3(
-        //                 100. + i as f32 * 2., //  + (j as f32)*0.01  
-        //                 g as f32 * 2., //  + (j as f32)*0.01 
-        //                 0.
-        //             ));
-        //         }
-        //         self.shapes.push(Shape::Curve(bndry));
-        //     }
-        // }
-        
-        let mut union = UnionBasis2::new(facet.boundaries.clone(), curves1.clone(), 0.001, false); // self.facet_hits[g][i].clone()
+        let mut union = UnionBasis2::new(facet.boundaries.clone(), curves1, 0.001, false); // self.facet_hits[g][i].clone()
         facet.boundaries = union.build();
-        
-        // for shape in union.shapes {
-        //     if let Shape::Point(point) = shape {
-        //         self.shapes.push(Shape::Point(point));
-        //     }
-        // }
-
-        if index < 2 {
-            // for j in 0..self.facet_hits[gi][fi][hi].len() {
-            //     let mut bndry = self.facet_hits[gi][fi][hi][j].clone();
+                // for shape in union.shapes {
+                //     if let Shape::Point(point) = shape {
+                //         self.shapes.push(Shape::Point(point));
+                //     }
+                // }
+        //if index < 2 {
+            // for j in 0..self.hit_basis.facet_hits[gi][fi][hi].len() {
+            //     let mut bndry = self.hit_basis.facet_hits[gi][fi][hi][j].clone();
             //     bndry.controls.clear();
-            //     for k in 0..self.facet_hits[gi][fi][hi][j].controls.len() {
-            //         bndry.controls.push(self.facet_hits[gi][fi][hi][j].controls[k] + vec3(
+            //     for k in 0..self.hit_basis.facet_hits[gi][fi][hi][j].controls.len() {
+            //         bndry.controls.push(self.hit_basis.facet_hits[gi][fi][hi][j].controls[k] + vec3(
             //             100. + fi as f32 * 2., //  + (j as f32)*0.01  
             //             gi as f32 * 2., //  + (j as f32)*0.01 
             //             0.
@@ -147,31 +117,28 @@ impl UnionBasis3 {
             //     bndry.controls.clear();
             //     for k in 0..curves1[j].controls.len() {
             //         bndry.controls.push(curves1[j].controls[k] + vec3(
-            //             100. + i as f32 * 2., //  + (j as f32)*0.01  
-            //             g as f32 * 2., //  + (j as f32)*0.01 
+            //             100. + fi as f32 * 2., //  + (j as f32)*0.01  
+            //             gi as f32 * 2., //  + (j as f32)*0.01 
             //             0.
             //         ));
             //     }
             //     self.shapes.push(Shape::Curve(bndry));
             // }
-            // for j in 0..facet.boundaries.len() {
-            //     let mut bndry = facet.boundaries[j].clone();
-            //     bndry.controls.clear();
-            //     for k in 0..facet.boundaries[j].controls.len() {
-            //         bndry.controls.push(facet.boundaries[j].controls[k] + vec3(
-            //             100. + i as f32 * 2.,// + (j as f32)*0.005,  
-            //             g as f32 * 2.,// + (j as f32)*0.01, 
-            //             0.
-            //         ));
-            //     }
-            //     self.shapes.push(Shape::Curve(bndry));
-            // }
-        }
+            for j in 0..facet.boundaries.len() {
+                let mut bndry = facet.boundaries[j].clone();
+                bndry.controls.clear();
+                for k in 0..facet.boundaries[j].controls.len() {
+                    bndry.controls.push(facet.boundaries[j].controls[k] + vec3(
+                        100. + fi as f32 * 2.,// + (j as f32)*0.005,  
+                        gi as f32 * 2.,// + (j as f32)*0.01, 
+                        0.
+                    ));
+                }
+                self.shapes.push(Shape::Curve(bndry));
+            }
+        //}
         //self.facets.push(facet);
     }
-
-    //fn test_groups(&mut self) -> Result<(), String> {
-        
 }
 
 //use std::time::Instant;

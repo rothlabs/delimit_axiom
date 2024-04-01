@@ -253,7 +253,7 @@ impl Ray {
         Self {origin, vector}
     }
     pub fn middle(&self, ray: &Ray) -> Vec3 {
-        if self.vector.cross(ray.vector).length() < 0.001 { // parallel case
+        if self.vector.cross(ray.vector).length() < 0.01 { // parallel case
             return (self.origin + ray.origin) / 2.;
         }
         let a = self.vector.dot(self.vector);

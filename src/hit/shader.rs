@@ -161,7 +161,8 @@ uniform sampler2D uv_tex;
 uniform sampler2D box_tex;
 layout(location=0) out vec4 uvs;
 layout(location=1) out vec4 box;
-layout(location=2) out vec3 direction;
+layout(location=2) out vec4 uvDirs;
+layout(location=3) out vec3 dir;
 "##,
 FACET_CORE, UV_POINT_CORE, 
 "void main() {",
@@ -173,12 +174,15 @@ FACET_CORE, UV_POINT_CORE,
     }
     vec3 normal0 = get_facet_normal(uv0, p0a, p0b, p0c);
     vec3 normal1 = get_facet_normal(uv1, p1a, p1b, p1c);
-    direction = normalize(cross(normal0, normal1));
-    vec3 target = direction * sign * step;
+    dir = normalize(cross(normal0, normal1));
+    vec3 target = dir * sign * step;
     vec2 uv0a = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, target);
     vec2 uv1a = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, target);
     uvs = vec4(uv0a.x, uv0a.y, uv1a.x, uv1a.y);
     box = texelFetch(box_tex, pair_coord, 0);
+    vec2 dirs0 = normalize(uv0a*100.0 - uv0*100.0);
+    vec2 dirs1 = normalize(uv1a*100.0 - uv1*100.0);
+    uvDirs = vec4(dirs0.x, dirs0.y, dirs1.x, dirs1.y);
 }
 "##);
 

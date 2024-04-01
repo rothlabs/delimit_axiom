@@ -1,7 +1,7 @@
 use std::f32::{EPSILON, INFINITY};
-
-use crate::{log, Ray, CurveShape, Spatial3};
 use glam::*;
+use crate::ray::*;
+use crate::{log, CurveShape, Spatial3};
 
 use super::Miss;
 

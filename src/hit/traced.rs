@@ -1,5 +1,6 @@
 use glam::*;
-use crate::{log, rays_to_curve::RaysToCurve, CurveShape, Ray};
+use crate::ray::*;
+use crate::{log, CurveShape};
 use super::IndexPair;
 use std::collections::HashMap;
 
@@ -37,8 +38,8 @@ pub fn get_traced_curves(
             vec.push((min, max));
         }
         let mut prev_point = vec3(100000., 100000., 100000.);
-        let mut curve0 = CurveShape::default();
-        let mut curve1 = CurveShape::default();
+        //let mut curve0 = CurveShape::default();
+        //let mut curve1 = CurveShape::default();
         let mut rays0a = vec![];
         let mut rays1a = vec![];
         let mut rays2a = vec![];
@@ -156,12 +157,12 @@ pub fn get_traced_curves(
         // console_log!("dirs1 {:?}", rays1a.iter().map(|x| x.vector).collect::<Vec<Vec3>>());
         // curve0.controls.extend(rays0a.iter().map(|x| x.origin));
         // curve1.controls.extend(rays1a.iter().map(|x| x.origin));
-        curve0 = RaysToCurve::new(rays0a);
-        curve1 = RaysToCurve::new(rays1a);
+        let mut curve0 = rays0a.to_curve();//RaysToCurve::new(rays0a);
+        let mut curve1 = rays1a.to_curve();//RaysToCurve::new(rays1a);
         curve0.negate();
         curve1.negate();
-        curve0 = curve0.get_valid();
-        curve1 = curve1.get_valid();
+        //curve0 = curve0.get_valid();
+        //curve1 = curve1.get_valid();
         // console_log!("knots0 {:?}", curve0.nurbs.knots);
         // console_log!("knots1 {:?}", curve1.nurbs.knots);
         traced_curves.push(TracedCurve{
@@ -172,7 +173,7 @@ pub fn get_traced_curves(
             // curve1: RaysToCurve::new(rays1a),
             curve0,
             curve1,
-            center: RaysToCurve::new(rays2a),//center.get_valid(),
+            center: rays2a.to_curve(),//RaysToCurve::new(rays2a),//center.get_valid(),
         });
     }
     traced_curves

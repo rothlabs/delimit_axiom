@@ -19,14 +19,14 @@ pub struct Reshape {
 impl Default for Reshape {
     fn default() -> Self {
         Self {
-            parts: vec![],
-            negate: false,
-            reverse: false,
+            parts:    vec![],
+            negate:   false,
+            reverse:  false,
             position: Vec3::ZERO,
             rotation: Vec3::ZERO,
-            scale: Vec3::ONE,
-            axis: Vec3::ZERO,
-            angle: 0.,
+            scale:    Vec3::ONE,
+            axis:     Vec3::Z,
+            angle:    0.,
         }
     }
 }

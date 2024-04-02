@@ -231,7 +231,7 @@ impl FacetShape {
                     loop_open = true;
                 }
             }
-            bndry_i = facet.get_next_boundary_index(&bndry.get_point_at_u(1.), &mut used_boundaries);
+            bndry_i = facet.get_next_boundary_index(&bndry.get_point(1.), &mut used_boundaries);
             used_boundaries.push(bndry_i);
             if bndry_i == start_bndry_i {
                 builder.end(true);
@@ -274,7 +274,7 @@ impl FacetShape {
         let mut bndry_i = 0;
         let mut distance = INFINITY;
         for (i, curve) in self.boundaries.iter().enumerate() { 
-            let p1 = curve.get_point_at_u(0.);
+            let p1 = curve.get_point(0.);
             let dist = point.distance(p1);
             if !used_boundaries.contains(&i) && distance > dist {
                 distance = dist;
@@ -291,7 +291,7 @@ impl FacetShape {
             for component_index in 0..3 { 
                 vector.push(
                     (0..self.controls.len())
-                        .map(|i| self.controls[i].get_vector_at_u(u)[component_index] * basis[i]).sum()
+                        .map(|i| self.controls[i].get_point(u)[component_index] * basis[i]).sum()
                 );
             }
         }

@@ -155,10 +155,13 @@ vec2 get_line_intersection(vec2 alt, vec2 p1, vec2 p2, vec2 p3, vec2 p4) {
 }
 
 vec3 get_point_between_lines(vec3 p0, vec3 d1, vec3 p1, vec3 d2) {
-    vec3 v = p0 - p1;
+    if(dot(normalize(d1), normalize(d2)) > 0.95) {
+        return (p0 + p1) / 2.0;
+    }
     float a = dot(d1, d1);
     float b = dot(d1, d2);
     float c = dot(d2, d2);
+    vec3 v = p0 - p1;
     float d = dot(d1, v);
     float e = dot(d2, v);
     float denom = a * c - b * b;
@@ -216,25 +219,25 @@ pub const HONE_PARTS: &str = r##"
     vec2 uv1_a = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
     vec3 p1_a  = get_point_on_facet(facet_i.g, uv1_a);
     
-    center = (p0a + p1a) / 2.;
-    vec2 uv0_b = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, center - p0a);
-    vec3 p0_b  = get_point_on_facet(facet_i.r, uv0_b);
-    vec2 uv1_b = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
-    vec3 p1_b  = get_point_on_facet(facet_i.g, uv1_b);
+    // center = (p0a + p1a) / 2.;
+    // vec2 uv0_b = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, center - p0a);
+    // vec3 p0_b  = get_point_on_facet(facet_i.r, uv0_b);
+    // vec2 uv1_b = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
+    // vec3 p1_b  = get_point_on_facet(facet_i.g, uv1_b);
     
     vec2 uv0_c = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, p1a - p0a);
     vec3 p0_c  = get_point_on_facet(facet_i.r, uv0_c);
     vec2 uv1_c = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, p0a - p1a);
     vec3 p1_c  = get_point_on_facet(facet_i.g, uv1_c);
-    vec4 lengths = vec4(
+    vec3 lengths = vec3(
         length(p0_a - p1_a), 
-        length(p0_b - p1_b),
+        //length(p0_b - p1_b),
         length(p1a  - p0_c),
         length(p0a  - p1_c)
     );
     float min_dist = 10000.;
-    int i = 3;
-    for(int k = 0; k < 4; k++){
+    int i = 0;
+    for(int k = 0; k < 3; k++){
         if(min_dist > lengths[k]){
             min_dist = lengths[k];
             i = k;

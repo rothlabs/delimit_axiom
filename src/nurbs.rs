@@ -86,25 +86,34 @@ impl Nurbs {
     }
 
 
-    fn get_knot_index(&self, u: f32) -> usize {
-        for i in 0..self.knots.len()-1 { 
-            if u >= self.knots[i] && u < self.knots[i+1] { 
-                return i
+    fn get_knot_indices(&self, u: f32) -> Option<(usize, usize)> {
+        let mut i0 = 0;
+        for i1 in 0..self.knots.len()-1 { 
+            if u >= self.knots[i1] && u < self.knots[i1+1] { 
+                return Some((i0, i1))
             }
+            if self.knots[i1] < self.knots[i1+1]  {
+                i0 = i1;
+            }
+            // if u >= self.knots[i1] {
+            //     if u < self.knots[i1+1] { 
+            //         return Some((i0, i1))
+            //     }else {
+            //         i0 = i1;
+            //     }
+            // }
         }
-        0
+        None
     }
 
     fn get_basis(&self, knot_index: usize, u: f32) -> [f32; 4] {
         let mut basis = self.get_unweighted_basis(knot_index, u);
         let sum: f32 = (0..self.order).map(|k| {
             let i = 4 - self.order + k;
-            //let wi = i + knot_index - 3; //1 - self.order + knot_index + k;
             basis[i] * self.weights[knot_index + i - 3]
         }).sum();
         for k in 0..self.order {
             let i = 4 - self.order + k;
-            //let wi = 1 - self.order + knot_index + k;
             basis[i] *= self.weights[knot_index + i - 3] / sum;
         }
         basis

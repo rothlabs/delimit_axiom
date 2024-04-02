@@ -61,9 +61,9 @@ FACET_CORE, UV_POINT_CORE,
     r##"
     if(i < 1){
         uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
+    // }else if(i < 2){
+    //     uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
     }else if(i < 2){
-        uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
-    }else if(i < 3){
         uvs = vec4(uv0_c.x, uv0_c.y, uv1.x, uv1.y);
     }else{
         uvs = vec4(uv0.x, uv0.y, uv1_c.x, uv1_c.y);
@@ -127,11 +127,11 @@ FACET_CORE, UV_POINT_CORE,
         uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
         point = (p0_a + p1_a) / 2.;
         uv = uv0_a;
+    // }else if(i < 2){
+    //     uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
+    //     point = (p0_b + p1_b) / 2.;
+    //     uv = uv0_b;
     }else if(i < 2){
-        uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
-        point = (p0_b + p1_b) / 2.;
-        uv = uv0_b;
-    }else if(i < 3){
         uvs = vec4(uv0_c.x, uv0_c.y, uv1.x, uv1.y);
         point = (p0_c + p1a) / 2.;
         uv = uv0_c;

@@ -30,8 +30,8 @@ impl HitTester2 {
     pub fn test(&mut self, start_u0: f32, start_u1: f32) -> Result<Hit2, (Miss, Miss)> { 
         let mut u0 = start_u0;
         let mut u1 = start_u1;
-        let mut p0 = self.curves.0.get_point_at_u(u0);
-        let mut p1 = self.curves.1.get_point_at_u(u1);
+        let mut p0 = self.curves.0.get_point(u0);
+        let mut p1 = self.curves.1.get_point(u1);
         //let mut center = Vec3::ZERO;
         //let mut distance = INFINITY;
         let mut distance_basis = INFINITY;
@@ -102,9 +102,10 @@ impl HitTester2 {
                         }
                     }
                 if !duplicate {
-                    
                     let tangent0 = -self.curves.0.get_tangent_at_u(u0);
                     let tangent1 = -self.curves.1.get_tangent_at_u(u1);
+                    // let tangent0 = -self.curves.0.get_ray(u0).direction;
+                    // let tangent1 = -self.curves.1.get_ray(u1).direction;
                     if tangent0.is_nan() {
                         log("hit tangent0 NaN!!!");
                         //break;
@@ -152,6 +153,8 @@ impl HitTester2 {
         }
         let tangent0 = self.curves.0.get_tangent_at_u(u0);
         let tangent1 = self.curves.1.get_tangent_at_u(u1);
+        // let tangent0 = self.curves.0.get_ray(u0).direction;
+        // let tangent1 = self.curves.1.get_ray(u1).direction;
         let cross0 = Vec3::Z.cross((p1 - p0).normalize()).normalize() * self.curves.0.nurbs.sign;
         let cross1 = Vec3::Z.cross((p0 - p1).normalize()).normalize() * self.curves.1.nurbs.sign;
         if tangent0.is_nan() {

@@ -1,5 +1,5 @@
 use glam::*;
-use crate::HitBasis3;
+use crate::{log, HitBasis3};
 use crate::{CurveShape, FacetShape, Shape, Trim};
 use super::union2::UnionBasis2;
 
@@ -90,10 +90,38 @@ impl UnionBasis3 {
                 curve.negate();
             }
         }
+
+        for curve in &self.hit_basis.facet_hits[gi][fi][hi] {
+            for control in curve.controls.windows(2) {
+                if (control[0] - control[1]).length() == 0. {
+                    log("bad facet hits!");
+                }
+            }
+        }
+
         let mut trim = Trim::new(self.hit_basis.facet_hits[gi][fi][hi].clone(), 0.001); // 
         let curves1 = trim.build();
+
+        for curve in &curves1 {
+            for control in curve.controls.windows(2) {
+                if (control[0] - control[1]).length() < 0.00001 {
+                    log("bad trim");
+                }
+            }
+        }
+
         let mut union = UnionBasis2::new(facet.boundaries.clone(), curves1, 0.001, false); // self.facet_hits[g][i].clone()
         facet.boundaries = union.build();
+
+
+        // for curve in &facet.boundaries {
+        //     for control in curve.controls.windows(2) {
+        //         if (control[0] - control[1]).length() < 0.00001 {
+        //             log("bad UnionBasis2");
+        //         }
+        //     }
+        // }
+
                 // for shape in union.shapes {
                 //     if let Shape::Point(point) = shape {
                 //         self.shapes.push(Shape::Point(point));
@@ -105,8 +133,8 @@ impl UnionBasis3 {
             //     bndry.controls.clear();
             //     for k in 0..self.hit_basis.facet_hits[gi][fi][hi][j].controls.len() {
             //         bndry.controls.push(self.hit_basis.facet_hits[gi][fi][hi][j].controls[k] + vec3(
-            //             100. + fi as f32 * 2., //  + (j as f32)*0.01  
-            //             gi as f32 * 2., //  + (j as f32)*0.01 
+            //             100. + fi as f32 * 2. + (j as f32)*0.01,  
+            //             gi as f32 * 2.  + (j as f32)*0.01, 
             //             0.
             //         ));
             //     }

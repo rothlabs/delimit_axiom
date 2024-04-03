@@ -24,7 +24,7 @@ impl Default for Revolve {
             reshape: Reshape::default(),
             center:  Vec3::ZERO,
             axis:    Vec3::Z,
-            angle:   PI,
+            angle:   PI * 2.,
         }
     }
 }

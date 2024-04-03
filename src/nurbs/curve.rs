@@ -1,4 +1,5 @@
 
+use std::f32::consts::PI;
 use std::f32::EPSILON;
 use crate::log;
 use crate::{get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, ray::Ray, scene::Polyline, Model, Shape};
@@ -17,6 +18,7 @@ pub struct Curve {
     pub nurbs: Nurbs,
     pub min:  f32,
     pub max:  f32,
+    pub arrows: usize,
 }
 
 impl Default for Curve {
@@ -26,18 +28,34 @@ impl Default for Curve {
             nurbs: Nurbs::default(),
             min: 0.,
             max: 1.,  
+            arrows: 0,
         }
     }
 }
 
 impl Curve {
     pub fn get_shapes(&self) -> Vec<Shape> {
-        vec![Shape::Curve(CurveShape{
+        let mut shapes = vec![Shape::Curve(CurveShape{
             controls: get_points(&self.controls),
             nurbs: self.nurbs.clone(),
             min: self.min, 
             max: self.max, 
-        }.get_valid())]
+        }.get_valid())];
+
+        //let mut shapes = revolve.get_shapes();
+        if self.arrows > 0 {
+            //let count = 30;
+            if let Shape::Curve(circle) = shapes[0].clone() {
+                for i in 0..self.arrows {
+                    let mut curve = CurveShape::default();
+                    let ray = circle.get_ray(i as f32 / (self.arrows - 1) as f32);
+                    curve.controls.push(ray.origin);
+                    curve.controls.push(ray.origin + ray.vector);
+                    shapes.push(Shape::Curve(curve.get_valid()));
+                }
+            }
+        }
+        shapes
     }
 }
 
@@ -141,18 +159,18 @@ impl CurveShape {
         knots
     }
 
-    pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
-        let mut step = 0.0001; // 0.0001
-        if u + step > 1. {step = -step;}
-        let p0 = self.get_point(u);
-        let p1 = self.get_point(u + step);
-        // if let Some(_) = (p1 - p0).try_normalize() {
+    // pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
+    //     let mut step = 0.0001; // 0.0001
+    //     if u + step > 1. {step = -step;}
+    //     let p0 = self.get_point(u);
+    //     let p1 = self.get_point(u + step);
+    //     // if let Some(_) = (p1 - p0).try_normalize() {
 
-        // }else{
-        //     log("failed to normalize");
-        // }
-        (p1 - p0).normalize() * step.signum()
-    }
+    //     // }else{
+    //     //     log("failed to normalize");
+    //     // }
+    //     (p1 - p0).normalize() * step.signum()
+    // }
 
     pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
         let mut step = 0.0001;
@@ -194,11 +212,11 @@ impl CurveShape {
         let u = self.min * (1.-u) + self.max * u;
         let knot_indices = self.nurbs.get_knot_indices(u);       
         if let Some(knot_indices) = knot_indices {
-            let basis = self.nurbs.get_basis(knot_indices.1, u);
+            let basis = self.nurbs.get_basis(knot_indices, u);
             for component in 0..3 { 
                 point[component] = (0..self.nurbs.order).map(|k| {
                     let i = 4 - self.nurbs.order + k;
-                    self.controls[knot_indices.1 + i - 3][component] * basis[i] 
+                    self.controls[knot_indices + i - 3][component] * basis.1[i]
                 }).sum()
             }
         }else{
@@ -212,65 +230,35 @@ impl CurveShape {
         let u = self.min * (1.-u) + self.max * u;    
         let knot_indices = self.nurbs.get_knot_indices(u);       
         if let Some(ki) = knot_indices {
-            let basis = self.nurbs.get_basis(ki.1, u);
-            //let mut div = self.nurbs.knots[ki.1] - self.nurbs.knots[ki.0];
-
-
-            // console_log!("knot indices {}, {}", ki.1, ki.0);
-            // console_log!("knot values {}, {}", self.nurbs.knots[ki.1], self.nurbs.knots[ki.0]);
-            // if div == 0. {
-            //     console_log!("knot list {:?}", self.nurbs.knots);
-            // }
-            // if div == 0. {
-            //     div = self.nurbs.knots[ki.1+1];
-            // }
-            
+            let basis = self.nurbs.get_basis(ki, u);
             for component in 0..3 { 
                 for k in 0..self.nurbs.order {
                     let i = 4 - self.nurbs.order + k;
-                    let ci = ki.1 + i - 3;
-                    ray.origin[component] += self.controls[ci][component] * basis[i];
-                    if k > 0 {
-                        // if (self.controls[ci] - self.controls[ci-1]).length() == 0. {
-                        //     log("failed!");
+                    let ci = ki + i - 3;
+                    ray.origin[component] += self.controls[ci][component] * basis.1[i];
+                    if ci > 0 && i > 1 {
+                        // let ki0 = ci + self.nurbs.order - 2;
+                        // if self.nurbs.knots[ki0-1] == self.nurbs.knots[ki0] || self.nurbs.knots[ki0+1] == self.nurbs.knots[ki0] {
+
                         // }
-                        ray.direction[component] += 
-                            (self.controls[ci][component] - self.controls[ci-1][component]) * basis[i] * 1000.;
+                        // if ci == 1 {
+                        //     ray.vector[component] += 
+                        //         (self.controls[ci][component] - self.controls[ci-1][component]) * basis.0[i] * 2.;
+                        // }else{
+                            ray.vector[component] += 
+                                (self.controls[ci][component] - self.controls[ci-1][component]) * basis.0[i];
+                        //}
                     }
-                    if k < self.nurbs.order-1 {
-                        // if (self.controls[ci+1] - self.controls[ci]).length() == 0. {
-                        //     log("failed 2!");
-                        // }
-                        ray.direction[component] += 
-                            (self.controls[ci+1][component] - self.controls[ci][component]) * basis[i] * 1000.;
-                    }
-                    // if k > 0 {
-                    //     let k1 = ki.1 + k;
-                    //     let knot1 = self.nurbs.knots[k1];
-                    //     let mut knot0 = 0.;
-                    //     for j in 1..self.nurbs.order {
-                    //         if self.nurbs.knots[k1-j] < knot1 {
-                    //             knot0 = self.nurbs.knots[k1-j];
-                    //             break;
-                    //         }
-                    //     }
-                    //     ray.direction[component] += 
-                    //         (self.controls[ci][component] - self.controls[ci-1][component]) / (knot1 - knot0) * basis[i];
-                    // }
-                    // }else{
-                    //     ray.direction[component] += 
-                    //         (self.controls[ci+1][component] - self.controls[ci][component]) / self.nurbs.knots[ki.1+1] * basis[i];
-                    // }
                 }
             }
         }else{
             ray.origin = *self.controls.last().expect(TWO_CONTROL_POINTS);
-            ray.direction = ray.origin - *self.controls.get(self.controls.len()-2).expect(TWO_CONTROL_POINTS);
+            ray.vector = ray.origin - *self.controls.get(self.controls.len()-2).expect(TWO_CONTROL_POINTS);
         }
-        if ray.direction.normalize().is_nan() {
-            console_log!("ray direction: {:?}", ray.direction);
-        }
-        ray.direction = ray.direction.normalize();
+        // if ray.direction.normalize().is_nan() {
+        //     console_log!("ray direction: {:?}", ray.direction);
+        // }
+        //ray.vector = ray.vector / ;
         ray
     }
 
@@ -291,6 +279,22 @@ impl CurveShape {
         }
     }
 }
+
+
+
+                    // //let mut div = 0.;
+                    // if k > 0 {
+                    //     //div += 1.;
+                    //     ray.vector[component] += 
+                    //         (self.controls[ci][component] - self.controls[ci-1][component]) * basis[i];
+                    // }
+                    // if k < self.nurbs.order-1 {
+                    //     //div += 1.;
+                    //     ray.vector[component] += 
+                    //         (self.controls[ci+1][component] - self.controls[ci][component]) * basis[i];
+                    // }
+                    // //ray.vector[component] *= basis[i] / 2.;
+
 
 
 // pub fn get_point(&self, u: f32) -> Vec3 {

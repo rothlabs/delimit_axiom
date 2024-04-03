@@ -151,26 +151,39 @@ impl Turtle {
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "Circle::default")]
+#[serde(default)]
 pub struct Circle {
-    pub center:  Vec2,//[f32; 2], 
+    pub center:  Vec2, 
     pub radius:  f32,
     pub reverse: bool,
+    pub arrows: usize,
 }
 
 impl Circle {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut revolve = Revolve {
-            parts: vec![Model::Point(vec3(self.center.x + self.radius, self.center.y, 0.))], // [self.center[0] + self.radius, self.center[1], 0.]
-            center: self.center.extend(0.),//[self.center[0], self.center[1], 0.],
-            axis: Vec3::Z,//[0., 0., 1.],
-            angle: PI*2.,
-            reshape: Reshape::default(),
+            parts: vec![Model::Point(vec3(self.center.x + self.radius, self.center.y, 0.))], 
+            center: self.center.extend(0.),
+            ..Default::default()
         };
         revolve.reshape.reverse = self.reverse;
-        revolve.get_shapes()
+        let mut shapes = revolve.get_shapes();
+        if self.arrows > 0 {
+            if let Shape::Curve(circle) = shapes[0].clone() {
+                for i in 0..self.arrows {
+                    let mut curve = CurveShape::default();
+                    let ray = circle.get_ray(i as f32 / (self.arrows - 1) as f32);
+                    curve.controls.push(ray.origin);
+                    curve.controls.push(ray.origin + ray.vector);
+                    shapes.push(Shape::Curve(curve.get_valid()));
+                }
+            }
+        }
+        shapes
     }
 }
+
+
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default = "Rectangle::default")]

@@ -50,17 +50,17 @@ pub fn get_traced_curves(
             //curve0.controls.push(vec3(traces[j+0], traces[j+1], 0.));
             rays0a.push(Ray{ 
                 origin: vec3(traces[j+0], traces[j+1], 0.),
-                direction: vec3(uv_dirs[j+0], uv_dirs[j+1], 0.),
+                vector: vec3(uv_dirs[j+0], uv_dirs[j+1], 0.),
             });
             //rays1a.push(vec3(traces[j+2], traces[j+3], 0.));
             rays1a.push(Ray{ 
                 origin: vec3(traces[j+2], traces[j+3], 0.),
-                direction: -vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
+                vector: -vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
             });
             //center.controls.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
             rays2a.push(Ray{ 
                 origin: vec3(centers0[j+0], centers0[j+1], centers0[j+2]),
-                direction: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
+                vector: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
             });
         }
         rays1a.reverse();
@@ -80,17 +80,17 @@ pub fn get_traced_curves(
             //points0.push(vec3(traces[j+0], traces[j+1], 0.));
             rays0b.push(Ray{ 
                 origin:  vec3(traces[j+0],  traces[j+1],  0.),
-                direction: -vec3(uv_dirs[j+0], uv_dirs[j+1], 0.),
+                vector: -vec3(uv_dirs[j+0], uv_dirs[j+1], 0.),
             });
             //curve1.controls.push(vec3(traces[j+2], traces[j+3], 0.));
             rays1b.push(Ray{ 
                 origin: vec3(traces[j+2],  traces[j+3],  0.),
-                direction: vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
+                vector: vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
             });
             //centers1.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
             rays2b.push(Ray{ 
                 origin:  vec3(centers0[j+0], centers0[j+1], centers0[j+2]),
-                direction: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
+                vector: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
             });
         }
         rays0b.reverse();
@@ -129,26 +129,26 @@ pub fn get_traced_curves(
         }
         //if duplicate {continue}
         for i in 0..rays0a.len()-1 {
-            if rays0a[i+1].direction.is_nan() {
-                rays0a[i+1].direction = rays0a[i].direction;
-            }else if rays0a[i].direction.is_nan() {
-                rays0a[i].direction = rays0a[i+1].direction;
+            if rays0a[i+1].vector.is_nan() {
+                rays0a[i+1].vector = rays0a[i].vector;
+            }else if rays0a[i].vector.is_nan() {
+                rays0a[i].vector = rays0a[i+1].vector;
             }
         }
         for i in 0..rays1a.len()-1 {
-            if rays1a[i+1].direction.is_nan() {
-                rays1a[i+1].direction = rays1a[i].direction;
-            }else if rays1a[i].direction.is_nan() {
-                rays1a[i].direction = rays1a[i+1].direction;
+            if rays1a[i+1].vector.is_nan() {
+                rays1a[i+1].vector = rays1a[i].vector;
+            }else if rays1a[i].vector.is_nan() {
+                rays1a[i].vector = rays1a[i+1].vector;
             }
         }
         for i in 0..rays0a.len() {
-            if rays0a[i].direction.is_nan() {
+            if rays0a[i].vector.is_nan() {
                 log("rays0a nan!!!");
             }
         }
         for i in 0..rays1a.len() {
-            if rays1a[i].direction.is_nan() {
+            if rays1a[i].vector.is_nan() {
                 log("rays1a nan!!!");
             }
         }

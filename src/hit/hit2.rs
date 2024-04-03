@@ -102,10 +102,10 @@ impl HitTester2 {
                         }
                     }
                 if !duplicate {
-                    let tangent0 = -self.curves.0.get_tangent_at_u(u0);
-                    let tangent1 = -self.curves.1.get_tangent_at_u(u1);
-                    // let tangent0 = -self.curves.0.get_ray(u0).direction;
-                    // let tangent1 = -self.curves.1.get_ray(u1).direction;
+                    // let tangent0 = -self.curves.0.get_tangent_at_u(u0);
+                    // let tangent1 = -self.curves.1.get_tangent_at_u(u1);
+                    let tangent0 = -self.curves.0.get_ray(u0).vector.normalize();
+                    let tangent1 = -self.curves.1.get_ray(u1).vector.normalize();
                     if tangent0.is_nan() {
                         log("hit tangent0 NaN!!!");
                         //break;
@@ -151,10 +151,10 @@ impl HitTester2 {
             // u0_prev = u0;
             // u1_prev = u1;
         }
-        let tangent0 = self.curves.0.get_tangent_at_u(u0);
-        let tangent1 = self.curves.1.get_tangent_at_u(u1);
-        // let tangent0 = self.curves.0.get_ray(u0).direction;
-        // let tangent1 = self.curves.1.get_ray(u1).direction;
+        // let tangent0 = self.curves.0.get_tangent_at_u(u0);
+        // let tangent1 = self.curves.1.get_tangent_at_u(u1);
+        let tangent0 = self.curves.0.get_ray(u0).vector.normalize();
+        let tangent1 = self.curves.1.get_ray(u1).vector.normalize();
         let cross0 = Vec3::Z.cross((p1 - p0).normalize()).normalize() * self.curves.0.nurbs.sign;
         let cross1 = Vec3::Z.cross((p0 - p1).normalize()).normalize() * self.curves.1.nurbs.sign;
         if tangent0.is_nan() {
@@ -191,8 +191,10 @@ impl HitTester2 {
     }
 
     pub fn get_tangent_intersection(&self, u0: f32, u1: f32, p0: Vec3, p1: Vec3) -> Vec3 {
-        let ray0 = Ray::new(p0, self.curves.0.get_tangent_at_u(u0));
-        let ray1 = Ray::new(p1, self.curves.1.get_tangent_at_u(u1));
+        // let ray0 = Ray::new(p0, self.curves.0.get_tangent_at_u(u0));
+        // let ray1 = Ray::new(p1, self.curves.1.get_tangent_at_u(u1));
+        let ray0 = self.curves.0.get_ray(u0);
+        let ray1 = self.curves.1.get_ray(u1);
         ray0.middle(&ray1)
     }
 }

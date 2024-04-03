@@ -97,7 +97,7 @@ impl Nurbs {
         None
     }
 
-    fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
+    fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 2]) {
         let mut basis = self.get_unweighted_basis(knot_index, u);
         // let sum: f32 = (0..self.order).map(|k| {
         //     let i = 4 - self.order + k;
@@ -108,63 +108,43 @@ impl Nurbs {
             let i = 4 - self.order + k;
             let weight = self.weights[knot_index + i - 3];
             //sum.0 += basis.0[i] * weight;
-            sum.0 += basis.0[i];
-            sum.1 += basis.1[i] * weight;
+            sum.0 += basis.0[i] * weight;
+            //sum.1 += basis.1[i];
         }
         for k in 0..self.order {
             let i = 4 - self.order + k;
             let weight = self.weights[knot_index + i - 3];
             //basis.0[i] *= weight / sum.0; // for getting velocity
-            basis.0[i] = (basis.0[i] / sum.0 * PI / 2.).sin();
-            // if self.knots[knot_index+k-2] == self.knots[knot_index+k-1] {
-            //     basis.0[i] *= 2.;
-            // }
-            // } else if self.knots[knot_index+1] == self.knots[knot_index+2] {
-            //     basis.0[i] *= 2.;
-            // }
-            basis.1[i] *= weight / sum.1; // for getting position
+            basis.0[i] *= weight / sum.1; // for getting position
+            //basis.1[i] = (basis.1[i] / sum.0 * PI / 2.).sin();
         }
         basis
     }
 
-    fn get_unweighted_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
-        let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);
+    fn get_unweighted_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 2]) {
+        let mut basis = ([0., 0., 0., 1.], [0., 0.]);
         for degree in 1..self.order {
             for k in 0..(degree+1) { 
                 let i = 3 - degree + k;
                 let i0 = knot_index + k - degree;
                 let i1 = i0 + 1; 
                 let mut interpolation = 0.;
-                if basis.1[i] != 0. {
-                    interpolation += basis.1[i] * (u - self.knots[i0]) 
+                if basis.0[i] != 0. {
+                    interpolation += basis.0[i] * (u - self.knots[i0]) 
                         / (self.knots[degree + i0] - self.knots[i0]); 
-                    // if degree < self.order-1 {
-                    //     basis.0[i] = interpolation;
-                    //     if self.knots[degree + i0] == self.knots[degree + i0 + 1] {
-                    //         basis.0[i] *= 2.;
-                    //     }
-                    // }
                 }
-                if i < 3 && basis.1[i+1] != 0. {
-                    interpolation += basis.1[i+1] * (self.knots[degree + i1] - u) 
+                if i < 3 && basis.0[i+1] != 0. {
+                    interpolation += basis.0[i+1] * (self.knots[degree + i1] - u) 
                         / (self.knots[degree + i1] - self.knots[i1]); 
-                    // if degree < self.order-1 {
-                    //     basis.0[i] = interpolation;
-                    //     if self.knots[i1-1] == self.knots[i1] {
-                    //         basis.0[i] *= 2.;
-                    //     }
-                    // }
                 }
-                if degree < self.order-1 {
-                    basis.0[i] = interpolation;
-                    // if k < 1 && self.knots[i0] == self.knots[i0+1] {
-                    //     basis.0[i] *= 2.;
-                    // } else if k > 0 && self.knots[i1] == self.knots[i1+1] {
-                    //     basis.0[i] *= 2.;
-                    // }
-                }
-                basis.1[i] = interpolation;
+                basis.0[i] = interpolation;
             }
+        }
+        if self.order > 2 {
+            let ki = knot_index;
+            let relative_u = u - self.knots[ki];
+            basis.1[0] = relative_u / (self.knots[ki+1] - self.knots[ki-1]); 
+            basis.1[1] = relative_u / (self.knots[ki+2] - self.knots[ki]); 
         }
         basis
     }

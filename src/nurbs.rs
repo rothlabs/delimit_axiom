@@ -88,7 +88,7 @@ impl Nurbs {
     }
 
 
-    fn get_knot_indices(&self, u: f32) -> Option<usize> {
+    fn get_knot_index(&self, u: f32) -> Option<usize> {
         for i in 0..self.knots.len()-1 { 
             if u >= self.knots[i] && u < self.knots[i+1] { 
                 return Some(i)
@@ -97,7 +97,7 @@ impl Nurbs {
         None
     }
 
-    fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 2]) {
+    fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
         let mut basis = self.get_unweighted_basis(knot_index, u);
         // let sum: f32 = (0..self.order).map(|k| {
         //     let i = 4 - self.order + k;
@@ -107,44 +107,42 @@ impl Nurbs {
         for k in 0..self.order {
             let i = 4 - self.order + k;
             let weight = self.weights[knot_index + i - 3];
-            //sum.0 += basis.0[i] * weight;
             sum.0 += basis.0[i] * weight;
-            //sum.1 += basis.1[i];
+            //sum.1 += basis.1[i] * weight;
         }
         for k in 0..self.order {
             let i = 4 - self.order + k;
             let weight = self.weights[knot_index + i - 3];
-            //basis.0[i] *= weight / sum.0; // for getting velocity
-            basis.0[i] *= weight / sum.1; // for getting position
-            //basis.1[i] = (basis.1[i] / sum.0 * PI / 2.).sin();
+            basis.0[i] *= weight / sum.0; // for getting position
+            //basis.1[i] *= weight / sum.1; // for getting velocity
+            //basis.1[k] = (basis.1[i] * PI / 2.).sin();
         }
         basis
     }
 
-    fn get_unweighted_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 2]) {
-        let mut basis = ([0., 0., 0., 1.], [0., 0.]);
+    fn get_unweighted_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
+        let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 0.]);
         for degree in 1..self.order {
             for k in 0..(degree+1) { 
                 let i = 3 - degree + k;
-                let i0 = knot_index + k - degree;
-                let i1 = i0 + 1; 
+                let k0 = knot_index + k - degree;
+                let k1 = k0 + 1; 
                 let mut interpolation = 0.;
                 if basis.0[i] != 0. {
-                    interpolation += basis.0[i] * (u - self.knots[i0]) 
-                        / (self.knots[degree + i0] - self.knots[i0]); 
+                    interpolation += basis.0[i] * (u - self.knots[k0]) 
+                        / (self.knots[degree + k0] - self.knots[k0]); 
                 }
                 if i < 3 && basis.0[i+1] != 0. {
-                    interpolation += basis.0[i+1] * (self.knots[degree + i1] - u) 
-                        / (self.knots[degree + i1] - self.knots[i1]); 
+                    interpolation += basis.0[i+1] * (self.knots[degree + k1] - u) 
+                        / (self.knots[degree + k1] - self.knots[k1]); 
                 }
                 basis.0[i] = interpolation;
             }
         }
         if self.order > 2 {
             let ki = knot_index;
-            let relative_u = u - self.knots[ki];
-            basis.1[0] = relative_u / (self.knots[ki+1] - self.knots[ki-1]); 
-            basis.1[1] = relative_u / (self.knots[ki+2] - self.knots[ki]); 
+            basis.1[2] = (u - self.knots[ki-1]) / (self.knots[ki+1] - self.knots[ki-1]); 
+            basis.1[3] = (u - self.knots[ki]) / (self.knots[ki+2] - self.knots[ki]); 
         }
         basis
     }

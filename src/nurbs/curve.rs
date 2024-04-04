@@ -179,10 +179,15 @@ impl CurveShape {
         let p1 = self.get_point(u + step);
         let length_ratio = (target.length() / p0.distance(p1)) * step;
         let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
+
+        // let ray = self.get_ray(u);
+        // let length_ratio = target.length() / ray.vector.length();
+        // let u_dir = ray.vector.normalize().dot(target.normalize()) * length_ratio;
+
         let mut u1 = u;
-        // if u_dir.is_nan() {
-        //     log("u_dir is nan!!");
-        // }
+        if u_dir.is_nan() {
+            console_log!("u_dir is nan!! {}", target.length());
+        }
         if u_dir.abs() > EPSILON {// step.abs() {
             u1 = u + u_dir; 
         }
@@ -208,57 +213,65 @@ impl CurveShape {
     }
 
     pub fn get_point(&self, u: f32) -> Vec3 {
-        let mut point = Vec3::ZERO; 
+        //let mut point = Vec3::ZERO; 
         let u = self.min * (1.-u) + self.max * u;
-        let knot_indices = self.nurbs.get_knot_indices(u);       
-        if let Some(knot_indices) = knot_indices {
-            let basis = self.nurbs.get_basis(knot_indices, u);
-            for component in 0..3 { 
-                point[component] = (0..self.nurbs.order).map(|k| {
+        let knot_index = self.nurbs.get_knot_index(u);       
+        if let Some(ki) = knot_index {
+            let basis = self.nurbs.get_basis(ki, u);
+            //for component in 0..3 { 
+                return (0..self.nurbs.order).map(|k| {
                     let i = 4 - self.nurbs.order + k;
-                    self.controls[knot_indices + i - 3][component] * basis.0[i]
+                    self.controls[ki + i - 3] * basis.0[i]
                 }).sum()
-            }
+            //}
         }else{
-            point = *self.controls.last().expect(TWO_CONTROL_POINTS);
+            return *self.controls.last().expect(TWO_CONTROL_POINTS);
         }
-        point
+        //point
     }
 
     pub fn get_ray(&self, u: f32) -> Ray {
-        let mut ray = Ray::new(Vec3::ZERO, Vec3::ONE);
+        let mut ray = Ray::new(Vec3::ZERO, Vec3::ZERO);
         let u = self.min * (1.-u) + self.max * u;    
-        let knot_indices = self.nurbs.get_knot_indices(u);       
-        if let Some(ki) = knot_indices {
+        let knot_index = self.nurbs.get_knot_index(u);       
+        if let Some(ki) = knot_index {
             let basis = self.nurbs.get_basis(ki, u);
-            for component in 0..3 { 
+            //for component in 0..3 { 
                 for k in 0..self.nurbs.order {
                     let i = 4 - self.nurbs.order + k;
                     let ci = ki + i - 3;
-                    ray.origin[component] += self.controls[ci][component] * basis.0[i];
+                    ray.origin += self.controls[ci] * basis.0[i];
                     // if self.nurbs.order > 2 && i > 1 {
                     //     ray.vector[component] += 
                     //             (self.controls[ci][component] - self.controls[ci-1][component]) * basis.1[i];
                     // }
                 }
+            //}
+            let c0 = ki - self.nurbs.order + 1;
+            let c1 = c0 + 1;
+            if self.nurbs.order > 2 {
+                let p0 = self.controls[c0] + (self.controls[c0+1] - self.controls[c0]) * basis.1[2];
+                let p1 = self.controls[c1] + (self.controls[c1+1] - self.controls[c1]) * basis.1[3];
+                ray.vector = p1 - p0;
+            }else{
+                ray.vector = self.controls[c0+1] - self.controls[c0];
             }
-            // let i0 = ki - self.nurbs.order + 1;
-            // let i1 = i0 + 1;
-            // if self.nurbs.order > 2 {
-            //     let p0 = (self.controls[i0+1] - self.controls[i0]) * basis.1[i0];
-            //     let p1 = (self.controls[i1+1] - self.controls[i1]) * basis.1[i1];
-            //     ray.vector = p1 - p0;
-            // }else{
-            //     ray.vector = self.controls[i0+1] - self.controls[i0];
-            // }
+            ray.vector = ray.vector / (self.nurbs.knots[ki+1] - self.nurbs.knots[ki]);
         }else{
             ray.origin = *self.controls.last().expect(TWO_CONTROL_POINTS);
             ray.vector = ray.origin - *self.controls.get(self.controls.len()-2).expect(TWO_CONTROL_POINTS);
+            let lki = self.nurbs.knots.len()-1;
+            ray.vector = ray.vector / (self.nurbs.knots[lki] - self.nurbs.knots[lki-self.nurbs.order]);
         }
-        // if ray.direction.normalize().is_nan() {
-        //     console_log!("ray direction: {:?}", ray.direction);
+        // if ray.vector.is_nan() {
+        //     console_log!("ray vector nan!!");
         // }
-        //ray.vector = ray.vector / ;
+        // if ray.vector.length() == 0. {
+        //     console_log!("ray vector 0!!");
+        // }
+        // if ray.vector.length() == 1. {
+        //     console_log!("ray vector 1!!");
+        // }
         ray
     }
 

@@ -15,7 +15,8 @@ impl Ray {
         Self {origin, vector}
     }
     pub fn middle(&self, ray: &Ray) -> Vec3 {
-        if self.vector.normalize().dot(ray.vector.normalize()) > 0.98 { // parallel case
+        //if self.vector.normalize().dot(ray.vector.normalize()) > 0.95 { // parallel case
+        if self.vector.normalize().cross(ray.vector.normalize()).length() < 0.001 {
             return (self.origin + ray.origin) / 2.;
         }
         let a = self.vector.dot(self.vector);
@@ -29,7 +30,13 @@ impl Ray {
         let u1 = (a * e - b * d) / denom;
         let p0 = self.origin + self.vector * u0;
         let p1 = ray.origin  + ray.vector  * u1;
-        (p0 + p1) / 2.
+
+        let wow = (p0 + p1) / 2.;
+        if wow.is_nan() {
+            log("ray middle nan!");
+        }
+        wow
+        //(p0 + p1) / 2.
     }
 }
 

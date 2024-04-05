@@ -133,9 +133,12 @@ impl Nurbs {
                         / (self.knots[degree + k0] - self.knots[k0]); 
                 }
                 if i < 3 && basis.0[i+1] != 0. {
+                    //let div = self.knots[degree + k1] - self.knots[k1];
+                    //basis.1[i+1] = basis.0[i+1] / 
                     interpolation += basis.0[i+1] * (self.knots[degree + k1] - u) 
                         / (self.knots[degree + k1] - self.knots[k1]); 
                 }
+                //if 
                 basis.0[i] = interpolation;
             }
         }

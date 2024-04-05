@@ -108,12 +108,14 @@ impl Nurbs {
             let i = 4 - self.order + k;
             let weight = self.weights[knot_index + i - 3];
             sum.0 += basis.0[i] * weight;
-            //sum.1 += basis.1[i] * weight;
+            //sum.0 += basis.0[i];
+            //sum.1 += basis.1[i].abs() * weight;
         }
         for k in 0..self.order {
             let i = 4 - self.order + k;
             let weight = self.weights[knot_index + i - 3];
             basis.0[i] *= weight / sum.0; // for getting position
+            //basis.0[i] /= sum.0; // for getting position
             //basis.1[i] *= weight / sum.1; // for getting velocity
             //basis.1[k] = (basis.1[i] * PI / 2.).sin();
         }
@@ -121,34 +123,35 @@ impl Nurbs {
     }
 
     fn get_unweighted_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
-        let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 0.]);
+        let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);
         for degree in 1..self.order {
             for k in 0..(degree+1) { 
                 let i = 3 - degree + k;
                 let k0 = knot_index + k - degree;
                 let k1 = k0 + 1; 
-                let mut interpolation = 0.;
+                let mut position = 0.;
+                let mut velocity = 0.;
                 if basis.0[i] != 0. {
-                    interpolation += basis.0[i] * (u - self.knots[k0]) 
-                        / (self.knots[degree + k0] - self.knots[k0]); 
+                    let div = self.knots[degree + k0] - self.knots[k0];
+                    position += basis.0[i] * (u - self.knots[k0]) / div; 
+                    velocity += basis.0[i] / div;
                 }
                 if i < 3 && basis.0[i+1] != 0. {
-                    //let div = self.knots[degree + k1] - self.knots[k1];
+                    let div = self.knots[degree + k1] - self.knots[k1];
                     //basis.1[i+1] = basis.0[i+1] / 
-                    interpolation += basis.0[i+1] * (self.knots[degree + k1] - u) 
-                        / (self.knots[degree + k1] - self.knots[k1]); 
-                }
-                //if 
-                basis.0[i] = interpolation;
+                    position += basis.0[i+1] * (self.knots[degree + k1] - u) / div; 
+                    velocity -= basis.0[i+1] / div;
+                } 
+                //let ci = knot_index + i - 3;
+                basis.0[i] = position;// * self.weights[ci];
+                basis.1[i] = velocity;// * self.weights[ci];
             }
-        }
-        if self.order > 2 {
-            let ki = knot_index;
-            basis.1[2] = (u - self.knots[ki-1]) / (self.knots[ki+1] - self.knots[ki-1]); 
-            basis.1[3] = (u - self.knots[ki]) / (self.knots[ki+2] - self.knots[ki]); 
         }
         basis
     }
+
+    //  b(u) = (k1-u)/(k1-k0) * (k2-u)/(k2-k0)
+    // 'b(u) = - (k1-u)/(k1-k0) / (k2-k0)
 
 
     fn get_rational_basis_at_u(&self, u: f32) -> Vec<f32> {

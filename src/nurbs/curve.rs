@@ -241,22 +241,12 @@ impl CurveShape {
                     let i = 4 - self.nurbs.order + k;
                     let ci = ki + i - 3;
                     ray.origin += self.controls[ci] * basis.0[i];
-                    // if self.nurbs.order > 2 && i > 1 {
-                    //     ray.vector[component] += 
-                    //             (self.controls[ci][component] - self.controls[ci-1][component]) * basis.1[i];
-                    // }
                 }
-            //}
-            let c0 = ki - self.nurbs.order + 1;
-            let c1 = c0 + 1;
-            if self.nurbs.order > 2 {
-                let p0 = self.controls[c0] + (self.controls[c0+1] - self.controls[c0]) * basis.1[2];
-                let p1 = self.controls[c1] + (self.controls[c1+1] - self.controls[c1]) * basis.1[3];
-                ray.vector = p1 - p0;
-            }else{
-                ray.vector = self.controls[c0+1] - self.controls[c0];
-            }
-            ray.vector = ray.vector / (self.nurbs.knots[ki+1] - self.nurbs.knots[ki]);
+                for k in 0..self.nurbs.order {
+                    let i = 4 - self.nurbs.order + k;
+                    let ci = ki + i - 3;
+                    ray.vector += self.controls[ci] * basis.1[i];// * self.nurbs.weights[ci];
+                }
         }else{
             ray.origin = *self.controls.last().expect(TWO_CONTROL_POINTS);
             ray.vector = ray.origin - *self.controls.get(self.controls.len()-2).expect(TWO_CONTROL_POINTS);

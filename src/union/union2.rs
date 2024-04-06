@@ -14,7 +14,7 @@ pub struct UnionBasis2 {
 
 impl UnionBasis2 { 
     pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>, tolerance: f32, same_groups: bool) -> Self {
-        let duplication_tolerance = tolerance * 5.; 
+        let duplication_tolerance = tolerance * 2.; // 5.
         UnionBasis2 {
             tester: HitTester2 {
                 curves: (CurveShape::default(), CurveShape::default()),

@@ -159,30 +159,30 @@ impl CurveShape {
         knots
     }
 
-    // pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
-    //     let mut step = 0.0001; // 0.0001
-    //     if u + step > 1. {step = -step;}
-    //     let p0 = self.get_point(u);
-    //     let p1 = self.get_point(u + step);
-    //     // if let Some(_) = (p1 - p0).try_normalize() {
-
-    //     // }else{
-    //     //     log("failed to normalize");
-    //     // }
-    //     (p1 - p0).normalize() * step.signum()
-    // }
-
-    pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
-        let mut step = 0.0001;
+    pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
+        let mut step = 0.0001; // 0.0001
         if u + step > 1. {step = -step;}
         let p0 = self.get_point(u);
         let p1 = self.get_point(u + step);
-        let length_ratio = (target.length() / p0.distance(p1)) * step;
-        let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
+        // if let Some(_) = (p1 - p0).try_normalize() {
 
-        // let ray = self.get_ray(u);
-        // let length_ratio = target.length() / ray.vector.length();
-        // let u_dir = ray.vector.normalize().dot(target.normalize()) * length_ratio;
+        // }else{
+        //     log("failed to normalize");
+        // }
+        (p1 - p0).normalize() * step.signum()
+    }
+
+    pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
+        // let mut step = 0.0001;
+        // if u + step > 1. {step = -step;}
+        // let p0 = self.get_point(u);
+        // let p1 = self.get_point(u + step);
+        // let length_ratio = (target.length() / p0.distance(p1)) * step;
+        // let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
+
+        let ray = self.get_ray(u);
+        let length_ratio = target.length() / ray.vector.length();
+        let u_dir = ray.vector.normalize().dot(target.normalize()) * length_ratio;
 
         let mut u1 = u;
         if u_dir.is_nan() {
@@ -232,36 +232,24 @@ impl CurveShape {
 
     pub fn get_ray(&self, u: f32) -> Ray {
         let mut ray = Ray::new(Vec3::ZERO, Vec3::ZERO);
+        //let velocity_scale = self.max - self.min;
         let u = self.min * (1.-u) + self.max * u;    
         let knot_index = self.nurbs.get_knot_index(u);       
         if let Some(ki) = knot_index {
             let basis = self.nurbs.get_basis(ki, u);
-            //for component in 0..3 { 
-                for k in 0..self.nurbs.order {
-                    let i = 4 - self.nurbs.order + k;
-                    let ci = ki + i - 3;
-                    ray.origin += self.controls[ci] * basis.0[i];
-                }
-                for k in 0..self.nurbs.order {
-                    let i = 4 - self.nurbs.order + k;
-                    let ci = ki + i - 3;
-                    ray.vector += self.controls[ci] * basis.1[i];// * self.nurbs.weights[ci];
-                }
+            for k in 0..self.nurbs.order {
+                let i = 4 - self.nurbs.order + k;
+                let ci = ki - 3 + i;
+                ray.origin += self.controls[ci] * basis.0[i];
+                ray.vector += self.controls[ci] * basis.1[i];
+            }
         }else{
             ray.origin = *self.controls.last().expect(TWO_CONTROL_POINTS);
             ray.vector = ray.origin - *self.controls.get(self.controls.len()-2).expect(TWO_CONTROL_POINTS);
             let lki = self.nurbs.knots.len()-1;
             ray.vector = ray.vector / (self.nurbs.knots[lki] - self.nurbs.knots[lki-self.nurbs.order]);
         }
-        // if ray.vector.is_nan() {
-        //     console_log!("ray vector nan!!");
-        // }
-        // if ray.vector.length() == 0. {
-        //     console_log!("ray vector 0!!");
-        // }
-        // if ray.vector.length() == 1. {
-        //     console_log!("ray vector 1!!");
-        // }
+        ray.vector *= self.max - self.min;
         ray
     }
 

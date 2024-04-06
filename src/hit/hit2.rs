@@ -87,70 +87,53 @@ impl HitTester2 {
                 u0 = u0_t1;
                 u1 = u1_t1;
             }
-            let distance = p0.distance(p1);
-            if distance < self.tolerance  {
-                let center = (p0 + p1) / 2.;
-                (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
-                (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
-                let center = (p0 + p1) / 2.;
-                let mut duplicate = false;
-                    for i in self.spatial.get(&center) {
-                        if self.points[i].distance(center) < self.duplication_tolerance {
-                            duplicate = true;
-                            //log("duplicate 2D");
-                            break;
-                        }
-                    }
-                if !duplicate {
-                    // let tangent0 = -self.curves.0.get_tangent_at_u(u0);
-                    // let tangent1 = -self.curves.1.get_tangent_at_u(u1);
-                    let tangent0 = -self.curves.0.get_ray(u0).vector.normalize();
-                    let tangent1 = -self.curves.1.get_ray(u1).vector.normalize();
-                    if tangent0.is_nan() {
-                        log("hit tangent0 NaN!!!");
-                        //break;
-                    }
-                    if tangent1.is_nan() {
-                        log("hit tangent1 NaN!!!");
-                        //break;
-                    }
-                    if tangent0.dot(tangent1).abs() > 0.995 {
-                        return Err((
-                            Miss{dot:self.curves.0.nurbs.sign, distance:0.}, // , point: p0 
-                            Miss{dot:self.curves.1.nurbs.sign, distance:0.}, // , point: p1
-                        ))
-                    }
-                    let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
-                    let cross1 = Vec3::Z.cross(tangent1).normalize() * self.curves.1.nurbs.sign;
-                    self.spatial.insert(&center, self.points.len());
-                    self.points.push(center);
-                    return Ok(Hit2{
-                        hit: (CurveHit {u:u0, dot:cross0.dot(tangent1)}, 
-                              CurveHit {u:u1, dot:cross1.dot(tangent0)}),
-                        center,
-                    })
-                }
-                break;
-            } 
-            if distance >= distance_basis {
 
-                // //console_log!("break early! {}", i);
-                break;
-                // u0 = (u0 + u0_prev) / 2.;
-                // u1 = (u1 + u1_prev) / 2.;
-                // p0 = self.curves.0.get_point_at_u(u0);
-                // p1 = self.curves.1.get_point_at_u(u1);
-                // //(u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
-                // //(u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
-            }
-            // u0 = (u0 + u0_prev) / 2.;
-            // u1 = (u1 + u1_prev) / 2.;
-            // p0 = self.curves.0.get_point_at_u(u0);
-            // p1 = self.curves.1.get_point_at_u(u1);
-            distance_basis = distance;
-            // u0_prev = u0;
-            // u1_prev = u1;
         }
+        //let distance = p0.distance(p1);
+        if p0.distance(p1) < self.tolerance  {
+            let center = (p0 + p1) / 2.;
+            (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
+            (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
+            let center = (p0 + p1) / 2.;
+            let mut duplicate = false;
+                for i in self.spatial.get(&center) {
+                    if self.points[i].distance(center) < self.duplication_tolerance {
+                        duplicate = true;
+                        //log("duplicate 2D");
+                        break;
+                    }
+                }
+            if !duplicate {
+                // let tangent0 = -self.curves.0.get_tangent_at_u(u0);
+                // let tangent1 = -self.curves.1.get_tangent_at_u(u1);
+                let tangent0 = -self.curves.0.get_ray(u0).vector.normalize();
+                let tangent1 = -self.curves.1.get_ray(u1).vector.normalize();
+                if tangent0.is_nan() {
+                    log("hit tangent0 NaN!!!");
+                    //break;
+                }
+                if tangent1.is_nan() {
+                    log("hit tangent1 NaN!!!");
+                    //break;
+                }
+                if tangent0.dot(tangent1).abs() > 0.995 {
+                    return Err((
+                        Miss{dot:self.curves.0.nurbs.sign, distance:0.}, // , point: p0 
+                        Miss{dot:self.curves.1.nurbs.sign, distance:0.}, // , point: p1
+                    ))
+                }
+                let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
+                let cross1 = Vec3::Z.cross(tangent1).normalize() * self.curves.1.nurbs.sign;
+                self.spatial.insert(&center, self.points.len());
+                self.points.push(center);
+                return Ok(Hit2{
+                    hit: (CurveHit {u:u0, dot:cross0.dot(tangent1)}, 
+                            CurveHit {u:u1, dot:cross1.dot(tangent0)}),
+                    center,
+                })
+            }
+            
+        } 
         // let tangent0 = self.curves.0.get_tangent_at_u(u0);
         // let tangent1 = self.curves.1.get_tangent_at_u(u1);
         let tangent0 = self.curves.0.get_ray(u0).vector.normalize();

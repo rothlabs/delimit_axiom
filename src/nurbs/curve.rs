@@ -185,9 +185,9 @@ impl CurveShape {
         let u_dir = ray.vector.normalize().dot(target.normalize()) * length_ratio;
 
         let mut u1 = u;
-        if u_dir.is_nan() {
-            console_log!("u_dir is nan!! {}", target.length());
-        }
+        // if u_dir.is_nan() {
+        //     console_log!("u_dir is nan!! {}", target.length());
+        // }
         if u_dir.abs() > EPSILON {// step.abs() {
             u1 = u + u_dir; 
         }

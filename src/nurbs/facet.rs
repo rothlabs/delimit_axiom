@@ -12,6 +12,8 @@ use lyon::path::Winding;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
+const TWO_CONTROLS: &str = "There should be two control curves or more.";
+
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Facet {
@@ -136,9 +138,9 @@ impl FacetShape {
         let mut step_v = 0.0001;
         if uv.x + step_u > 1. {step_u = -step_u;}
         if uv.y + step_v > 1. {step_v = -step_v;}
-        let p0 = self.get_point_at_uv(uv);
-        let p1 = self.get_point_at_uv(uv + Vec2::X * step_u);
-        let p2 = self.get_point_at_uv(uv + Vec2::Y * step_v);
+        let p0 = self.get_point(uv);
+        let p1 = self.get_point(uv + Vec2::X * step_u);
+        let p2 = self.get_point(uv + Vec2::Y * step_v);
         step_u.signum() * step_v.signum() * (p0 - p1).cross(p0 - p2).normalize() // TODO: remove final normalize after Union3 works!!!!
     }
 
@@ -150,9 +152,9 @@ impl FacetShape {
         let mut step_v = 0.0001;
         if uv.x + step_u > 1. {step_u = -step_u;}
         if uv.y + step_v > 1. {step_v = -step_v;}
-        let p0 = self.get_point_at_uv(uv);
-        let pu = self.get_point_at_uv(uv + Vec2::X * step_u);
-        let pv = self.get_point_at_uv(uv + Vec2::Y * step_v);
+        let p0 = self.get_point(uv);
+        let pu = self.get_point(uv + Vec2::X * step_u);
+        let pv = self.get_point(uv + Vec2::Y * step_v);
         let length_ratio_u = target.length() / p0.distance(pu) * step_u;
         let length_ratio_v = target.length() / p0.distance(pv) * step_v;
         let uv_delta = vec2(
@@ -171,7 +173,7 @@ impl FacetShape {
             uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::X).unwrap_or(uv1);
         }
         uv1 = uv1.clamp(Vec2::ZERO, Vec2::ONE); // TODO: might not be needed
-        let point = self.get_point_at_uv(uv1);
+        let point = self.get_point(uv1);
         (uv1, point)
     }
 
@@ -189,10 +191,10 @@ impl FacetShape {
         
     }
 
-    pub fn get_point_at_uv(&self, uv: Vec2) -> Vec3 {
-        let p = self.get_vector_at_uv(uv.x, uv.y);
-        vec3(p[0], p[1], p[2])
-    }
+    // pub fn get_point_at_uv(&self, uv: Vec2) -> Vec3 {
+    //     let p = self.get_vector_at_uv(uv.x, uv.y);
+    //     vec3(p[0], p[1], p[2])
+    // }
 
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { 
         let facet = self.get_valid();
@@ -254,7 +256,7 @@ impl FacetShape {
         tessellator.tessellate_path(&path, &options, &mut buffer_builder).expect("Tessellation failed");
         let mut vector = vec![];
         for [u, v] in geometry.vertices.into_iter(){
-            vector.extend(facet.get_vector_at_uv(u, v));
+            vector.extend(facet.get_point(vec2(u, v)).to_array());
         }
         let mut trivec = geometry.indices;
         for k in 0..trivec.len()/3 {
@@ -284,18 +286,20 @@ impl FacetShape {
         bndry_i
     }
 
-    pub fn get_vector_at_uv(&self, u: f32, v: f32) -> Vec<f32> {
-        let basis = self.nurbs.get_rational_basis_at_u(v);
-        let mut vector = vec![];
-        if !self.controls.is_empty() {
-            for component_index in 0..3 { 
-                vector.push(
-                    (0..self.controls.len())
-                        .map(|i| self.controls[i].get_point(u)[component_index] * basis[i]).sum()
-                );
+    pub fn get_point(&self, uv: Vec2) -> Vec3 {
+        let mut point = Vec3::ZERO;
+        let knot_index = self.nurbs.get_knot_index(uv.y);
+        if let Some(ki) = knot_index {
+            let basis = self.nurbs.get_basis(ki, uv.y); 
+            for k in 0..self.nurbs.order {
+                let i = 4 - self.nurbs.order + k;
+                let ci = ki - 3 + i;
+                point += self.controls[ci].get_point(uv.x) * basis.0[i];
             }
+        }else{
+            point = self.controls.last().expect(TWO_CONTROLS).get_point(uv.x);
         }
-        vector
+        point
     }
 
     pub fn get_valid(&self) -> FacetShape {
@@ -310,6 +314,25 @@ impl FacetShape {
         }
     }
 }
+
+
+
+
+
+// pub fn get_vector_at_uv(&self, u: f32, v: f32) -> Vec<f32> {
+//     let knot_index = self.nurbs.get_knot_index(u);
+//     let basis = self.nurbs.get_basis(knot_index, u); // self.nurbs.get_rational_basis_at_u(v);
+//     let mut vector = vec![];
+//     if !self.controls.is_empty() {
+//         for component_index in 0..3 { 
+//             vector.push(
+//                 (0..self.controls.len())
+//                     .map(|i| self.controls[i].get_point(u)[component_index] * basis[i]).sum()
+//             );
+//         }
+//     }
+//     vector
+// }
 
 
 // #[derive(Clone, Serialize, Deserialize)] 

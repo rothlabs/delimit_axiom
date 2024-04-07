@@ -41,28 +41,48 @@ int get_knot_index(int idx, int knot_count, float u){
     return knot_i;
 }
 
-vec4 get_basis(int idx, int order, float u){
-    vec4 basis = vec4(0., 0., 0., 1.);
-    for(int degree = 1; degree < order; degree++) {
-        for(int k = 0; k < degree+1; k++) { 
-            int i = 3 - degree + k;
-            int i0 = idx + k - degree;
-            int i1 = i0 + 1;  
-            float interpolation = 0.;
-            if(basis[i] != 0.) {
-                float knot0  = get_facet_texel(i0);
-                float knot0d = get_facet_texel(i0 + degree);
-                interpolation += basis[i] * (u - knot0) / (knot0d - knot0); 
-            }
-            if(i < 3 && basis[i+1] != 0.) {
-                float knot1  = get_facet_texel(i1);
-                float knot1d = get_facet_texel(i1 + degree);
-                interpolation += basis[i+1] * (knot1d - u) / (knot1d - knot1); 
-            }
-            basis[i] = interpolation;
-        }
+vec4 get_basis(int ki, int order, int control_len, float u){
+    float r1  = get_facet_texel(ki - 1);
+    float k0  = get_facet_texel(ki);
+    float k1  = get_facet_texel(ki + 1);
+    float k2  = get_facet_texel(ki + 2);
+    float k1u  = k1 - u;
+    float uk0  = u - k0;
+    float k0k1 = k0 - k1;
+    float k1k0 = k1 - k0;
+    if(order > 2){ // quadratic
+        float w0 = get_facet_texel(ki + control_len + 1);
+        float w1 = get_facet_texel(ki + control_len + 2);
+        float w2 = get_facet_texel(ki + control_len + 3);
+        float k0u = k0 - u;
+        float k2u = k2 - u;
+        float ur1 = u - r1;
+        float r1k2 = r1 - k2;
+        float k0k2 = k0 - k2;
+        float k1r1 = k1 - r1;
+        float k2k0 = k2 - k0;
+        float p0 = k1u/k1k0 * k1u/k1r1 * w0;
+        float p1 = (k1u/k1k0 * ur1/k1r1 + uk0/k1k0 * k2u/k2k0) * w1;
+        float p2 = uk0/k1k0 * uk0/k2k0 * w2;
+        float sum = p0 + p1 + p2;
+        return vec4(0., p0/sum, p1/sum, p2/sum);
+        // float a0 = 2. * k0k1 * k0k2 * k1r1;
+        // float w0xk1u = w0 * k1u;
+        // float w2xuk0 = w2 * uk0;
+        // float n0 = a0 * w0xk1u * (w1 * (u-k2) - w2xuk0);
+        // float n1 = a0 * w1 * (w0 * k1u * k2u - w2xuk0 * ur1);
+        // float n2 = a0 * w2xuk0 * (w0 * k1u + w1 * ur1);
+        // float uxu = u * u;
+        // float k2xr1 = k2 * r1;
+        // float ux2 = u * 2.;
+        // float a1 = - w0xk1u * k0k2 * k1u + w1 * (k0 * (k1 * r1k2 + k2xr1 - r1 * ux2 + uxu) - k1*(k2xr1 - k2 * ux2 + uxu) + uxu * r1k2);
+        // float d0 = a1 + w2xuk0 * uk0 * k1r1;
+        // float d1 = a1 + w2 * k0u * k0u * k1r1;
+        // basis.1 = [0., n0/d0/d0, n1/d0/d0, n2/d1/d1];
+    } else { // linear
+        return vec4(0., 0., k1u/k1k0, uk0/k1k0);
+        //basis.1 = [0., 0., 1./k0k1, 1./k1k0];
     }
-    return basis;
 }
 
 float get_rational_basis_sum(int idx, vec4 basis, int order){
@@ -85,15 +105,15 @@ vec3 get_point_on_curve(int idx, int nth, float u){
     if(knot_i < 0){
         return get_point_from_index(ci+5+knot_count+control_count + (control_count-1)*3);
     }else{
-        int weight_start = ci + 5 + knot_i + control_count + 1;
+            // int weight_start = ci + 5 + knot_i + control_count + 1;
         int control_start = ci + 5 + knot_count + control_count + (knot_i-order+1)*3;
-        vec4 basis = get_basis(ci + 5 + knot_i, order, u);
-        float sum = get_rational_basis_sum(weight_start, basis, order);
+        vec4 basis = get_basis(ci + 5 + knot_i, order, control_count, u);
+            // float sum = get_rational_basis_sum(weight_start, basis, order);
         vec3 point = vec3(0., 0., 0.);
         for(int k = 0; k < order; k++) {
-            float basis = basis[4-order+k] * get_facet_texel(weight_start+k) / sum;
+                // float basis = basis[4-order+k] * get_facet_texel(weight_start+k) / sum;
             for(int j = 0; j < 3; j++) {
-                point[j] += get_facet_texel(control_start + k*3 + j) * basis;
+                point[j] += get_facet_texel(control_start + k*3 + j) * basis[4-order+k];
             }
         }
         return point; 
@@ -108,14 +128,14 @@ vec3 get_point_on_facet(int fi, vec2 uv){
     if(knot_i < 0){
         return get_point_on_curve(fi, control_count-1, uv.x);
     }else{
-        int weight_start = fi + 3 + knot_i + control_count + 1;
+            // int weight_start = fi + 3 + knot_i + control_count + 1;
         int control_start = knot_i - order + 1;
-        vec4 basis = get_basis(fi + 3 + knot_i, order, uv.y);
-        float sum = get_rational_basis_sum(weight_start, basis, order);
+        vec4 basis = get_basis(fi + 3 + knot_i, order, control_count, uv.y);
+            // float sum = get_rational_basis_sum(weight_start, basis, order);
         vec3 point = vec3(0., 0., 0.);
         for(int k = 0; k < order; k++) {
-            float basis = basis[4-order+k] * get_facet_texel(weight_start+k) / sum;
-            point += get_point_on_curve(fi, control_start+k, uv.x) * basis;
+                // float basis = basis[4-order+k] * get_facet_texel(weight_start+k) / sum;
+            point += get_point_on_curve(fi, control_start + k, uv.x) * basis[4-order+k];
         }
         return point; 
     }
@@ -155,7 +175,7 @@ vec2 get_line_intersection(vec2 alt, vec2 p1, vec2 p2, vec2 p3, vec2 p4) {
 }
 
 vec3 get_point_between_lines(vec3 p0, vec3 d1, vec3 p1, vec3 d2) {
-    if(dot(normalize(d1), normalize(d2)) > 0.95) {
+    if(dot(normalize(d1), normalize(d2)) > 0.99) {
         return (p0 + p1) / 2.0;
     }
     float a = dot(d1, d1);
@@ -219,12 +239,6 @@ pub const HONE_PARTS: &str = r##"
     vec2 uv1_a = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
     vec3 p1_a  = get_point_on_facet(facet_i.g, uv1_a);
     
-    // center = (p0a + p1a) / 2.;
-    // vec2 uv0_b = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, center - p0a);
-    // vec3 p0_b  = get_point_on_facet(facet_i.r, uv0_b);
-    // vec2 uv1_b = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
-    // vec3 p1_b  = get_point_on_facet(facet_i.g, uv1_b);
-    
     vec2 uv0_c = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, p1a - p0a);
     vec3 p0_c  = get_point_on_facet(facet_i.r, uv0_c);
     vec2 uv1_c = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, p0a - p1a);
@@ -244,3 +258,62 @@ pub const HONE_PARTS: &str = r##"
         }
     }
 "##;
+
+
+
+
+
+
+
+// vec4 get_basis(int idx, int order, float u){
+//     vec4 basis = vec4(0., 0., 0., 1.);
+//     for(int degree = 1; degree < order; degree++) {
+//         for(int k = 0; k < degree+1; k++) { 
+//             int i = 3 - degree + k;
+//             int i0 = idx + k - degree;
+//             int i1 = i0 + 1;  
+//             float interpolation = 0.;
+//             if(basis[i] != 0.) {
+//                 float knot0  = get_facet_texel(i0);
+//                 float knot0d = get_facet_texel(i0 + degree);
+//                 interpolation += basis[i] * (u - knot0) / (knot0d - knot0); 
+//             }
+//             if(i < 3 && basis[i+1] != 0.) {
+//                 float knot1  = get_facet_texel(i1);
+//                 float knot1d = get_facet_texel(i1 + degree);
+//                 interpolation += basis[i+1] * (knot1d - u) / (knot1d - knot1); 
+//             }
+//             basis[i] = interpolation;
+//         }
+//     }
+//     return basis;
+// }
+
+
+// vec3 get_point_on_facet_old(int fi, vec2 uv){
+//     int control_count = int(get_facet_texel(fi + 1));
+//     int order = int(get_facet_texel(fi + 2));
+//     int knot_count = control_count + order;
+//     int knot_i = get_knot_index(fi + 3, knot_count, uv.y);
+//     if(knot_i < 0){
+//         return get_point_on_curve(fi, control_count-1, uv.x);
+//     }else{
+//         int weight_start = fi + 3 + knot_i + control_count + 1;
+//         int control_start = knot_i - order + 1;
+//         vec4 basis = get_basis(fi + 3 + knot_i, order, uv.y);
+//         float sum = get_rational_basis_sum(weight_start, basis, order);
+//         vec3 point = vec3(0., 0., 0.);
+//         for(int k = 0; k < order; k++) {
+//             float basis = basis[4-order+k] * get_facet_texel(weight_start+k) / sum;
+//             point += get_point_on_curve(fi, control_start+k, uv.x) * basis;
+//         }
+//         return point; 
+//     }
+// }
+
+
+// center = (p0a + p1a) / 2.;
+    // vec2 uv0_b = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, center - p0a);
+    // vec3 p0_b  = get_point_on_facet(facet_i.r, uv0_b);
+    // vec2 uv1_b = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
+    // vec3 p1_b  = get_point_on_facet(facet_i.g, uv1_b);

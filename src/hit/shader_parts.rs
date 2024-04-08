@@ -1,4 +1,5 @@
 pub const FACET_PARTS: &str = r##"
+    facet_tex_width = textureSize(facet_tex, 0).x;
     ivec2 pair_size = textureSize(pair_tex, 0);
     ivec2 pair_coord = ivec2(gl_FragCoord.x, gl_FragCoord.y);
 "##;
@@ -8,12 +9,12 @@ uniform sampler2D facet_tex;
 uniform int max_facet_length;
 uniform int max_knot_count;
 
+int facet_tex_width = 0;
 float uv_shift = 0.0001;
 
 float get_facet_texel(int index) {
-    int width = textureSize(facet_tex, 0).x;  // size of mip 0
-    int y = index / width;
-    int x = index % width;
+    int y = index / facet_tex_width;
+    int x = index % facet_tex_width;
     return texelFetch(facet_tex, ivec2(x, y), 0).r;
 }
 
@@ -41,16 +42,34 @@ int get_knot_index(int idx, int knot_count, float u){
     return knot_i;
 }
 
-vec4 get_basis(int ki, int order, int control_len, float u){
-    float r1  = get_facet_texel(ki - 1);
+
+
+// vec4 get_linear_position_basis(int ki, float u) {
+//     float k0  = get_facet_texel(ki);
+//     float k1  = get_facet_texel(ki + 1);
+//     return vec4(0., 0., k1u/k1k0, uk0/k1k0);
+// }
+
+// vec4 get_quadratic_position_basis(int ki, float u) {
+//     float k0  = get_facet_texel(ki);
+//     float k1  = get_facet_texel(ki + 1);
+//     return vec4(0., 0., k1u/k1k0, uk0/k1k0);
+// }
+
+// vec4 get_velocity_basis(int ki, int order, int control_len, float u){
+
+// }
+
+vec4 get_position_basis(int ki, int order, int control_len, float u){
     float k0  = get_facet_texel(ki);
     float k1  = get_facet_texel(ki + 1);
-    float k2  = get_facet_texel(ki + 2);
     float k1u  = k1 - u;
     float uk0  = u - k0;
-    float k0k1 = k0 - k1;
+        //float k0k1 = k0 - k1;
     float k1k0 = k1 - k0;
     if(order > 2){ // quadratic
+        float r1  = get_facet_texel(ki - 1);
+        float k2  = get_facet_texel(ki + 2);
         float w0 = get_facet_texel(ki + control_len + 1);
         float w1 = get_facet_texel(ki + control_len + 2);
         float w2 = get_facet_texel(ki + control_len + 3);
@@ -66,31 +85,23 @@ vec4 get_basis(int ki, int order, int control_len, float u){
         float p2 = uk0/k1k0 * uk0/k2k0 * w2;
         float sum = p0 + p1 + p2;
         return vec4(0., p0/sum, p1/sum, p2/sum);
-        // float a0 = 2. * k0k1 * k0k2 * k1r1;
-        // float w0xk1u = w0 * k1u;
-        // float w2xuk0 = w2 * uk0;
-        // float n0 = a0 * w0xk1u * (w1 * (u-k2) - w2xuk0);
-        // float n1 = a0 * w1 * (w0 * k1u * k2u - w2xuk0 * ur1);
-        // float n2 = a0 * w2xuk0 * (w0 * k1u + w1 * ur1);
-        // float uxu = u * u;
-        // float k2xr1 = k2 * r1;
-        // float ux2 = u * 2.;
-        // float a1 = - w0xk1u * k0k2 * k1u + w1 * (k0 * (k1 * r1k2 + k2xr1 - r1 * ux2 + uxu) - k1*(k2xr1 - k2 * ux2 + uxu) + uxu * r1k2);
-        // float d0 = a1 + w2xuk0 * uk0 * k1r1;
-        // float d1 = a1 + w2 * k0u * k0u * k1r1;
-        // basis.1 = [0., n0/d0/d0, n1/d0/d0, n2/d1/d1];
+            // float a0 = 2. * k0k1 * k0k2 * k1r1;
+            // float w0xk1u = w0 * k1u;
+            // float w2xuk0 = w2 * uk0;
+            // float n0 = a0 * w0xk1u * (w1 * (u-k2) - w2xuk0);
+            // float n1 = a0 * w1 * (w0 * k1u * k2u - w2xuk0 * ur1);
+            // float n2 = a0 * w2xuk0 * (w0 * k1u + w1 * ur1);
+            // float uxu = u * u;
+            // float k2xr1 = k2 * r1;
+            // float ux2 = u * 2.;
+            // float a1 = - w0xk1u * k0k2 * k1u + w1 * (k0 * (k1 * r1k2 + k2xr1 - r1 * ux2 + uxu) - k1*(k2xr1 - k2 * ux2 + uxu) + uxu * r1k2);
+            // float d0 = a1 + w2xuk0 * uk0 * k1r1;
+            // float d1 = a1 + w2 * k0u * k0u * k1r1;
+            // basis.1 = [0., n0/d0/d0, n1/d0/d0, n2/d1/d1];
     } else { // linear
         return vec4(0., 0., k1u/k1k0, uk0/k1k0);
         //basis.1 = [0., 0., 1./k0k1, 1./k1k0];
     }
-}
-
-float get_rational_basis_sum(int idx, vec4 basis, int order){
-    float sum = 0.;
-    for(int k = 0; k < order; k++) {
-        sum += basis[4-order+k] * get_facet_texel(idx+k);
-    }
-    return sum;
 }
 
 vec3 get_point_on_curve(int idx, int nth, float u){
@@ -105,13 +116,34 @@ vec3 get_point_on_curve(int idx, int nth, float u){
     if(knot_i < 0){
         return get_point_from_index(ci+5+knot_count+control_count + (control_count-1)*3);
     }else{
-            // int weight_start = ci + 5 + knot_i + control_count + 1;
         int control_start = ci + 5 + knot_count + control_count + (knot_i-order+1)*3;
-        vec4 basis = get_basis(ci + 5 + knot_i, order, control_count, u);
-            // float sum = get_rational_basis_sum(weight_start, basis, order);
+        vec4 basis = get_position_basis(ci + 5 + knot_i, order, control_count, u);
         vec3 point = vec3(0., 0., 0.);
         for(int k = 0; k < order; k++) {
-                // float basis = basis[4-order+k] * get_facet_texel(weight_start+k) / sum;
+            for(int j = 0; j < 3; j++) {
+                point[j] += get_facet_texel(control_start + k*3 + j) * basis[4-order+k];
+            }
+        }
+        return point; 
+    }
+}
+
+vec3 get_curve_velocity(int idx, int nth, float u){
+    int ci = get_curve_index(idx, nth);
+    int control_count = int(get_facet_texel(ci + 1));
+    int order = int(get_facet_texel(ci + 2));
+    float min = get_facet_texel(ci + 3);
+    float max = get_facet_texel(ci + 4);
+    int knot_count = control_count + order;
+    u = min*(1.-u) + max*u;
+    int knot_i = get_knot_index(ci + 5, knot_count, u);
+    if(knot_i < 0){
+        return get_point_from_index(ci+5+knot_count+control_count + (control_count-1)*3);
+    }else{
+        int control_start = ci + 5 + knot_count + control_count + (knot_i-order+1)*3;
+        vec4 basis = get_position_basis(ci + 5 + knot_i, order, control_count, u);
+        vec3 point = vec3(0., 0., 0.);
+        for(int k = 0; k < order; k++) {
             for(int j = 0; j < 3; j++) {
                 point[j] += get_facet_texel(control_start + k*3 + j) * basis[4-order+k];
             }
@@ -128,13 +160,28 @@ vec3 get_point_on_facet(int fi, vec2 uv){
     if(knot_i < 0){
         return get_point_on_curve(fi, control_count-1, uv.x);
     }else{
-            // int weight_start = fi + 3 + knot_i + control_count + 1;
         int control_start = knot_i - order + 1;
-        vec4 basis = get_basis(fi + 3 + knot_i, order, control_count, uv.y);
-            // float sum = get_rational_basis_sum(weight_start, basis, order);
+        vec4 basis = get_position_basis(fi + 3 + knot_i, order, control_count, uv.y);
         vec3 point = vec3(0., 0., 0.);
         for(int k = 0; k < order; k++) {
-                // float basis = basis[4-order+k] * get_facet_texel(weight_start+k) / sum;
+            point += get_point_on_curve(fi, control_start + k, uv.x) * basis[4-order+k];
+        }
+        return point; 
+    }
+}
+
+vec3 get_facet_velocity_u(int fi, vec2 uv){
+    int control_count = int(get_facet_texel(fi + 1));
+    int order = int(get_facet_texel(fi + 2));
+    int knot_count = control_count + order;
+    int knot_i = get_knot_index(fi + 3, knot_count, uv.y);
+    if(knot_i < 0){
+        return get_curve_velocity(fi, control_count-1, uv.x);
+    }else{
+        int control_start = knot_i - order + 1;
+        vec4 basis = get_position_basis(fi + 3 + knot_i, order, control_count, uv.y);
+        vec3 point = vec3(0., 0., 0.);
+        for(int k = 0; k < order; k++) {
             point += get_point_on_curve(fi, control_start + k, uv.x) * basis[4-order+k];
         }
         return point; 
@@ -201,19 +248,15 @@ vec3 get_point_between_facet_tangents(vec2 uv0, vec3 p0a, vec3 p0b, vec3 p0c, ve
     return get_point_between_lines(p0a, cross0, p1a, cross1);
 }
 
-vec2 get_uv_from_3d_move_target(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 target) {
+vec2 get_uv_from_3d_move_target(vec2 uv, vec3 velocity_u, vec3 velocity_v, vec3 target) {
     if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){
         return uv;
     }
-    float su = uv_shift;
-    float sv = uv_shift;
-    if(uv.x > 0.5) su = -su;
-    if(uv.y > 0.5) sv = -sv;
-    float length_ratio_u = length(target) / length(p0-p1) * su;
-    float length_ratio_v = length(target) / length(p0-p2) * sv;
+    float length_ratio_u = length(target) / length(velocity_u);
+    float length_ratio_v = length(target) / length(velocity_v);
     vec2 uv_delta = vec2(
-        dot(normalize(p1-p0), normalize(target)) * length_ratio_u, 
-        dot(normalize(p2-p0), normalize(target)) * length_ratio_v
+        dot(normalize(velocity_u), normalize(target)) * length_ratio_u, 
+        dot(normalize(velocity_v), normalize(target)) * length_ratio_v
     );
     vec2 uv1 = uv + uv_delta;
     if(uv1.x > 1. && abs(dot(normalize(uv_delta), vec2(0., 1.))) < 0.95){
@@ -263,6 +306,15 @@ pub const HONE_PARTS: &str = r##"
 
 
 
+
+
+// float get_rational_basis_sum(int idx, vec4 basis, int order){
+//     float sum = 0.;
+//     for(int k = 0; k < order; k++) {
+//         sum += basis[4-order+k] * get_facet_texel(idx+k);
+//     }
+//     return sum;
+// }
 
 
 // vec4 get_basis(int idx, int order, float u){
@@ -317,3 +369,34 @@ pub const HONE_PARTS: &str = r##"
     // vec3 p0_b  = get_point_on_facet(facet_i.r, uv0_b);
     // vec2 uv1_b = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, center - p1a);
     // vec3 p1_b  = get_point_on_facet(facet_i.g, uv1_b);
+
+
+    // vec2 get_uv_from_3d_move_target(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 target) {
+    //     if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){
+    //         return uv;
+    //     }
+    //     float su = uv_shift;
+    //     float sv = uv_shift;
+    //     if(uv.x > 0.5) su = -su;
+    //     if(uv.y > 0.5) sv = -sv;
+    //     float length_ratio_u = length(target) / length(p0-p1) * su;
+    //     float length_ratio_v = length(target) / length(p0-p2) * sv;
+    //     vec2 uv_delta = vec2(
+    //         dot(normalize(p1-p0), normalize(target)) * length_ratio_u, 
+    //         dot(normalize(p2-p0), normalize(target)) * length_ratio_v
+    //     );
+    //     vec2 uv1 = uv + uv_delta;
+    //     if(uv1.x > 1. && abs(dot(normalize(uv_delta), vec2(0., 1.))) < 0.95){
+    //         uv1 = get_line_intersection(uv1, uv, uv + uv_delta*100., vec2(1., 0.), vec2(1., 1.));
+    //     }else if(uv1.x < 0. && abs(dot(normalize(uv_delta), vec2(0., 1.))) < 0.95){
+    //         uv1 = get_line_intersection(uv1, uv, uv + uv_delta*100., vec2(0., 0.), vec2(0., 1.));
+    //     }
+    //     if(uv1.y > 1. && abs(dot(normalize(uv_delta), vec2(1., 0.))) < 0.95){
+    //         uv1 = get_line_intersection(uv1, uv, uv + uv_delta*100., vec2(0., 1.), vec2(1., 1.));
+    //     }else if(uv1.y < 0. && abs(dot(normalize(uv_delta), vec2(1., 0.))) < 0.95){
+    //         uv1 = get_line_intersection(uv1, uv, uv + uv_delta*100., vec2(0., 0.), vec2(1., 0.));
+    //     }
+    //     uv1.x = clamp(uv1.x, 0., 1.);
+    //     uv1.y = clamp(uv1.y, 0., 1.);
+    //     return uv1;
+    // }

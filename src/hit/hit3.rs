@@ -3,7 +3,7 @@ use crate::gpu::{framebuffer::Framebuffer, shader::COPY_FRAGMENT_SOURCE, GPU};
 use glam::*;
 use web_sys::WebGlProgram;
 use super::basis3::{HoneBasis, TraceBasis};
-use super::shader::{HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, POINT_SOURCE, TRACE_SOURCE};
+use super::shader::{HIT_MISS_SOURCE, HONE_SOURCE, HONE_TRACE_SOURCE, RAY_SOURCE, TRACE_SOURCE};
 use super::traced::{get_traced_curves, TracedCurve};
 use super::{IndexPair, Miss, MissPair};
 
@@ -60,7 +60,7 @@ impl HitBasis3 {
             facet_miss,
             shapes: vec![],
             hone_basis: HoneBasis::default(),
-            point_program:      gpu.get_quad_program_from_source(POINT_SOURCE).unwrap(),
+            point_program:      gpu.get_quad_program_from_source(RAY_SOURCE).unwrap(),
             hone_program:       gpu.get_quad_program_from_source(HONE_SOURCE).unwrap(),
             hit_miss_program:   gpu.get_quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
             copy_program:       gpu.get_quad_program_from_source(COPY_FRAGMENT_SOURCE).unwrap(),

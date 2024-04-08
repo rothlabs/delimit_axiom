@@ -133,16 +133,16 @@ impl FacetShape {
     //     knots
     // }
 
-    pub fn get_normal_at_uv(&self, uv: Vec2) -> Vec3 {
-        let mut step_u = 0.0001;
-        let mut step_v = 0.0001;
-        if uv.x + step_u > 1. {step_u = -step_u;}
-        if uv.y + step_v > 1. {step_v = -step_v;}
-        let p0 = self.get_point(uv);
-        let p1 = self.get_point(uv + Vec2::X * step_u);
-        let p2 = self.get_point(uv + Vec2::Y * step_v);
-        step_u.signum() * step_v.signum() * (p0 - p1).cross(p0 - p2).normalize() // TODO: remove final normalize after Union3 works!!!!
-    }
+    // pub fn get_normal_at_uv(&self, uv: Vec2) -> Vec3 {
+    //     let mut step_u = 0.0001;
+    //     let mut step_v = 0.0001;
+    //     if uv.x + step_u > 1. {step_u = -step_u;}
+    //     if uv.y + step_v > 1. {step_v = -step_v;}
+    //     let p0 = self.get_point(uv);
+    //     let p1 = self.get_point(uv + Vec2::X * step_u);
+    //     let p2 = self.get_point(uv + Vec2::Y * step_v);
+    //     step_u.signum() * step_v.signum() * (p0 - p1).cross(p0 - p2).normalize() // TODO: remove final normalize after Union3 works!!!!
+    // }
 
     pub fn get_uv_and_point_from_target(&self, uv: Vec2, point: Vec3, target: Vec3) -> (Vec2, Vec3) {
         if target.is_nan() || target.length() < EPSILON {
@@ -177,19 +177,18 @@ impl FacetShape {
         (uv1, point)
     }
 
-    pub fn get_curvature(&self, uv0: Vec2, p0: Vec3, dir: Vec3) -> f32 {
-        let step = 1.;
-        let (uv1, p1) = self.get_uv_and_point_from_target(uv0, p0, dir * step);
-        let normal0 = self.get_normal_at_uv(uv0);
-        let normal1 = self.get_normal_at_uv(uv1);
-        let distance = p0.distance(p1);
-        if distance > EPSILON*10. {
-            (1. + (1. - normal0.dot(normal1)) / distance).powf(30.)
-        }else{
-            1.
-        }
-        
-    }
+    // pub fn get_curvature(&self, uv0: Vec2, p0: Vec3, dir: Vec3) -> f32 {
+    //     let step = 1.;
+    //     let (uv1, p1) = self.get_uv_and_point_from_target(uv0, p0, dir * step);
+    //     let normal0 = self.get_normal_at_uv(uv0);
+    //     let normal1 = self.get_normal_at_uv(uv1);
+    //     let distance = p0.distance(p1);
+    //     if distance > EPSILON*10. {
+    //         (1. + (1. - normal0.dot(normal1)) / distance).powf(30.)
+    //     }else{
+    //         1.
+    //     }
+    // }
 
     // pub fn get_point_at_uv(&self, uv: Vec2) -> Vec3 {
     //     let p = self.get_vector_at_uv(uv.x, uv.y);

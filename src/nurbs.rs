@@ -97,6 +97,7 @@ impl Nurbs {
         if self.order > 2 { // quadratic
             let w0 = self.weights[knot_index - self.order + 1];
             let w1 = self.weights[knot_index - self.order + 2];
+            let w2 = self.weights[knot_index - self.order + 3];
             let k0u = k0 - u;
             let k2u = k2 - u;
             let ur1 = u - r1;
@@ -104,7 +105,6 @@ impl Nurbs {
             let k0k2 = k0 - k2;
             let k1r1 = k1 - r1;
             let k2k0 = k2 - k0;
-            let w2 = self.weights[knot_index - self.order + 3];
             let p0 = k1u/k1k0 * k1u/k1r1 * w0;
             let p1 = (k1u/k1k0 * ur1/k1r1 + uk0/k1k0 * k2u/k2k0) * w1;
             let p2 = uk0/k1k0 * uk0/k2k0 * w2;
@@ -132,6 +132,7 @@ impl Nurbs {
 }
 
 
+//((k1-u)/(k1-k0)*(k1-u)/(k1-r1)*a) / k1u/k1k0*k1u/k1r1*a + 
 
 // fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
 //     let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);

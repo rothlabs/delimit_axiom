@@ -1,13 +1,13 @@
 use const_format::concatcp;
 use super::shader_parts::{FACET_CORE, FACET_PARTS, UV_POINT_CORE, UV_POINT_PARTS, HONE_PARTS};
 
-pub const POINT_SOURCE: &str = concatcp!(r##"#version 300 es
+pub const RAY_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
 precision highp isampler2D;
 uniform isampler2D pair_tex;
 uniform sampler2D uv_tex;
-out vec3 point;
+out vec3 output;
 "##,
 FACET_CORE,
 "void main() {",
@@ -33,15 +33,11 @@ FACET_CORE,
         uv = texelFetch(uv_tex, pair_coord, 0).ba;
     }
     if(tile_x == 0){
-        point = get_point_on_facet(facet_i, uv);
+        output = get_point_on_facet(facet_i, uv);
     }else if(tile_x == 1){
-        if(uv.x > 0.5){uv = uv - vec2(uv_shift, 0.);}
-        else{uv = uv + vec2(uv_shift, 0.);}
-        point = get_point_on_facet(facet_i, uv);
+        output = get_facet_velocity_u(facet_i, uv);
     }else if(tile_x == 2){
-        if(uv.y > 0.5){uv = uv - vec2(0., uv_shift);}
-        else{uv = uv + vec2(0., uv_shift);}
-        point = get_point_on_facet(facet_i, uv);
+        output = get_facet_velocity_v(facet_i, uv);
     }
 }
 "##);
@@ -185,6 +181,54 @@ FACET_CORE, UV_POINT_CORE,
     uvDirs = vec4(dirs0.x, dirs0.y, dirs1.x, dirs1.y);
 }
 "##);
+
+
+
+
+// pub const POINT_SOURCE: &str = concatcp!(r##"#version 300 es
+// precision highp float;
+// precision highp sampler2D;
+// precision highp isampler2D;
+// uniform isampler2D pair_tex;
+// uniform sampler2D uv_tex;
+// out vec3 point;
+// "##,
+// FACET_CORE,
+// "void main() {",
+//     FACET_PARTS, 
+//     r##"
+//     int tile_x = 0;
+//     if(pair_coord.x > pair_size.x-1){ 
+//         pair_coord.x = pair_coord.x - pair_size.x; 
+//         tile_x = 1;
+//     }
+//     if(pair_coord.x > pair_size.x-1){ 
+//         pair_coord.x = pair_coord.x - pair_size.x; 
+//         tile_x = 2;
+//     }
+//     int facet_i = 0;
+//     vec2 uv = vec2(0., 0.);
+//     if(pair_coord.y < pair_size.y){
+//         facet_i = texelFetch(pair_tex, pair_coord, 0).r;
+//         uv = texelFetch(uv_tex, pair_coord, 0).rg;
+//     }else{
+//         pair_coord.y = pair_coord.y - pair_size.y;
+//         facet_i = texelFetch(pair_tex, pair_coord, 0).g;
+//         uv = texelFetch(uv_tex, pair_coord, 0).ba;
+//     }
+//     if(tile_x == 0){
+//         point = get_point_on_facet(facet_i, uv);
+//     }else if(tile_x == 1){
+//         if(uv.x > 0.5){uv = uv - vec2(uv_shift, 0.);}
+//         else{uv = uv + vec2(uv_shift, 0.);}
+//         point = get_point_on_facet(facet_i, uv);
+//     }else if(tile_x == 2){
+//         if(uv.y > 0.5){uv = uv - vec2(0., uv_shift);}
+//         else{uv = uv + vec2(0., uv_shift);}
+//         point = get_point_on_facet(facet_i, uv);
+//     }
+// }
+// "##);
 
 
 

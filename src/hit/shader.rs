@@ -72,11 +72,11 @@ FACET_CORE, RAY_CORE,
     vec3 normal0 = -normalize(cross(d0u, d0v));
     vec3 normal1 = -normalize(cross(d1u, d1v));
     if(dist < tolerance){
-        //if(abs(dot(normal0, normal1)) < 0.995){     
+        if(abs(dot(normal0, normal1)) < 0.995){     
             hit_miss = uvs;
-        //}else{
-        //    hit_miss = vec4(-1, 0, 0, 0); 
-        //}
+        }else{
+           hit_miss = vec4(-1, 0, 0, 0); 
+        }
     }else{
         hit_miss = vec4(
             -1, 

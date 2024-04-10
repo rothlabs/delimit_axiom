@@ -75,14 +75,23 @@ impl Nurbs {
         knots
     }
 
-    fn get_knot_index(&self, u: f32) -> Option<usize> {
+    fn get_knot_index(&self, u: f32) -> usize {
         for i in 0..self.knots.len()-1 { 
             if u >= self.knots[i] && u < self.knots[i+1] { 
-                return Some(i)
+                return i;
             }
         }
-        None
+        return self.knots.len() - self.order - 1;
     }
+
+    // fn get_knot_index(&self, u: f32) -> Option<usize> {
+    //     for i in 0..self.knots.len()-1 { 
+    //         if u >= self.knots[i] && u < self.knots[i+1] { 
+    //             return Some(i)
+    //         }
+    //     }
+    //     None
+    // }
 
     fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
         let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);

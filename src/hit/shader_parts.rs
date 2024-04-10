@@ -33,14 +33,16 @@ vec3 get_point_from_index(int pi){
     return vec3(get_facet_texel(pi), get_facet_texel(pi+1), get_facet_texel(pi+2));
 }
 
-int get_knot_index(int idx, int knot_count, float u){
-    int knot_i = -1; 
+int get_knot_index(int idx, int knot_count, int order, float u){
+    //int knot_i = -1; 
     for(int i = 0; i < max_knot_count-1; i++) { 
-        if(knot_i < 0 && i < knot_count && u >= get_facet_texel(idx + i) && u < get_facet_texel(idx + i + 1)) { 
-            knot_i = i;
+        //if(knot_i < 0 && i < knot_count && u >= get_facet_texel(idx + i) && u < get_facet_texel(idx + i + 1)) { 
+        if(i < knot_count && u >= get_facet_texel(idx + i) && u < get_facet_texel(idx + i + 1)) { 
+            return i; // knot_i = i;
         }
     }
-    return knot_i;
+    return knot_count - order - 1;
+    //return knot_i;
 }
 
 float[8] get_basis(int ki, int order, int control_len, float u){
@@ -97,61 +99,37 @@ float[6] get_curve_ray(int idx, int nth, float u){
     int knot_count = control_count + order;
     u = min*(1.-u) + max*u;
     float velocity_scale = max - min;
-    int knot_i = get_knot_index(ci + 5, knot_count, u);
-    if(knot_i < 0){
-        if(order > 2){
-            knot_i = 2;
-        }else{
-            knot_i = 1;
+    int knot_i = get_knot_index(ci + 5, knot_count, order, u);
+    int control_start = ci + 5 + knot_count + control_count + (knot_i-order+1)*3;
+    float[8] basis = get_basis(ci + 5 + knot_i, order, control_count, u);
+    float[6] ray = float[6](0., 0., 0., 0., 0., 0.);
+    for(int k = 0; k < order; k++) {
+        for(int j = 0; j < 3; j++) {
+            float control_component = get_facet_texel(control_start + k*3 + j);
+            ray[j]   += control_component * basis[4-order+k];
+            ray[j+3] += control_component * basis[8-order+k] * velocity_scale;
         }
     }
-    // if(knot_i < 0){
-    //     // return get_point_from_index(ci+5+knot_count+control_count + (control_count-1)*3);
-    //     return float[6](0., 0., 0., 1., 0., 0.);
-    // }else{
-        int control_start = ci + 5 + knot_count + control_count + (knot_i-order+1)*3;
-        float[8] basis = get_basis(ci + 5 + knot_i, order, control_count, u);
-        float[6] ray = float[6](0., 0., 0., 0., 0., 0.);
-        for(int k = 0; k < order; k++) {
-            for(int j = 0; j < 3; j++) {
-                float control_component = get_facet_texel(control_start + k*3 + j);
-                ray[j]   += control_component * basis[4-order+k];
-                ray[j+3] += control_component * basis[8-order+k] * velocity_scale;
-            }
-        }
-        return ray; 
-    //}
+    return ray; 
 }
 
 float[9] get_facet_rays(int fi, vec2 uv){
     int control_count = int(get_facet_texel(fi + 1));
     int order = int(get_facet_texel(fi + 2));
     int knot_count = control_count + order;
-    int knot_i = get_knot_index(fi + 3, knot_count, uv.y);
-    if(knot_i < 0){
-        if(order > 2){
-            knot_i = 2;
-        }else{
-            knot_i = 1;
+    int knot_i = get_knot_index(fi + 3, knot_count, order, uv.y);
+    int nth_control = knot_i - order + 1;
+    float[8] basis = get_basis(fi + 3 + knot_i, order, control_count, uv.y);
+    float[9] rays = float[9](0., 0., 0., 0., 0., 0., 0., 0., 0.);
+    for(int k = 0; k < order; k++) {
+        float[6] ray = get_curve_ray(fi, nth_control + k, uv.x); 
+        for(int j = 0; j < 3; j++) {
+            rays[j]   += ray[j]   * basis[4-order+k];
+            rays[j+3] += ray[j+3] * basis[4-order+k];
+            rays[j+6] += ray[j]   * basis[8-order+k];
         }
     }
-    // if(knot_i < 0){
-    //     // return get_point_on_curve(fi, control_count-1, uv.x);
-    //     float[9](0., 0., 0., 1., 0., 0., 1., 0., 0.);
-    // }else{
-        int control_start = knot_i - order + 1;
-        float[8] basis = get_basis(fi + 3 + knot_i, order, control_count, uv.y);
-        float[9] rays = float[9](0., 0., 0., 0., 0., 0., 0., 0., 0.);
-        for(int k = 0; k < order; k++) {
-            float[6] ray = get_curve_ray(fi, control_start + k, uv.x); 
-            for(int j = 0; j < 3; j++) {
-                rays[j]   += ray[j]   * basis[4-order+k];
-                rays[j+3] += ray[j+3] * basis[4-order+k];
-                rays[j+6] += ray[j]   * basis[8-order+k];
-            }
-        }
-        return rays; 
-    //}
+    return rays; 
 }
 "##;
 
@@ -352,6 +330,40 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 pdu, vec3 pdv, vec3 target) {
 }
 "##;
 
+
+
+// // if(knot_i < 0){
+//     //     if(order > 2){
+//     //         knot_i = 2;
+//     //     }else{
+//     //         knot_i = 1;
+//     //     }
+//     // }
+//     if(knot_i < 0){
+//         ci = ci+5+knot_count+control_count + (control_count-2)*3;
+//         vec3 pnt = get_point_from_index(ci + 3);
+//         vec3 vlc = pnt - get_point_from_index(ci);
+//         int ki = ci + 5 + knot_count - order;
+//         float a0 = velocity_scale / (get_facet_texel(ki) - get_facet_texel(ki - 1));
+//         return float[6](pnt.x, pnt.y, pnt.z, vlc.x*a0, vlc.y*a0, vlc.z*a0);
+//     }else{
+
+
+    // // if(knot_i < 0){
+    // //     if(order > 2){
+    // //         knot_i = 2;
+    // //     }else{
+    // //         knot_i = 1;
+    // //     }
+    // // }
+    // if(knot_i < 0){
+    //     // return get_point_on_curve(fi, control_count-1, uv.x);
+    //     float[9](0., 0., 0., 1., 0., 0., 1., 0., 0.);
+    // }else{
+
+
+
+
 // pub const HONE_PARTS: &str = r##"
 //     vec3 center = get_point_between_facet_tangents(uv0, p0a, p0b, p0c, uv1, p1a, p1b, p1c);
 //     vec2 uv0_a = get_uv_from_3d_delta(uv0, p0a, p0b, p0c, center - p0a);
@@ -525,4 +537,14 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 pdu, vec3 pdv, vec3 target) {
     //     uv1.x = clamp(uv1.x, 0., 1.);
     //     uv1.y = clamp(uv1.y, 0., 1.);
     //     return uv1;
+    // }
+
+    // if(order > 2){
+    //     if(knot_i == 2) {
+    //         return float[9](100., 100., 100., 1., 0., 0., 1., 0., 0.);
+    //     }
+    // }else{
+    //     if(knot_i == 1) {
+    //         return float[9](100., 100., 100., 1., 0., 0., 1., 0., 0.);
+    //     }
     // }

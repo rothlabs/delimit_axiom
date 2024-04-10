@@ -215,8 +215,9 @@ impl CurveShape {
     pub fn get_point(&self, u: f32) -> Vec3 {
         //let mut point = Vec3::ZERO; 
         let u = self.min * (1.-u) + self.max * u;
-        let knot_index = self.nurbs.get_knot_index(u);       
-        if let Some(ki) = knot_index {
+        // let knot_index = self.nurbs.get_knot_index(u);       
+        // if let Some(ki) = knot_index {
+            let ki = self.nurbs.get_knot_index(u);      
             let basis = self.nurbs.get_basis(ki, u);
             //for component in 0..3 { 
                 return (0..self.nurbs.order).map(|k| {
@@ -224,9 +225,9 @@ impl CurveShape {
                     self.controls[ki + i - 3] * basis.0[i]
                 }).sum()
             //}
-        }else{
-            return *self.controls.last().expect(TWO_CONTROL_POINTS);
-        }
+        // }else{
+        //     return *self.controls.last().expect(TWO_CONTROL_POINTS);
+        // }
         //point
     }
 
@@ -234,8 +235,9 @@ impl CurveShape {
         let mut ray = Ray::new(Vec3::ZERO, Vec3::ZERO);
         //let velocity_scale = self.max - self.min;
         let u = self.min * (1.-u) + self.max * u;    
-        let knot_index = self.nurbs.get_knot_index(u);       
-        if let Some(ki) = knot_index {
+        // let knot_index = self.nurbs.get_knot_index(u);       
+        // if let Some(ki) = knot_index {
+            let ki = self.nurbs.get_knot_index(u);  
             let basis = self.nurbs.get_basis(ki, u);
             for k in 0..self.nurbs.order {
                 let i = 4 - self.nurbs.order + k;
@@ -243,12 +245,12 @@ impl CurveShape {
                 ray.origin += self.controls[ci] * basis.0[i];
                 ray.vector += self.controls[ci] * basis.1[i];
             }
-        }else{
-            ray.origin = *self.controls.last().expect(TWO_CONTROL_POINTS);
-            ray.vector = ray.origin - *self.controls.get(self.controls.len()-2).expect(TWO_CONTROL_POINTS);
-            let lki = self.nurbs.knots.len()-1;
-            ray.vector = ray.vector / (self.nurbs.knots[lki] - self.nurbs.knots[lki-self.nurbs.order]);
-        }
+        // }else{
+        //     ray.origin = *self.controls.last().expect(TWO_CONTROL_POINTS);
+        //     ray.vector = ray.origin - *self.controls.get(self.controls.len()-2).expect(TWO_CONTROL_POINTS);
+        //     let lki = self.nurbs.knots.len()-1;
+        //     ray.vector = ray.vector / (self.nurbs.knots[lki] - self.nurbs.knots[lki-self.nurbs.order]);
+        // }
         ray.vector *= self.max - self.min;
         ray
     }

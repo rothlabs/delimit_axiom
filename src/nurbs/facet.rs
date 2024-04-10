@@ -287,17 +287,18 @@ impl FacetShape {
 
     pub fn get_point(&self, uv: Vec2) -> Vec3 {
         let mut point = Vec3::ZERO;
-        let knot_index = self.nurbs.get_knot_index(uv.y);
-        if let Some(ki) = knot_index {
+        // let knot_index = self.nurbs.get_knot_index(uv.y);
+        // if let Some(ki) = knot_index {
+            let ki = self.nurbs.get_knot_index(uv.y);
             let basis = self.nurbs.get_basis(ki, uv.y); 
             for k in 0..self.nurbs.order {
                 let i = 4 - self.nurbs.order + k;
                 let ci = ki - 3 + i;
                 point += self.controls[ci].get_point(uv.x) * basis.0[i];
             }
-        }else{
-            point = self.controls.last().expect(TWO_CONTROLS).get_point(uv.x);
-        }
+        // }else{
+        //     point = self.controls.last().expect(TWO_CONTROLS).get_point(uv.x);
+        // }
         point
     }
 

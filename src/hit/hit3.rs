@@ -89,14 +89,14 @@ impl HitBasis3 {
         self.hone_basis = hone_basis;
         self.hone_to_hit_or_miss();
         let buff0 = &self.hone_buffer.as_ref().unwrap();
-        // let tex_data = self.gpu.read(&buff0.quad0, 0);
+        // let tex_data = self.gpu.read(&buff0.dual, 0);
         // console_log!("tex_data len {}", tex_data.len());
         // console_log!("index_pairs len {}", self.hone_basis.index_pairs.len());
         // let len = tex_data.len() / 2;
         // for i in 0..self.hone_basis.index_pairs.len() {
         //     //let IndexPair{g0, g1, i0, i1} = self.hone_basis.index_pairs[i];
         //     //let point = self.facet_groups[g1][i1].get_point(vec2(hit_miss[i*4], hit_miss[i*4+1]));
-        //     let point = vec3(tex_data[i*4], tex_data[i*4 +1], tex_data[i*4 +2]);
+        //     let point = vec3(tex_data[len+ i*4], tex_data[len+ i*4 +1], tex_data[len+ i*4 +2]);
         //     self.shapes.push(Shape::Point(point));
         // }
         let hit_miss = self.gpu.read(&buff0.uv, 0);

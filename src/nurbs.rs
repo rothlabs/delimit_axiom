@@ -86,15 +86,17 @@ impl Nurbs {
 
     fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
         let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);
-        let r1 = self.knots[knot_index - 1];
         let k0 = self.knots[knot_index];
         let k1 = self.knots[knot_index + 1];
-        let k2 = self.knots[knot_index + 2];
         let k1u = k1 - u;
         let uk0 = u - k0;
         let k0k1 = k0 - k1;
         let k1k0 = k1 - k0;
+        let k1u_d_k1k0 = k1u / k1k0;
+        let uk0_d_k1k0 = uk0 / k1k0;
         if self.order > 2 { // quadratic
+            let r1 = self.knots[knot_index - 1];
+            let k2 = self.knots[knot_index + 2];
             let w0 = self.weights[knot_index - self.order + 1];
             let w1 = self.weights[knot_index - self.order + 2];
             let w2 = self.weights[knot_index - self.order + 3];
@@ -105,14 +107,14 @@ impl Nurbs {
             let k0k2 = k0 - k2;
             let k1r1 = k1 - r1;
             let k2k0 = k2 - k0;
-            let p0 = k1u/k1k0 * k1u/k1r1 * w0;
-            let p1 = (k1u/k1k0 * ur1/k1r1 + uk0/k1k0 * k2u/k2k0) * w1;
-            let p2 = uk0/k1k0 * uk0/k2k0 * w2;
+            let w0xk1u = w0 * k1u;
+            let w2xuk0 = w2 * uk0;
+            let p0 = w0xk1u * k1u_d_k1k0 / k1r1;
+            let p1 = w1 * (k1u_d_k1k0 * ur1/k1r1 + uk0_d_k1k0 * k2u/k2k0);
+            let p2 = w2xuk0 * uk0_d_k1k0 / k2k0;
             let sum = p0 + p1 + p2;
             basis.0 = [0., p0/sum, p1/sum, p2/sum];
             let a0 = 2. * k0k1 * k0k2 * k1r1;
-            let w0xk1u = w0 * k1u;
-            let w2xuk0 = w2 * uk0;
             let n0 = a0 * w0xk1u * (w1 * (u-k2) - w2xuk0);
             let n1 = a0 * w1 * (w0 * k1u * k2u - w2xuk0 * ur1);
             let n2 = a0 * w2xuk0 * (w0 * k1u + w1 * ur1);
@@ -124,7 +126,7 @@ impl Nurbs {
             let d1 = a1 + w2 * k0u * k0u * k1r1;
             basis.1 = [0., n0/d0/d0, n1/d0/d0, n2/d1/d1];
         } else { // linear
-            basis.0 = [0., 0., k1u/k1k0, uk0/k1k0];
+            basis.0 = [0., 0., k1u_d_k1k0, uk0_d_k1k0];
             basis.1 = [0., 0., 1./k0k1, 1./k1k0];
         }
         basis

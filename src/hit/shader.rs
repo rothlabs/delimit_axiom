@@ -1,101 +1,88 @@
 use const_format::concatcp;
-use super::shader_parts::{FACET_CORE, FACET_PARTS, UV_POINT_CORE, UV_POINT_PARTS, HONE_PARTS};
+use super::shader_parts::{
+    FACET_CORE, FACET_PARTS, RAY_CORE, GET_RAY_DUAL, 
+    GET_RAY_QUAD, HONE_CORE, HONE,
+};
 
-pub const RAY_SOURCE: &str = concatcp!(r##"#version 300 es
+pub const DUAL_FROM_UVS_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
 precision highp isampler2D;
-uniform isampler2D pair_tex;
 uniform sampler2D uv_tex;
-out vec3 output;
+layout(location=0) out vec3 point;
+layout(location=1) out vec4 deriv_u;
+layout(location=2) out vec4 deriv_v;
 "##,
 FACET_CORE,
 "void main() {",
     FACET_PARTS, 
     r##"
-    int tile_x = 0;
-    if(pair_coord.x > pair_size.x-1){ 
-        pair_coord.x = pair_coord.x - pair_size.x; 
-        tile_x = 1;
-    }
-    if(pair_coord.x > pair_size.x-1){ 
-        pair_coord.x = pair_coord.x - pair_size.x; 
-        tile_x = 2;
-    }
     int facet_i = 0;
     vec2 uv = vec2(0., 0.);
-    if(pair_coord.y < pair_size.y){
-        facet_i = texelFetch(pair_tex, pair_coord, 0).r;
-        uv = texelFetch(uv_tex, pair_coord, 0).rg;
+    if(out_coord.y < pair_size.y){
+        facet_i = texelFetch(pair_tex, out_coord, 0).r;
+        uv = texelFetch(uv_tex, out_coord, 0).rg;
     }else{
-        pair_coord.y = pair_coord.y - pair_size.y;
-        facet_i = texelFetch(pair_tex, pair_coord, 0).g;
-        uv = texelFetch(uv_tex, pair_coord, 0).ba;
+        out_coord.y = out_coord.y - pair_size.y;
+        facet_i = texelFetch(pair_tex, out_coord, 0).g;
+        uv = texelFetch(uv_tex, out_coord, 0).ba;
     }
-    if(tile_x == 0){
-        output = get_point_on_facet(facet_i, uv);
-    }else if(tile_x == 1){
-        output = get_facet_velocity_u(facet_i, uv);
-    }else if(tile_x == 2){
-        output = get_facet_velocity_v(facet_i, uv);
-    }
+    float[9] rays = get_facet_rays(facet_i, uv);
+    point   = vec3(rays[0], rays[1], rays[2]);
+    deriv_u = vec4(rays[3], rays[4], rays[5], uv.x);
+    deriv_v = vec4(rays[6], rays[7], rays[8], uv.y);
 }
 "##);
 
-pub const HONE_SOURCE: &str = concatcp!(r##"#version 300 es
+pub const QUAD_FROM_DUAL_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
 precision highp isampler2D;
-uniform isampler2D pair_tex;
-uniform sampler2D uv_tex;
-uniform sampler2D point_tex;
-out vec4 uvs;
 "##,
-FACET_CORE, UV_POINT_CORE, 
+FACET_CORE, HONE_CORE, RAY_CORE, 
 "void main() {",
-    FACET_PARTS, UV_POINT_PARTS, HONE_PARTS, 
-    r##"
-    if(i < 1){
-        uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
-    // }else if(i < 2){
-    //     uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
-    }else if(i < 2){
-        uvs = vec4(uv0_c.x, uv0_c.y, uv1.x, uv1.y);
-    }else{
-        uvs = vec4(uv0.x, uv0.y, uv1_c.x, uv1_c.y);
-    }
-}
-"##);
+    FACET_PARTS, GET_RAY_DUAL, HONE,
+"}");
+
+pub const HONE_QUAD_SOURCE: &str = concatcp!(r##"#version 300 es
+precision highp float;
+precision highp sampler2D;
+precision highp isampler2D;
+"##,
+FACET_CORE, RAY_CORE, HONE_CORE, 
+"void main() {",
+    FACET_PARTS, GET_RAY_QUAD, HONE,
+"}");
 
 pub const HIT_MISS_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
 precision highp isampler2D;
 float tolerance = 0.005;
-uniform isampler2D pair_tex;
-uniform sampler2D uv_tex;
 uniform sampler2D point_tex;
-out vec4 outColor;
+uniform sampler2D deriv_tex_u;
+uniform sampler2D deriv_tex_v;
+out vec4 hit_miss;
 "##,
-FACET_CORE, UV_POINT_CORE, 
+FACET_CORE, RAY_CORE, 
 "void main() {",
-    FACET_PARTS, UV_POINT_PARTS, 
+    FACET_PARTS, GET_RAY_QUAD, 
     r##"
-    float dist = distance(p0a, p1a);
-    vec3 normal0 = -get_facet_normal(uv0, p0a, p0b, p0c);
-    vec3 normal1 = -get_facet_normal(uv1, p1a, p1b, p1c);
+    float dist = length(p0 - p1);
+    vec3 normal0 = -normalize(cross(d0u, d0v));
+    vec3 normal1 = -normalize(cross(d1u, d1v));
     if(dist < tolerance){
-        if(abs(dot(normal0, normal1)) < 0.995){     
-            outColor = vec4(uv0.x, uv0.y, uv1.x, uv1.y);
-        }else{
-            outColor = vec4(-1, 0, 0, 0); // outColor = vec4(-1, 0, 1, 1);
-        }
+        //if(abs(dot(normal0, normal1)) < 0.995){     
+            hit_miss = uvs;
+        //}else{
+        //    hit_miss = vec4(-1, 0, 0, 0); 
+        //}
     }else{
-        outColor = vec4(
+        hit_miss = vec4(
             -1, 
             dist, 
-            dot(normalize(p1a - p0a), normal1), 
-            dot(normalize(p0a - p1a), normal0)
+            dot(normalize(p1 - p0), normal1), 
+            dot(normalize(p0 - p1), normal0)
         );
     }
 }
@@ -113,9 +100,9 @@ layout(location=0) out vec4 uvs;
 layout(location=1) out vec4 box;
 layout(location=2) out vec3 point;
 "##,
-FACET_CORE, UV_POINT_CORE, 
+FACET_CORE, RAY_CORE, 
 "void main() {",
-    FACET_PARTS, UV_POINT_PARTS, HONE_PARTS, 
+    FACET_PARTS, GET_RAY_DUAL, HONE, 
     r##"
     box = texelFetch(box_tex, pair_coord, 0);
     vec2 uv = vec2(0, 0);
@@ -160,9 +147,9 @@ layout(location=1) out vec4 box;
 layout(location=2) out vec4 uvDirs;
 layout(location=3) out vec3 dir;
 "##,
-FACET_CORE, UV_POINT_CORE, 
+FACET_CORE, RAY_CORE, 
 "void main() {",
-    FACET_PARTS, UV_POINT_PARTS, 
+    FACET_PARTS, GET_RAY_DUAL, 
     r##"
     float sign = -1.;
     if(pair_coord.x < pair_size.x/2){
@@ -172,8 +159,8 @@ FACET_CORE, UV_POINT_CORE,
     vec3 normal1 = get_facet_normal(uv1, p1a, p1b, p1c);
     dir = normalize(cross(normal0, normal1));
     vec3 target = dir * sign * step;
-    vec2 uv0a = get_uv_from_3d_move_target(uv0, p0a, p0b, p0c, target);
-    vec2 uv1a = get_uv_from_3d_move_target(uv1, p1a, p1b, p1c, target);
+    vec2 uv0a = get_uv_from_3d_delta(uv0, p0a, p0b, p0c, target);
+    vec2 uv1a = get_uv_from_3d_delta(uv1, p1a, p1b, p1c, target);
     uvs = vec4(uv0a.x, uv0a.y, uv1a.x, uv1a.y);
     box = texelFetch(box_tex, pair_coord, 0);
     vec2 dirs0 = normalize(uv0a*100.0 - uv0*100.0);
@@ -182,6 +169,37 @@ FACET_CORE, UV_POINT_CORE,
 }
 "##);
 
+
+
+
+
+
+
+
+// pub const HONE_SOURCE: &str = concatcp!(r##"#version 300 es
+// precision highp float;
+// precision highp sampler2D;
+// precision highp isampler2D;
+// uniform isampler2D pair_tex;
+// uniform sampler2D uv_tex;
+// uniform sampler2D point_tex;
+// out vec4 uvs;
+// "##,
+// FACET_CORE, UV_POINT_CORE, 
+// "void main() {",
+//     FACET_PARTS, UV_POINT_PARTS, HONE_PARTS, 
+//     r##"
+//     if(i < 1){
+//         uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
+//     // }else if(i < 2){
+//     //     uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
+//     }else if(i < 2){
+//         uvs = vec4(uv0_c.x, uv0_c.y, uv1.x, uv1.y);
+//     }else{
+//         uvs = vec4(uv0.x, uv0.y, uv1_c.x, uv1_c.y);
+//     }
+// }
+// "##);
 
 
 

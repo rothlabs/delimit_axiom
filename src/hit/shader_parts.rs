@@ -146,9 +146,14 @@ layout(location=2) out vec4 deriv_v;
 pub const GET_RAY_DUAL: &str = r##"
     ivec2 in_coord0 = out_coord;
     ivec2 in_coord1 = out_coord;
-    if(!(out_coord.x < pair_size.x)){ 
-        in_coord0.x = out_coord.x - pair_size.x; 
-        in_coord1.x = in_coord0.x;
+    if(!(out_coord.x < pair_size.x)){
+        if(out_coord.x < pair_size.x * 2){ 
+            in_coord0.x = out_coord.x - pair_size.x; 
+            in_coord1.x = in_coord0.x;
+        }else{
+            in_coord0.x = out_coord.x - pair_size.x * 2; 
+            in_coord1.x = in_coord0.x;
+        }
     }
     if(out_coord.y < pair_size.y){
         in_coord1.y = out_coord.y + pair_size.y;
@@ -160,7 +165,7 @@ pub const GET_RAY_DUAL: &str = r##"
     vec4 t0v = texelFetch(deriv_tex_v, in_coord0, 0);
     vec4 t1u = texelFetch(deriv_tex_u, in_coord1, 0);
     vec4 t1v = texelFetch(deriv_tex_v, in_coord1, 0);
-    vec4 uvs = vec4(t0u.a, t0v.a,  t1u.a, t1v.a);
+    vec4 uvs = vec4(t0u.a, t0v.a, t1u.a, t1v.a);
     vec3 p0  = texelFetch(point_tex, in_coord0, 0).xyz;
     vec3 p1  = texelFetch(point_tex, in_coord1, 0).xyz;
     vec3 d0u = t0u.xyz;
@@ -169,62 +174,78 @@ pub const GET_RAY_DUAL: &str = r##"
     vec3 d1v = t1v.xyz;
 "##;
 
+
 pub const GET_RAY_QUAD: &str = r##"
-    ivec2 in_coord0 = out_coord;
-    ivec2 in_coord1 = out_coord;
-    ivec2 in_coord2 = out_coord;
-    ivec2 in_coord3 = out_coord;
+    ivec2 in_coord0a = out_coord;
+    ivec2 in_coord0b = out_coord;
+    ivec2 in_coord0c = out_coord;
+    ivec2 in_coord1a = out_coord;
+    ivec2 in_coord1b = out_coord;
+    ivec2 in_coord1c = out_coord;
     if(out_coord.x < pair_size.x){ 
-        in_coord1.x = out_coord.x + pair_size.x; 
-        in_coord3.x = in_coord1.x;
+        in_coord0b.x = out_coord.x + pair_size.x; 
+        in_coord0c.x = out_coord.x + (pair_size.x * 2); 
+        in_coord1b.x = in_coord0b.x;
+        in_coord1c.x = in_coord0c.x;
+    }else if(out_coord.x < pair_size.x * 2){
+        in_coord0a.x = out_coord.x - pair_size.x;  
+        in_coord0c.x = out_coord.x + pair_size.x; 
+        in_coord1a.x = in_coord0a.x;
+        in_coord1c.x = in_coord0c.x;
     }else{
-        in_coord0.x = out_coord.x - pair_size.x; 
-        in_coord2.x = in_coord0.x;
+        in_coord0a.x = out_coord.x - (pair_size.x * 2);  
+        in_coord0b.x = out_coord.x - pair_size.x; 
+        in_coord1a.x = in_coord0a.x;
+        in_coord1b.x = in_coord0b.x;
     }
     if(out_coord.y < pair_size.y){
-        in_coord2.y = out_coord.y + pair_size.y;
-        in_coord3.y = in_coord2.y;
+        in_coord1a.y = out_coord.y + pair_size.y;
+        in_coord1b.y = in_coord1a.y;
+        in_coord1c.y = in_coord1a.y;
     }else{
-        in_coord0.y = out_coord.y - pair_size.y;
-        in_coord1.y = in_coord0.y;
+        in_coord0a.y = out_coord.y - pair_size.y;
+        in_coord0b.y = in_coord0a.y;
+        in_coord0c.y = in_coord0a.y;
     }
-    ivec2 facet_i = texelFetch(pair_tex, in_coord0, 0).rg;
-
-    vec3 p0  = texelFetch(point_tex, in_coord0,  0).xyz;
-    vec3 p0b = texelFetch(point_tex, in_coord1,  0).xyz;
-    vec4 t0u = vec4(0., 0., 0., 0.);
-    vec4 t0v = vec4(0., 0., 0., 0.);
-    vec3 p1  = texelFetch(point_tex, in_coord2,  0).xyz;
-    vec3 p1b = texelFetch(point_tex, in_coord3,  0).xyz;
-    vec4 t1u = vec4(0., 0., 0., 0.);
-    vec4 t1v = vec4(0., 0., 0., 0.);
-    
+    ivec2 facet_i = texelFetch(pair_tex, in_coord0a, 0).rg;
+    vec3 p0a = texelFetch(point_tex, in_coord0a, 0).xyz;
+    vec3 p0b = texelFetch(point_tex, in_coord0b, 0).xyz;
+    vec3 p0c = texelFetch(point_tex, in_coord0c, 0).xyz;
+    vec3 p1a = texelFetch(point_tex, in_coord1a, 0).xyz;
+    vec3 p1b = texelFetch(point_tex, in_coord1b, 0).xyz;
+    vec3 p1c = texelFetch(point_tex, in_coord1c, 0).xyz;
     int pick = 0;
-    vec3 p0_ = p0;
-    if(length(p0b - p1) < length(p0 - p1)){
+    vec3 p0 = p0a;
+    vec3 p1 = p1b;
+    if(length(p0b - p1a) < length(p0 - p1)){
         pick = 1;
         p0 = p0b;
+        p1 = p1a;
     }
-    if(length(p0 - p1b) < length(p0 - p1)){
+    if(length(p0c - p1c) < length(p0 - p1)){
         pick = 2;
-        p0 = p0_;
-        p1 = p1b;
+        p0 = p0c;
+        p1 = p1c;
     }
+    vec4 t0u = vec4(0., 0., 0., 0.);
+    vec4 t0v = vec4(0., 0., 0., 0.);
+    vec4 t1u = vec4(0., 0., 0., 0.);
+    vec4 t1v = vec4(0., 0., 0., 0.);
     if(pick > 1){
-        t0u = texelFetch(deriv_tex_u, in_coord0,  0);
-        t0v = texelFetch(deriv_tex_v, in_coord0,  0);
-        t1u = texelFetch(deriv_tex_u, in_coord3,  0);
-        t1v = texelFetch(deriv_tex_v, in_coord3,  0);
+        t0u = texelFetch(deriv_tex_u, in_coord0c,  0);
+        t0v = texelFetch(deriv_tex_v, in_coord0c,  0);
+        t1u = texelFetch(deriv_tex_u, in_coord1c,  0);
+        t1v = texelFetch(deriv_tex_v, in_coord1c,  0);
     }else if(pick > 0){
-        t0u = texelFetch(deriv_tex_u, in_coord1,  0);
-        t0v = texelFetch(deriv_tex_v, in_coord1,  0);
-        t1u = texelFetch(deriv_tex_u, in_coord2,  0);
-        t1v = texelFetch(deriv_tex_v, in_coord2,  0);
+        t0u = texelFetch(deriv_tex_u, in_coord0b,  0);
+        t0v = texelFetch(deriv_tex_v, in_coord0b,  0);
+        t1u = texelFetch(deriv_tex_u, in_coord1a,  0);
+        t1v = texelFetch(deriv_tex_v, in_coord1a,  0);
     }else{
-        t0u = texelFetch(deriv_tex_u, in_coord0,  0);
-        t0v = texelFetch(deriv_tex_v, in_coord0,  0);
-        t1u = texelFetch(deriv_tex_u, in_coord2,  0);
-        t1v = texelFetch(deriv_tex_v, in_coord2,  0);
+        t0u = texelFetch(deriv_tex_u, in_coord0a,  0);
+        t0v = texelFetch(deriv_tex_v, in_coord0a,  0);
+        t1u = texelFetch(deriv_tex_u, in_coord1b,  0);
+        t1v = texelFetch(deriv_tex_v, in_coord1b,  0);
     }
     vec3 d0u = t0u.xyz;
     vec3 d0v = t0v.xyz;
@@ -233,28 +254,39 @@ pub const GET_RAY_QUAD: &str = r##"
     vec4 uvs = vec4(t0u.a, t0v.a, t1u.a, t1v.a);
 "##;
 
+
+
 pub const HONE: &str = r##"
-int fi = 0;
-vec2 uv_in  = vec2(0., 0.);
-vec3 pnt  = vec3(0., 0., 0.);
-vec3 pdu    = vec3(0., 0., 0.);
-vec3 pdv    = vec3(0., 0., 0.);
-vec3 delta  = vec3(0., 0., 0.);
-if(out_coord.y < pair_size.y){
-    fi = facet_i.r; uv_in = uvs.rg; pnt = p0; pdu = d0u; pdv=d0v;
-    delta = p1 - pnt;
-}else{
-    fi = facet_i.g; uv_in = uvs.ba; pnt = p1; pdu = d1u; pdv=d1v;
-    delta = p0 - pnt;
-}
-if(out_coord.x < pair_size.x){
-    delta = get_point_between_facet_tangents(p0, d0u, d0v, p1, d1u, d1v) - pnt;
-}
-vec2 uv_out = get_uv_from_3d_delta(uv_in, pdu, pdv, delta);
-float[9] rays = get_facet_rays(fi, uv_out);
-point   = vec3(rays[0], rays[1], rays[2]);
-deriv_u = vec4(rays[3], rays[4], rays[5], uv_out.x);
-deriv_v = vec4(rays[6], rays[7], rays[8], uv_out.y);
+    int fi = 0;
+    vec2 uv    = vec2(0., 0.);
+    vec3 du    = vec3(0., 0., 0.);
+    vec3 dv    = vec3(0., 0., 0.);
+    vec3 p_a   = vec3(0., 0., 0.);
+    vec3 p_b   = vec3(0., 0., 0.);
+    vec3 delta = vec3(0., 0., 0.);
+    if(out_coord.y < pair_size.y){
+        fi = facet_i.r; uv = uvs.rg; p_a = p0; du = d0u; dv = d0v;
+        p_b = p1;
+    }else{
+        fi = facet_i.g; uv = uvs.ba; p_a = p1; du = d1u; dv = d1v;
+        p_b = p0;
+    }
+    if(out_coord.x < pair_size.x){
+        point   = p_a;
+        deriv_u = vec4(du.x, du.y, du.z, uv.x);
+        deriv_v = vec4(dv.x, dv.y, dv.z, uv.y);
+    }else{
+        if(out_coord.x < pair_size.x * 2){
+            delta = p_b - p_a;
+        }else{
+            delta = get_point_between_facet_tangents(p0, d0u, d0v, p1, d1u, d1v) - p_a;
+        }
+        vec2 uv_out = get_uv_from_3d_delta(uv, du, dv, delta);
+        float[9] rays = get_facet_rays(fi, uv_out);
+        point   = vec3(rays[0], rays[1], rays[2]);
+        deriv_u = vec4(rays[3], rays[4], rays[5], uv_out.x);
+        deriv_v = vec4(rays[6], rays[7], rays[8], uv_out.y);
+    }
 "##;
 
 // pub const RAY_OUT: &str = r##"
@@ -330,6 +362,223 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 pdu, vec3 pdv, vec3 target) {
 }
 "##;
 
+
+
+// pub const GET_RAY_DUAL: &str = r##"
+//     ivec2 in_coord0 = out_coord;
+//     ivec2 in_coord1 = out_coord;
+//     if(!(out_coord.x < pair_size.x)){ 
+//         in_coord0.x = out_coord.x - pair_size.x; 
+//         in_coord1.x = in_coord0.x;
+//     }
+//     if(out_coord.y < pair_size.y){
+//         in_coord1.y = out_coord.y + pair_size.y;
+//     }else{
+//         in_coord0.y = out_coord.y - pair_size.y;
+//     }
+//     ivec2 facet_i = texelFetch(pair_tex, in_coord0, 0).rg;
+//     vec4 t0u = texelFetch(deriv_tex_u, in_coord0, 0);
+//     vec4 t0v = texelFetch(deriv_tex_v, in_coord0, 0);
+//     vec4 t1u = texelFetch(deriv_tex_u, in_coord1, 0);
+//     vec4 t1v = texelFetch(deriv_tex_v, in_coord1, 0);
+//     vec4 uvs = vec4(t0u.a, t0v.a,  t1u.a, t1v.a);
+//     vec3 p0  = texelFetch(point_tex, in_coord0, 0).xyz;
+//     vec3 p1  = texelFetch(point_tex, in_coord1, 0).xyz;
+//     vec3 d0u = t0u.xyz;
+//     vec3 d0v = t0v.xyz;
+//     vec3 d1u = t1u.xyz;
+//     vec3 d1v = t1v.xyz;
+// "##;
+
+
+// pub const GET_RAY_QUAD: &str = r##"
+//     ivec2 in_coord0 = out_coord;
+//     ivec2 in_coord1 = out_coord;
+//     ivec2 in_coord2 = out_coord;
+//     ivec2 in_coord3 = out_coord;
+//     if(out_coord.x < pair_size.x){ 
+//         in_coord1.x = out_coord.x + pair_size.x; 
+//         in_coord3.x = in_coord1.x;
+//     }else{
+//         in_coord0.x = out_coord.x - pair_size.x; 
+//         in_coord2.x = in_coord0.x;
+//     }
+//     if(out_coord.y < pair_size.y){
+//         in_coord2.y = out_coord.y + pair_size.y;
+//         in_coord3.y = in_coord2.y;
+//     }else{
+//         in_coord0.y = out_coord.y - pair_size.y;
+//         in_coord1.y = in_coord0.y;
+//     }
+//     ivec2 facet_i = texelFetch(pair_tex, in_coord0, 0).rg;
+
+//     vec3 p0  = texelFetch(point_tex, in_coord0,  0).xyz;
+//     vec3 p0b = texelFetch(point_tex, in_coord1,  0).xyz;
+//     vec4 t0u = vec4(0., 0., 0., 0.);
+//     vec4 t0v = vec4(0., 0., 0., 0.);
+//     vec3 p1  = texelFetch(point_tex, in_coord2,  0).xyz;
+//     vec3 p1b = texelFetch(point_tex, in_coord3,  0).xyz;
+//     vec4 t1u = vec4(0., 0., 0., 0.);
+//     vec4 t1v = vec4(0., 0., 0., 0.);
+    
+//     int pick = 0;
+//     vec3 p0_ = p0;
+//     if(length(p0b - p1) < length(p0 - p1)){
+//         pick = 1;
+//         p0 = p0b;
+//     }
+//     if(length(p0 - p1b) < length(p0 - p1)){
+//         pick = 2;
+//         p0 = p0_;
+//         p1 = p1b;
+//     }
+//     if(pick > 1){
+//         t0u = texelFetch(deriv_tex_u, in_coord0,  0);
+//         t0v = texelFetch(deriv_tex_v, in_coord0,  0);
+//         t1u = texelFetch(deriv_tex_u, in_coord3,  0);
+//         t1v = texelFetch(deriv_tex_v, in_coord3,  0);
+//     }else if(pick > 0){
+//         t0u = texelFetch(deriv_tex_u, in_coord1,  0);
+//         t0v = texelFetch(deriv_tex_v, in_coord1,  0);
+//         t1u = texelFetch(deriv_tex_u, in_coord2,  0);
+//         t1v = texelFetch(deriv_tex_v, in_coord2,  0);
+//     }else{
+//         t0u = texelFetch(deriv_tex_u, in_coord0,  0);
+//         t0v = texelFetch(deriv_tex_v, in_coord0,  0);
+//         t1u = texelFetch(deriv_tex_u, in_coord2,  0);
+//         t1v = texelFetch(deriv_tex_v, in_coord2,  0);
+//     }
+//     vec3 d0u = t0u.xyz;
+//     vec3 d0v = t0v.xyz;
+//     vec3 d1u = t1u.xyz;
+//     vec3 d1v = t1v.xyz;
+//     vec4 uvs = vec4(t0u.a, t0v.a, t1u.a, t1v.a);
+// "##;
+
+////////////////////////////////////////////////////////////////////////////////////
+
+// pub const HONE: &str = r##"
+// int fi = 0;
+// vec2 uv_in  = vec2(0., 0.);
+// vec3 pnt  = vec3(0., 0., 0.);
+// vec3 pdu    = vec3(0., 0., 0.);
+// vec3 pdv    = vec3(0., 0., 0.);
+// vec3 delta  = vec3(0., 0., 0.);
+// if(out_coord.y < pair_size.y){
+//     fi = facet_i.r; uv_in = uvs.rg; pnt = p0; pdu = d0u; pdv=d0v;
+//     delta = p1 - pnt;
+// }else{
+//     fi = facet_i.g; uv_in = uvs.ba; pnt = p1; pdu = d1u; pdv=d1v;
+//     delta = p0 - pnt;
+// }
+// if(out_coord.x < pair_size.x){
+//     delta = get_point_between_facet_tangents(p0, d0u, d0v, p1, d1u, d1v) - pnt;
+// }
+// vec2 uv_out = get_uv_from_3d_delta(uv_in, pdu, pdv, delta);
+// float[9] rays = get_facet_rays(fi, uv_out);
+// point   = vec3(rays[0], rays[1], rays[2]);
+// deriv_u = vec4(rays[3], rays[4], rays[5], uv_out.x);
+// deriv_v = vec4(rays[6], rays[7], rays[8], uv_out.y);
+// "##;
+
+// pub const GET_RAY_DUAL: &str = r##"
+//     ivec2 in_coord0 = out_coord;
+//     ivec2 in_coord1 = out_coord;
+//     if(!(out_coord.x < pair_size.x)){ 
+//         in_coord0.x = out_coord.x - pair_size.x; 
+//         in_coord1.x = in_coord0.x;
+//     }
+//     if(out_coord.y < pair_size.y){
+//         in_coord1.y = out_coord.y + pair_size.y;
+//     }else{
+//         in_coord1.y = out_coord.y - pair_size.y;
+//     }
+//     ivec2 facet_i = texelFetch(pair_tex, in_coord0, 0).rg;
+//     vec4 t0u = texelFetch(deriv_tex_u, in_coord0, 0);
+//     vec4 t0v = texelFetch(deriv_tex_v, in_coord0, 0);
+//     vec2 uv0 = vec2(t0u.a, t0v.a);
+//     vec3 p0  = texelFetch(point_tex, in_coord0, 0).xyz;
+//     vec3 p1  = texelFetch(point_tex, in_coord1, 0).xyz;
+//     vec3 d0u = t0u.xyz;
+//     vec3 d0v = t0v.xyz;
+// "##;
+
+// pub const GET_RAY_QUAD: &str = r##"
+//     ivec2 in_coord0 = out_coord;
+//     ivec2 in_coord1 = out_coord;
+//     ivec2 in_coord2 = out_coord;
+//     ivec2 in_coord3 = out_coord;
+//     if(out_coord.x < pair_size.x){ 
+//         in_coord1.x = out_coord.x + pair_size.x; 
+//         in_coord3.x = in_coord1.x;
+//     }else{
+//         in_coord0.x = out_coord.x - pair_size.x; 
+//         in_coord2.x = in_coord0.x;
+//     }
+//     if(out_coord.y < pair_size.y){
+//         in_coord2.y = out_coord.y + pair_size.y;
+//         in_coord3.y = in_coord2.y;
+//     }else{
+//         in_coord0.y = out_coord.y - pair_size.y;
+//         in_coord1.y = in_coord0.y;
+//     }
+//     ivec2 facet_i = texelFetch(pair_tex, in_coord0, 0).rg;
+
+//     vec4 uvs = vec4(0., 0., 0., 0.);
+//     vec3 p0  = texelFetch(point_tex, in_coord0,  0).xyz;
+//     vec3 p1  = texelFetch(point_tex, in_coord3,  0).xyz;
+//     vec3 p0b = texelFetch(point_tex, in_coord1,  0).xyz;
+//     vec3 p1b = texelFetch(point_tex, in_coord2,  0).xyz;
+//     vec4 du = vec4(0., 0., 0., 0.);
+//     vec4 dv = vec4(0., 0., 0., 0.);
+    
+//     if(length(p0 - p1) > length(p0b - p1b)){
+//         p0 = p0b;
+//         p1 = p1b;
+
+//     }else{
+
+//     }
+//     if(pick > 1){
+//         t0u = texelFetch(deriv_tex_u, in_coord0,  0);
+//         t0v = texelFetch(deriv_tex_v, in_coord0,  0);
+//         t1u = texelFetch(deriv_tex_u, in_coord3,  0);
+//         t1v = texelFetch(deriv_tex_v, in_coord3,  0);
+//     }else if(pick > 0){
+//         t0u = texelFetch(deriv_tex_u, in_coord1,  0);
+//         t0v = texelFetch(deriv_tex_v, in_coord1,  0);
+//         t1u = texelFetch(deriv_tex_u, in_coord2,  0);
+//         t1v = texelFetch(deriv_tex_v, in_coord2,  0);
+//     }else{
+//         t0u = texelFetch(deriv_tex_u, in_coord0,  0);
+//         t0v = texelFetch(deriv_tex_v, in_coord0,  0);
+//         t1u = texelFetch(deriv_tex_u, in_coord2,  0);
+//         t1v = texelFetch(deriv_tex_v, in_coord2,  0);
+//     }
+//     vec3 d0u = t0u.xyz;
+//     vec3 d0v = t0v.xyz;
+//     vec3 d1u = t1u.xyz;
+//     vec3 d1v = t1v.xyz;
+//     vec4 uvs = vec4(t0u.a, t0v.a, t1u.a, t1v.a);
+// "##;
+
+// pub const HONE: &str = r##"
+// if(out_coord.x < pair_size.x){
+//     point   = p0;
+//     deriv_u = vec4(d0u.x, d0u.y, d0u.z, uv0.x);
+//     deriv_v = vec4(d0v.x, d0v.y, d0v.z, uv0.y);
+// }else{
+//     int fi = facet_i.g; 
+//     if(out_coord.y < pair_size.y){
+//         fi = facet_i.r;
+//     }
+//     vec2 uv_out = get_uv_from_3d_delta(uv0, d0u, d0v, p1 - p0);
+//     float[9] rays = get_facet_rays(fi, uv_out);
+//     point   = vec3(rays[0], rays[1], rays[2]);
+//     deriv_u = vec4(rays[3], rays[4], rays[5], uv_out.x);
+//     deriv_v = vec4(rays[6], rays[7], rays[8], uv_out.y);
+// }
+// "##;
 
 
 // // if(knot_i < 0){

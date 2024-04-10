@@ -75,7 +75,7 @@ FACET_CORE, RAY_CORE,
         if(abs(dot(normal0, normal1)) < 0.995){     
             hit_miss = uvs;
         }else{
-           hit_miss = vec4(-1, 0, 0, 0); 
+          hit_miss = vec4(-1, 0, 0, 0); 
         }
     }else{
         hit_miss = vec4(

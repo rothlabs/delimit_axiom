@@ -4,7 +4,7 @@ use super::shader_parts::{
     GET_RAY_QUAD, HONE_CORE, HONE,
 };
 
-pub const DUAL_FROM_UVS_SOURCE: &str = concatcp!(r##"#version 300 es
+pub const INIT_HONE_QUAD_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
 precision highp isampler2D;
@@ -19,13 +19,20 @@ FACET_CORE,
     r##"
     int facet_i = 0;
     vec2 uv = vec2(0., 0.);
-    if(out_coord.y < pair_size.y){
-        facet_i = texelFetch(pair_tex, out_coord, 0).r;
-        uv = texelFetch(uv_tex, out_coord, 0).rg;
+    ivec2 in_pos = out_pos;
+    if(!(in_pos.x < pair_size.x)){
+        in_pos.x = in_pos.x - pair_size.x; 
+    }
+    if(!(in_pos.x < pair_size.x)){
+        in_pos.x = in_pos.x - pair_size.x; 
+    }
+    if(in_pos.y < pair_size.y){
+        facet_i = texelFetch(pair_tex, in_pos, 0).r;
+        uv = texelFetch(uv_tex, in_pos, 0).rg;
     }else{
-        out_coord.y = out_coord.y - pair_size.y;
-        facet_i = texelFetch(pair_tex, out_coord, 0).g;
-        uv = texelFetch(uv_tex, out_coord, 0).ba;
+        in_pos.y = in_pos.y - pair_size.y;
+        facet_i = texelFetch(pair_tex, in_pos, 0).g;
+        uv = texelFetch(uv_tex, in_pos, 0).ba;
     }
     float[9] rays = get_facet_rays(facet_i, uv);
     point   = vec3(rays[0], rays[1], rays[2]);
@@ -33,16 +40,6 @@ FACET_CORE,
     deriv_v = vec4(rays[6], rays[7], rays[8], uv.y);
 }
 "##);
-
-pub const QUAD_FROM_DUAL_SOURCE: &str = concatcp!(r##"#version 300 es
-precision highp float;
-precision highp sampler2D;
-precision highp isampler2D;
-"##,
-FACET_CORE, HONE_CORE, RAY_CORE, 
-"void main() {",
-    FACET_PARTS, GET_RAY_DUAL, HONE,
-"}");
 
 pub const HONE_QUAD_SOURCE: &str = concatcp!(r##"#version 300 es
 precision highp float;

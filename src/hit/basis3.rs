@@ -102,7 +102,9 @@ impl HoneBasis {
 pub struct TraceBasis{
     pub index_pairs:   Vec<IndexPair>,
     pub pair_texels:   Vec<i32>,
-    pub uv_box_dir_texels: Vec<Vec<f32>>,
+    pub uv_texels:     Vec<f32>,
+    pub box_texels:    Vec<f32>,
+    //pub uv_box_dir_texels: Vec<Vec<f32>>,
     pub misses: Vec<MissPair>
 }
 
@@ -114,12 +116,12 @@ impl TraceBasis {
         let mut box_texels  = vec![];
         let mut misses      = vec![];
         let mut length = 0;
-        for k in 0..2 {
+        //for k in 0..2 {
             for i in 0..basis.index_pairs.len() {
                 if hit_miss[i*4] > -0.5 { // it's a hit
-                    if k < 1 {
+                    //if k < 1 {
                         index_pairs.push(basis.index_pairs[i].clone());
-                    }
+                    //}
                     pair_texels.extend([basis.pair_texels[i*2], basis.pair_texels[i*2+1]]);
                     uv_texels.extend([hit_miss[i*4+0], hit_miss[i*4+1], hit_miss[i*4+2], hit_miss[i*4+3]]); // use .slice of tex
                     box_texels.extend([1., 1., 0., 0.]);
@@ -136,11 +138,13 @@ impl TraceBasis {
                     });
                 }
             }
-        }
+        //}
         TraceBasis {
             index_pairs, 
             pair_texels,
-            uv_box_dir_texels: vec![uv_texels, box_texels, vec![0.; length], vec![0.; length]],
+            uv_texels,
+            box_texels,
+            //uv_box_dir_texels: vec![uv_texels, box_texels, vec![0.; length], vec![0.; length]],
             misses,
         }
     }

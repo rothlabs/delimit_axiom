@@ -99,24 +99,13 @@ void main() {"##,
 
 pub const TRACE_SEGMENT_SOURCE: &str = concatcp!( // TODO: does not need pair_tex, only size!
 HEADER, ARROW_IN, r##"
-// layout(location=0) out vec3 point;
-// layout(location=1) out vec3 delta;
-// layout(location=2) out vec4 arrow0;
-// layout(location=3) out vec4 arrow1;
-// uniform ivec2 viewport_position;
 uniform int half_trace_count;
-layout(location=0) out vec3 origin;
+layout(location=0) out vec3 point;
 layout(location=1) out vec3 delta;
 layout(location=2) out vec4 uvs_out;
-layout(location=3) out vec4 uv_vectors;
+layout(location=3) out vec4 uv_deltas;
 void main() {"##,
     CORE_PARTS, r##"
-            // int direction_tile_y = 0;
-            // if(out_pos.y > 0){ // backward trace
-            //     direction_tile_y = pair_size.y;
-            // }
-            // ivec2 in_pos0 = ivec2(out_pos.x % pair_size.x, (out_pos.x / pair_size.x) + direction_tile_y);
-            // out_pos = out_pos - viewport_position;
     int y = out_pos.x / pair_size.x;
     ivec2 in_pos0a = ivec2(out_pos.x % pair_size.x,  y);
     ivec2 in_pos0b = ivec2(in_pos0a.x + pair_size.x, y);
@@ -126,22 +115,16 @@ void main() {"##,
     ivec2 in_pos1b = ivec2(in_pos0b.x, y);
     ivec2 in_pos1c = ivec2(in_pos0c.x, y);
     "##, ARROW_PALETTE, r##"
-        // float sign = -1.;
-        // if(out_pos.x < half_trace_count){
-        //     sign = 1.;
-        // }
-    origin = (p0 + p1) / 2.;
+    point = (p0 + p1) / 2.;
     vec3 cross0 = cross(d0u, d0v);
     vec3 cross1 = cross(d1u, d1v);
     delta = normalize(cross(cross0, cross1));
-            // arrow0  = vec4(t0u.a, t0v.a, dot(normalize(d0u), delta), dot(normalize(d0v), delta));
-            // arrow1  = vec4(t1u.a, t1v.a, dot(normalize(d1u), delta), dot(normalize(d1v), delta));
     uvs_out = uvs;
     float du0 = dot(normalize(d0u), delta) * 100. / length(d0u);
     float dv0 = dot(normalize(d0v), delta) * 100. / length(d0v);
     float du1 = dot(normalize(d1u), delta) * 100. / length(d1u);
     float dv1 = dot(normalize(d1v), delta) * 100. / length(d1v);
-    uv_vectors = vec4(du0, dv0, du1, dv1);
+    uv_deltas = vec4(du0, dv0, du1, dv1);
 }"##);
 
 

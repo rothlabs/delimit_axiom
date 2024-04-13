@@ -66,10 +66,10 @@ impl GPU {
         self.gl.viewport(0, 0, buffer.size.x, buffer.size.y);
         self.gl.draw_arrays(GL::TRIANGLES, 0, 6);
     }
-    pub fn draw_at_pos(&self, buffer: &Framebuffer, pos: IVec2) {
+    pub fn draw_at_y(&self, buffer: &Framebuffer, y: i32, height: i32) {
         self.gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&buffer.content));
         //self.draw_buffers(attachments);
-        self.gl.viewport(pos.x, pos.y, buffer.size.x, buffer.size.y);
+        self.gl.viewport(0, y, buffer.size.x, height);
         self.gl.draw_arrays(GL::TRIANGLES, 0, 6);
     }
     pub fn set_uniform_1i(&self, program: &WebGlProgram, name: &str, value: i32) {

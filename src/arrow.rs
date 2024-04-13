@@ -1,44 +1,43 @@
-use std::f32::consts::FRAC_PI_4;
+use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, FRAC_PI_8};
 use glam::*;
 use crate::{log, CurveShape};
 
-const TWO_RAYS: &str = "There should be two rays or more.";
+const TWO_ARROWS: &str = "There should be two arrows or more.";
 
 #[derive(Default, Clone)]
-pub struct Ray {
-    pub origin: Vec3,
-    pub vector: Vec3,
+pub struct Arrow {
+    pub point: Vec3,
+    pub delta: Vec3,
 }
 
-impl Ray {
+impl Arrow {
     pub fn new(origin: Vec3, vector: Vec3) -> Self {
-        Self {origin, vector}
+        Self {point: origin, delta: vector}
     }
-    pub fn middle(&self, ray: &Ray) -> Vec3 {
-        let v0 = self.vector.normalize();
-        let v1 = ray.vector.normalize();
-
-        //if v0.normalize().dot(v1.normalize()) > 0.95 { // parallel case
-        if v0.cross(v1).length() < 0.001 {
-            return (self.origin + ray.origin) / 2.;
+    pub fn middle(&self, arrow: &Arrow) -> Vec3 {
+        let v0 = self.delta.normalize();
+        let v1 = arrow.delta.normalize();
+        //if v0.dot(v1) > 0.95 { 
+        if v0.cross(v1).length() < 0.001 { // parallel case
+            return (self.point + arrow.point) / 2.;
         }
         let a = v0.dot(v0);
         let b = v0.dot(v1);
-        let c =  v1.dot(v1);
-        let delta = self.origin - ray.origin;
+        let c = v1.dot(v1);
+        let delta = self.point - arrow.point;
         let d = v0.dot(delta);
-        let e =  v1.dot(delta);
+        let e = v1.dot(delta);
         let denom = a * c - b * b;
         let u0 = (b * e - c * d) / denom;
         let u1 = (a * e - b * d) / denom;
-        let p0 = self.origin + v0 * u0;
-        let p1 = ray.origin  + v1  * u1;
+        let p0 = self.point + v0 * u0;
+        let p1 = arrow.point  + v1  * u1;
 
-        let wow = (p0 + p1) / 2.;
-        if wow.is_nan() {
-            log("ray middle nan!");
+        let point = (p0 + p1) / 2.;
+        if point.is_nan() {
+            log("arrow.middle -> nan!");
         }
-        wow
+        point
         //(p0 + p1) / 2.
     }
 }
@@ -48,39 +47,39 @@ pub trait ToCurve {
     fn to_curve(self) -> CurveShape;
 }
 
-impl ToCurve for Vec<Ray> {
+impl ToCurve for Vec<Arrow> {
     fn to_curve(self) -> CurveShape {
-        RaysToCurve {
+        ArrowsToCurve {
             curve: CurveShape::from_order(3),
-            ray: self.first().expect(TWO_RAYS).clone(),
+            arrow: self.first().expect(TWO_ARROWS).clone(),
             knot:  0.,
         }.make(self)
     }
 }
 
-pub struct RaysToCurve {
+pub struct ArrowsToCurve {
     curve: CurveShape,
     knot:  f32,
-    ray:   Ray,
+    arrow:   Arrow,
 }
 
-impl RaysToCurve {
-    fn make(&mut self, rays: Vec<Ray>) -> CurveShape {
-        self.curve.controls.push(self.ray.origin);
+impl ArrowsToCurve {
+    fn make(&mut self, arrows: Vec<Arrow>) -> CurveShape {
+        self.curve.controls.push(self.arrow.point);
         self.curve.nurbs.weights.push(1.);
-        let vector = rays.get(1).expect(TWO_RAYS).vector;
-        let mut base_angle = self.ray.vector.angle_between(vector);
-        for (i, ray) in rays.windows(2).enumerate() {
+        let vector = arrows.get(1).expect(TWO_ARROWS).delta;
+        let mut base_angle = self.arrow.delta.angle_between(vector);
+        for (i, arrow) in arrows.windows(2).enumerate() {
             if i > 0 {
-                let angle = self.ray.vector.angle_between(ray[1].vector);
-                if angle > FRAC_PI_4 || (angle > 0.01 && angle < base_angle) { // 1/8th turn or inflection 
-                    self.add_arc(&ray[0]);
+                let angle = self.arrow.delta.angle_between(arrow[1].delta);
+                if angle > FRAC_PI_2 || (angle > 0.05 && angle < base_angle) { // 1/8th turn or inflection 
+                    self.add_arc(&arrow[0]);
                     base_angle = 0.;
                 }else{
                     base_angle = angle;
                 }
-                if i+3 > rays.len() {
-                    self.add_arc(&ray[1]);
+                if i+3 > arrows.len() {
+                    self.add_arc(&arrow[1]);
                 }
             }
         }
@@ -88,24 +87,24 @@ impl RaysToCurve {
         self.curve.nurbs.normalize_knots();
         self.curve.clone()
     }
-    fn add_arc(&mut self, ray: &Ray) { 
-        let middle = self.ray.middle(ray);
+    fn add_arc(&mut self, arrow: &Arrow) { 
+        let middle = self.arrow.middle(arrow);
         self.curve.controls.push(middle); 
-        self.curve.controls.push(ray.origin);
-        if (self.ray.origin - middle).length() == 0. {
-            log("self.ray and middle the same");
-            console_log!("diff of self.ray and ray {}", (self.ray.origin - ray.origin).length());
+        self.curve.controls.push(arrow.point);
+        if (self.arrow.point - middle).length() == 0. {
+            log("self.arrow and middle the same");
+            console_log!("diff of self.arrow and arrow {}", (self.arrow.point - arrow.point).length());
         }
-        if (ray.origin - middle).length() == 0. {
-            log("ray and middle the same");
-            console_log!("diff of self.ray and ray {}", (self.ray.origin - ray.origin).length());
+        if (arrow.point - middle).length() == 0. {
+            log("arrow and middle the same");
+            console_log!("diff of self.arrow and arrow {}", (self.arrow.point - arrow.point).length());
         }
-        self.knot += (ray.origin - self.ray.origin).length();
+        self.knot += (arrow.point - self.arrow.point).length();
         //self.knot += 1.;
         self.curve.nurbs.knots.extend(&[self.knot, self.knot]);
-        let angle = self.ray.vector.angle_between(ray.vector);
-        self.curve.nurbs.weights.extend(&[(angle / 2.).cos(), 1.]); 
-        self.ray = ray.clone();
+        let angle = self.arrow.delta.angle_between(arrow.delta);
+        self.curve.nurbs.weights.extend(&[2., 1.]);  // (angle / 2.).cos()
+        self.arrow = arrow.clone();
     }
 }
 

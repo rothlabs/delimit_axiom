@@ -31,7 +31,7 @@ mod revolve;
 mod grid_pattern;
 mod radial_pattern;
 mod mirror;
-mod ray;
+mod arrow;
 
 use utils::*;
 use nurbs::{curve::*, facet::*};

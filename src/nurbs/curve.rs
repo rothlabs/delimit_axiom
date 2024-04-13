@@ -2,7 +2,7 @@
 use std::f32::consts::PI;
 use std::f32::EPSILON;
 use crate::log;
-use crate::{get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, ray::Ray, scene::Polyline, Model, Shape};
+use crate::{get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, arrow::Arrow, scene::Polyline, Model, Shape};
 use glam::*;
 use serde::{Deserialize, Serialize};
 use super::Nurbs;
@@ -48,9 +48,9 @@ impl Curve {
             if let Shape::Curve(circle) = shapes[0].clone() {
                 for i in 0..self.arrows {
                     let mut curve = CurveShape::default();
-                    let ray = circle.get_ray(i as f32 / (self.arrows - 1) as f32);
-                    curve.controls.push(ray.origin);
-                    curve.controls.push(ray.origin + ray.vector);
+                    let ray = circle.get_arrow(i as f32 / (self.arrows - 1) as f32);
+                    curve.controls.push(ray.point);
+                    curve.controls.push(ray.point + ray.delta);
                     shapes.push(Shape::Curve(curve.get_valid()));
                 }
             }
@@ -180,9 +180,9 @@ impl CurveShape {
         // let length_ratio = (target.length() / p0.distance(p1)) * step;
         // let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
 
-        let ray = self.get_ray(u);
-        let length_ratio = target.length() / ray.vector.length();
-        let u_dir = ray.vector.normalize().dot(target.normalize()) * length_ratio;
+        let ray = self.get_arrow(u);
+        let length_ratio = target.length() / ray.delta.length();
+        let u_dir = ray.delta.normalize().dot(target.normalize()) * length_ratio;
 
         let mut u1 = u;
         // if u_dir.is_nan() {
@@ -231,8 +231,8 @@ impl CurveShape {
         //point
     }
 
-    pub fn get_ray(&self, u: f32) -> Ray {
-        let mut ray = Ray::new(Vec3::ZERO, Vec3::ZERO);
+    pub fn get_arrow(&self, u: f32) -> Arrow {
+        let mut ray = Arrow::new(Vec3::ZERO, Vec3::ZERO);
         //let velocity_scale = self.max - self.min;
         let u = self.min * (1.-u) + self.max * u;    
         // let knot_index = self.nurbs.get_knot_index(u);       
@@ -242,8 +242,8 @@ impl CurveShape {
             for k in 0..self.nurbs.order {
                 let i = 4 - self.nurbs.order + k;
                 let ci = ki - 3 + i;
-                ray.origin += self.controls[ci] * basis.0[i];
-                ray.vector += self.controls[ci] * basis.1[i];
+                ray.point += self.controls[ci] * basis.0[i];
+                ray.delta += self.controls[ci] * basis.1[i];
             }
         // }else{
         //     ray.origin = *self.controls.last().expect(TWO_CONTROL_POINTS);
@@ -251,7 +251,7 @@ impl CurveShape {
         //     let lki = self.nurbs.knots.len()-1;
         //     ray.vector = ray.vector / (self.nurbs.knots[lki] - self.nurbs.knots[lki-self.nurbs.order]);
         // }
-        ray.vector *= self.max - self.min;
+        ray.delta *= self.max - self.min;
         ray
     }
 

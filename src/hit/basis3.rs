@@ -115,7 +115,7 @@ impl TraceBasis {
         let mut uv_texels   = vec![];
         let mut box_texels  = vec![];
         let mut misses      = vec![];
-        let mut length = 0;
+        //let mut length = 0;
         //for k in 0..2 {
             for i in 0..basis.index_pairs.len() {
                 if hit_miss[i*4] > -0.5 { // it's a hit
@@ -125,7 +125,7 @@ impl TraceBasis {
                     pair_texels.extend([basis.pair_texels[i*2], basis.pair_texels[i*2+1]]);
                     uv_texels.extend([hit_miss[i*4+0], hit_miss[i*4+1], hit_miss[i*4+2], hit_miss[i*4+3]]); // use .slice of tex
                     box_texels.extend([1., 1., 0., 0.]);
-                    length += 4;
+                    //length += 4;
                 }else{
                     if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() || hit_miss[i*4+2].abs() < 0.011 {
                         continue;
@@ -139,6 +139,9 @@ impl TraceBasis {
                 }
             }
         //}
+        pair_texels.extend(pair_texels.clone());
+        uv_texels.extend(uv_texels.clone());
+        box_texels.extend(box_texels.clone());
         TraceBasis {
             index_pairs, 
             pair_texels,

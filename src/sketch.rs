@@ -172,9 +172,9 @@ impl Circle {
             if let Shape::Curve(circle) = shapes[0].clone() {
                 for i in 0..self.arrows {
                     let mut curve = CurveShape::default();
-                    let ray = circle.get_ray(i as f32 / (self.arrows - 1) as f32);
-                    curve.controls.push(ray.origin);
-                    curve.controls.push(ray.origin + ray.vector);
+                    let arrow = circle.get_arrow(i as f32 / (self.arrows - 1) as f32);
+                    curve.controls.push(arrow.point);
+                    curve.controls.push(arrow.point + arrow.delta);
                     shapes.push(Shape::Curve(curve.get_valid()));
                 }
             }

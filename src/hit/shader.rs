@@ -137,10 +137,10 @@ void main() {"##,
             // arrow0  = vec4(t0u.a, t0v.a, dot(normalize(d0u), delta), dot(normalize(d0v), delta));
             // arrow1  = vec4(t1u.a, t1v.a, dot(normalize(d1u), delta), dot(normalize(d1v), delta));
     uvs_out = uvs;
-    float du0 = dot(normalize(d0u), delta);// *100. / length(d0u);
-    float dv0 = dot(normalize(d0v), delta);// *100. / length(d0v);
-    float du1 = dot(normalize(d1u), delta);// *100. / length(d1u);
-    float dv1 = dot(normalize(d1v), delta);// *100. / length(d1v);
+    float du0 = dot(normalize(d0u), delta) * 100. / length(d0u);
+    float dv0 = dot(normalize(d0v), delta) * 100. / length(d0v);
+    float du1 = dot(normalize(d1u), delta) * 100. / length(d1u);
+    float dv1 = dot(normalize(d1v), delta) * 100. / length(d1v);
     uv_vectors = vec4(du0, dv0, du1, dv1);
 }"##);
 

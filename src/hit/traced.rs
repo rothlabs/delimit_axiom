@@ -131,30 +131,30 @@ pub fn get_traced_curves(
             continue;
         }
         //if duplicate {continue}
-        for i in 0..rays0a.len()-1 {
-            if rays0a[i+1].delta.is_nan() {
-                rays0a[i+1].delta = rays0a[i].delta;
-            }else if rays0a[i].delta.is_nan() {
-                rays0a[i].delta = rays0a[i+1].delta;
-            }
-        }
-        for i in 0..rays1a.len()-1 {
-            if rays1a[i+1].delta.is_nan() {
-                rays1a[i+1].delta = rays1a[i].delta;
-            }else if rays1a[i].delta.is_nan() {
-                rays1a[i].delta = rays1a[i+1].delta;
-            }
-        }
-        for i in 0..rays0a.len() {
-            if rays0a[i].delta.is_nan() {
-                log("rays0a nan!!!");
-            }
-        }
-        for i in 0..rays1a.len() {
-            if rays1a[i].delta.is_nan() {
-                log("rays1a nan!!!");
-            }
-        }
+                // for i in 0..rays0a.len()-1 {
+                //     if rays0a[i+1].delta.is_nan() {
+                //         rays0a[i+1].delta = rays0a[i].delta;
+                //     }else if rays0a[i].delta.is_nan() {
+                //         rays0a[i].delta = rays0a[i+1].delta;
+                //     }
+                // }
+                // for i in 0..rays1a.len()-1 {
+                //     if rays1a[i+1].delta.is_nan() {
+                //         rays1a[i+1].delta = rays1a[i].delta;
+                //     }else if rays1a[i].delta.is_nan() {
+                //         rays1a[i].delta = rays1a[i+1].delta;
+                //     }
+                // }
+                // for i in 0..rays0a.len() {
+                //     if rays0a[i].delta.is_nan() {
+                //         log("rays0a nan!!!");
+                //     }
+                // }
+                // for i in 0..rays1a.len() {
+                //     if rays1a[i].delta.is_nan() {
+                //         log("rays1a nan!!!");
+                //     }
+                // }
         // console_log!("dirs0 {:?}", rays0a.iter().map(|x| x.vector).collect::<Vec<Vec3>>());
         // console_log!("dirs1 {:?}", rays1a.iter().map(|x| x.vector).collect::<Vec<Vec3>>());
         // let mut curve0 = CurveShape::default();

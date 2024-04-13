@@ -71,6 +71,8 @@ impl ArrowsToCurve {
         let mut base_angle = self.arrow.delta.angle_between(vector);
         for (i, arrow) in arrows.windows(2).enumerate() {
             if i > 0 {
+                console_log!("arrow[1].point {}", arrow[1].point);
+                console_log!("arrow[1].delta {}", arrow[1].delta);
                 let angle = self.arrow.delta.angle_between(arrow[1].delta);
                 if angle > FRAC_PI_2 || (angle > 0.05 && angle < base_angle) { // 1/8th turn or inflection 
                     self.add_arc(&arrow[0]);
@@ -107,6 +109,63 @@ impl ArrowsToCurve {
         self.arrow = arrow.clone();
     }
 }
+
+
+
+
+
+
+// impl ArrowsToCurve {
+//     fn make(&mut self, arrows: Vec<SpaceArrow>) -> CurveShape {
+//         self.curve.controls.push(self.arrow.point);
+//         self.curve.nurbs.weights.push(1.);
+//         let vector = arrows.get(1).expect(TWO_ARROWS).world_delta;
+//         let mut base_angle = self.arrow.world_delta.angle_between(vector);
+//         for (i, arrow) in arrows.windows(2).enumerate() {
+//             if i > 0 {
+//                 console_log!("arrow.point {}", arrow[1].point);
+//                 let angle = self.arrow.world_delta.angle_between(arrow[1].world_delta);
+//                 if angle > FRAC_PI_4 || (angle > 0.1 && angle < base_angle) { // 1/8th turn or inflection 
+//                     self.add_arc(&arrows[0]);
+//                     base_angle = 0.;
+//                 }else{
+//                     base_angle = angle;
+//                 }
+//                 if i+3 > arrows.len() {
+//                     self.add_arc(&arrows[1]);
+//                 }
+//             }
+//         }
+//         self.curve.nurbs.knots.push(self.knot);
+//         self.curve.nurbs.normalize_knots();
+//         self.curve.clone()
+//     }
+//     fn add_arc(&mut self, arrow: &SpaceArrow) { 
+//         let middle = self.arrow.middle(arrow);
+//         self.curve.controls.push(middle); 
+//         self.curve.controls.push(arrow.point);
+//         if (self.arrow.point - middle).length() == 0. {
+//             log("self.arrow and middle the same");
+//             console_log!("diff of self.arrow and arrow {}", (self.arrow.point - arrow.point).length());
+//         }
+//         // if (arrow.point - middle).length() == 0. {
+//         //     log("arrow and middle the same");
+//         //     console_log!("diff of self.arrow and arrow {}", (self.arrow.point - arrow.point).length());
+//         // }
+//         self.knot += (arrow.point - self.arrow.point).length();
+//         //self.knot += 1.;
+//         self.curve.nurbs.knots.extend(&[self.knot, self.knot]);
+//         let angle = self.arrow.world_delta.angle_between(arrow.world_delta);
+//         self.curve.nurbs.weights.extend(&[(angle / 2.).cos(), 1.]);  
+//         self.arrow = arrow.clone();
+//     }
+// }
+
+
+
+
+
+
 
 
 // pub fn new(rays: Vec<Ray>) -> CurveShape {

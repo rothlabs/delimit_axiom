@@ -130,7 +130,7 @@ impl HitBasis3 {
             boxes:   self.gpu.framebuffer.make_empty_rgba32f(3, boxes_buf_size)?,
             dual:    self.gpu.framebuffer.make_multi_empty_rgba32f(4,  dual_buf_size,    4)?, // point, deriv_u,u, deriv_v,v, box
             palette: self.gpu.framebuffer.make_multi_empty_rgba32f(8,  palette_buf_size, 4)?, // point, deriv_u,u, deriv_v,v, box
-            trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(12, trace_buf_size,   4)?, // origins, vectors, uvs, uv_vectors
+            trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(12, trace_buf_size,   5)?, // origins, vectors, uvs, uv_vectors
         });
         self.trace(trace_length);
         let buff1   = &self.trace_buffer.as_ref().unwrap();
@@ -139,7 +139,8 @@ impl HitBasis3 {
         let vectors    = self.gpu.read(&buff1.trace, 1);
         let uvs        = self.gpu.read(&buff1.trace, 2);
         let uv_vectors = self.gpu.read(&buff1.trace, 3);
-        let traced_curves = get_traced_curves(trace_basis.index_pairs, trace_buf_size, uvs, boxes, origins, uv_vectors, vectors);
+        let uv_vectors_local = self.gpu.read(&buff1.trace, 4);
+        let traced_curves = get_traced_curves(trace_basis.index_pairs, trace_buf_size, uvs, boxes, origins, uv_vectors, vectors, uv_vectors_local);
         for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
             let IndexPair{g0, g1, i0, i1} = index_pair;
             self.facet_hits[g0][i0][g1-g0-1].push(curve0);
@@ -169,7 +170,7 @@ impl HitBasis3 {
     fn hone(&self) {
         let buff = &self.hone_buffer.as_ref().unwrap();
         self.draw_init_hone_palette();
-        for _ in 0..3 {
+        for _ in 0..8 {
             self.draw_hone_palette(&buff.palette1, 3);
             self.draw_hone_palette(&buff.palette0, 6);
         }

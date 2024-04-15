@@ -15,6 +15,7 @@ pub struct TracedCurve {
 pub fn get_traced_curves(
     index_pairs: Vec<IndexPair>, buf_size: IVec2, traces: Vec<f32>, boxes: Vec<f32>, 
     centers0: Vec<f32>, uv_dirs: Vec<f32>, dirs: Vec<f32>, 
+    uv_dirs_local: Vec<f32>,
 ) -> Vec<TracedCurve> {
     let mut traced_curves = vec![];
     let mut box_map: HashMap<String, Vec<(Vec2, Vec2)>> = HashMap::new();
@@ -51,19 +52,22 @@ pub fn get_traced_curves(
             if prev_point.distance(point) < 0.05 {break;}
             prev_point = point;
             //curve0.controls.push(vec3(traces[j+0], traces[j+1], 0.));
-            rays0a.push(Arrow{ 
+            rays0a.push(SpaceArrow{ 
                 point: vec3(traces[j+0], traces[j+1], 0.),
-                delta: vec3(uv_dirs[j+0], uv_dirs[j+1], 0.),
+                world_delta: vec3(uv_dirs[j+0], uv_dirs[j+1], 0.),
+                local_delta: vec3(uv_dirs_local[j+0], uv_dirs_local[j+1], 0.),
             });
             //rays1a.push(vec3(traces[j+2], traces[j+3], 0.));
-            rays1a.push(Arrow{ 
+            rays1a.push(SpaceArrow{ 
                 point: vec3(traces[j+2], traces[j+3], 0.),
-                delta: vec3(uv_dirs[j+2], uv_dirs[j+3], 0.), // was negated
+                world_delta: vec3(uv_dirs[j+2], uv_dirs[j+3], 0.), // was negated
+                local_delta: vec3(uv_dirs_local[j+2], uv_dirs_local[j+3], 0.),
             });
             //center.controls.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
-            rays2a.push(Arrow{ 
+            rays2a.push(SpaceArrow{ 
                 point: vec3(centers0[j+0], centers0[j+1], centers0[j+2]),
-                delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
+                world_delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
+                local_delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
             });
         }
         rays1a.reverse();
@@ -81,19 +85,22 @@ pub fn get_traced_curves(
             if prev_point.distance(point) < 0.05 {break;}
             prev_point = point;
             //points0.push(vec3(traces[j+0], traces[j+1], 0.));
-            rays0b.push(Arrow{ 
+            rays0b.push(SpaceArrow{ 
                 point:  vec3(traces[j+0],  traces[j+1],  0.),
-                delta:  vec3(uv_dirs[j+0], uv_dirs[j+1], 0.), // was negated
+                world_delta:  vec3(uv_dirs[j+0], uv_dirs[j+1], 0.), // was negated
+                local_delta:  vec3(uv_dirs_local[j+0], uv_dirs_local[j+1], 0.),
             });
             //curve1.controls.push(vec3(traces[j+2], traces[j+3], 0.));
-            rays1b.push(Arrow{ 
+            rays1b.push(SpaceArrow{ 
                 point: vec3(traces[j+2],  traces[j+3],  0.),
-                delta: vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
+                world_delta: vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
+                local_delta: vec3(uv_dirs_local[j+2], uv_dirs_local[j+3], 0.),
             });
             //centers1.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
-            rays2b.push(Arrow{ 
+            rays2b.push(SpaceArrow{ 
                 point: vec3(centers0[j+0], centers0[j+1], centers0[j+2]),
-                delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
+                world_delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
+                local_delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
             });
         }
         rays0b.reverse();

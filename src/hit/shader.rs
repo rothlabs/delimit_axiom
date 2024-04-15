@@ -45,8 +45,8 @@ out vec4 hit_miss;
 void main() {"##,
     CORE_PARTS, ARROW_IN_POS, ARROW_PALETTE, r##"
     float dist = length(p0 - p1);
-    vec3 normal0 = -normalize(cross(d0u, d0v));
-    vec3 normal1 = -normalize(cross(d1u, d1v));
+    vec3 normal0 = normalize(cross(d0u, d0v));
+    vec3 normal1 = normalize(cross(d1u, d1v));
     if(dist < tolerance){
         if(abs(dot(normal0, normal1)) < 0.995){     
             hit_miss = uvs;
@@ -66,7 +66,6 @@ void main() {"##,
 pub const INIT_TRACE_PALETTE_SOURCE: &str = concatcp!(
 HEADER, FACET_CORE, ARROW_OUT, r##"
 uniform sampler2D uv_tex;
-    //uniform sampler2D box_tex;
 layout(location=3) out vec4 box;
 void main() {"##,
     CORE_PARTS, FACET_PARTS, r##"
@@ -88,7 +87,6 @@ void main() {"##,
         uv = texelFetch(uv_tex, in_pos, 0).ba;
     }
     output_arrows(facet_index, uv);
-        //box = texelFetch(box_tex, in_pos, 0);
     box = vec4(1., 1., 0., 0.);
     box.x = min(box.x, uv.x);
     box.y = min(box.y, uv.y);
@@ -104,6 +102,7 @@ layout(location=0) out vec3 point;
 layout(location=1) out vec3 delta;
 layout(location=2) out vec4 uvs_out;
 layout(location=3) out vec4 uv_deltas;
+layout(location=4) out vec4 uv_deltas_local;
 void main() {"##,
     CORE_PARTS, r##"
     int y = out_pos.x / pair_size.x;
@@ -120,17 +119,22 @@ void main() {"##,
     vec3 cross1 = cross(d1u, d1v);
     delta = normalize(cross(cross0, cross1));
     uvs_out = uvs;
-    float du0 = dot(normalize(d0u), delta) * 100. / length(d0u);
-    float dv0 = dot(normalize(d0v), delta) * 100. / length(d0v);
-    float du1 = dot(normalize(d1u), delta) * 100. / length(d1u);
-    float dv1 = dot(normalize(d1v), delta) * 100. / length(d1v);
+    float du0 = dot(normalize(d0u), delta);
+    float dv0 = dot(normalize(d0v), delta);
+    float du1 = dot(normalize(d1u), delta);
+    float dv1 = dot(normalize(d1v), delta);
     uv_deltas = vec4(du0, dv0, du1, dv1);
+    float du0l = du0 * 100. / length(d0u);
+    float dv0l = dv0 * 100. / length(d0v);
+    float du1l = du1 * 100. / length(d1u);
+    float dv1l = dv1 * 100. / length(d1v);
+    uv_deltas_local = vec4(du0l, dv0l, du1l, dv1l);
 }"##);
 
 
 pub const TRACE_DUAL_SOURCE: &str = concatcp!(
 HEADER, FACET_CORE, ARROW_CORE, ARROW_IN, ARROW_OUT, r##"
-float step = 0.8;
+float step = 0.4;
 uniform int trace_count;
 uniform sampler2D box_tex;
 layout(location=3) out vec4 box;

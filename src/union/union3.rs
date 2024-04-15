@@ -41,7 +41,7 @@ impl UnionBasis3 {
                             //     |a| !a.distance.is_nan() && !a.dot.is_nan() && a.dot.abs() > 0.01
                             // ).collect();
                             misses[gi][fi][hi].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                            if misses[gi][fi][hi].is_empty() || misses[gi][fi][hi][0].dot * self.facet_groups[gi][fi].nurbs.sign > -0.01 {
+                            if misses[gi][fi][hi].is_empty() || misses[gi][fi][hi][0].dot * self.facet_groups[gi][fi].nurbs.sign < 0.01 {
                                 //self.facets.push(self.facet_groups[gi][fi].clone());
                                 //self.shapes.push(Shape::Facet(self.facet_groups[gi][fi].clone()));
                                 //facet_indices.push((gi, fi));

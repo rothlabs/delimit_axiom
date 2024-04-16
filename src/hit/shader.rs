@@ -39,21 +39,41 @@ HEADER, FACET_CORE, ARROW_CORE, ARROW_IN, ARROW_OUT,
 }"##);
 
 pub const HIT_MISS_SOURCE: &str = concatcp!(
-HEADER, ARROW_IN, r##"
+HEADER, ARROW_IN, FACET_CORE, r##"
 float tolerance = 0.005;
 out vec4 hit_miss;
 void main() {"##,
-    CORE_PARTS, ARROW_IN_POS, ARROW_PALETTE, r##"
-    float dist = length(p0 - p1);
+    CORE_PARTS, FACET_PARTS, ARROW_IN_POS, ARROW_PALETTE, r##"
     vec3 normal0 = normalize(cross(d0u, d0v));
     vec3 normal1 = normalize(cross(d1u, d1v));
-    if(dist < tolerance){
+    if(length(p0 - p1) < tolerance){
         if(abs(dot(normal0, normal1)) < 0.995){     
             hit_miss = uvs;
         }else{
             hit_miss = vec4(-1, 0, 0, 0); 
         }
     }else{
+        if(uvs.x < 0.01){
+            p0 = p0 + normalize(d0u) * 0.01;
+        }else if(uvs.x > 0.99){
+            p0 = p0 - normalize(d0u) * 0.01;
+        }
+        if(uvs.y < 0.01){
+            p0 = p0 + normalize(d0v) * 0.01;
+        }else if(uvs.y > 0.99){
+            p0 = p0 - normalize(d0v) * 0.01;
+        }
+        if(uvs.z < 0.01){
+            p1 = p1 + normalize(d1u) * 0.01;
+        }else if(uvs.z > 0.99){
+            p1 = p1 - normalize(d1u) * 0.01;
+        }
+        if(uvs.w < 0.01){
+            p1 = p1 + normalize(d1v) * 0.01;
+        }else if(uvs.w > 0.99){
+            p1 = p1 - normalize(d1v) * 0.01;
+        }
+        float dist = length(p0 - p1);
         hit_miss = vec4(
             -1, 
             dist, 
@@ -62,6 +82,8 @@ void main() {"##,
         );
     }
 }"##);
+
+
 
 pub const INIT_TRACE_PALETTE_SOURCE: &str = concatcp!(
 HEADER, FACET_CORE, ARROW_OUT, r##"
@@ -97,7 +119,6 @@ void main() {"##,
 
 pub const TRACE_SEGMENT_SOURCE: &str = concatcp!( // TODO: does not need pair_tex, only size!
 HEADER, ARROW_IN, r##"
-uniform int half_trace_count;
 layout(location=0) out vec3 point;
 layout(location=1) out vec3 delta;
 layout(location=2) out vec4 uvs_out;
@@ -119,22 +140,17 @@ void main() {"##,
     vec3 cross1 = cross(d1u, d1v);
     delta = normalize(cross(cross0, cross1));
     uvs_out = uvs;
-    float du0 = dot(normalize(d0u), delta);
-    float dv0 = dot(normalize(d0v), delta);
-    float du1 = dot(normalize(d1u), delta);
-    float dv1 = dot(normalize(d1v), delta);
+    float du0 = dot(normalize(d0u), delta) * 100. / length(d0u);
+    float dv0 = dot(normalize(d0v), delta) * 100. / length(d0v);
+    float du1 = dot(normalize(d1u), delta) * 100. / length(d1u);
+    float dv1 = dot(normalize(d1v), delta) * 100. / length(d1v);
     uv_deltas = vec4(du0, dv0, du1, dv1);
-    float du0l = du0 * 100. / length(d0u);
-    float dv0l = dv0 * 100. / length(d0v);
-    float du1l = du1 * 100. / length(d1u);
-    float dv1l = dv1 * 100. / length(d1v);
-    uv_deltas_local = vec4(du0l, dv0l, du1l, dv1l);
 }"##);
 
 
 pub const TRACE_DUAL_SOURCE: &str = concatcp!(
 HEADER, FACET_CORE, ARROW_CORE, ARROW_IN, ARROW_OUT, r##"
-float step = 0.4;
+float step = 0.5;
 uniform int trace_count;
 uniform sampler2D box_tex;
 layout(location=3) out vec4 box;
@@ -221,89 +237,104 @@ void main() {"##,
 ////////////////////////////////////////////////////
 
 
-pub const HONE_TRACE_SOURCE: &str = concatcp!(r##"#version 300 es
-precision highp float;
-precision highp sampler2D;
-precision highp isampler2D;
-uniform isampler2D pair_tex;
-uniform sampler2D origin_tex;
-uniform sampler2D uv_tex;
-uniform sampler2D box_tex;
-layout(location=0) out vec4 uvs;
-layout(location=1) out vec4 box;
-layout(location=2) out vec3 point;
-"##,
-FACET_CORE, ARROW_CORE, 
-"void main() {",
-    FACET_PARTS, ARROW_DUAL, HONE, 
-    r##"
-    box = texelFetch(box_tex, pair_coord, 0);
-    vec2 uv = vec2(0, 0);
-    if(i < 1){
-        uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
-        point = (p0_a + p1_a) / 2.;
-        uv = uv0_a;
-    // }else if(i < 2){
-    //     uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
-    //     point = (p0_b + p1_b) / 2.;
-    //     uv = uv0_b;
-    }else if(i < 2){
-        uvs = vec4(uv0_c.x, uv0_c.y, uv1.x, uv1.y);
-        point = (p0_c + p1a) / 2.;
-        uv = uv0_c;
-    }else{
-        uvs = vec4(uv0.x, uv0.y, uv1_c.x, uv1_c.y);
-        point = (p0a + p1_c) / 2.;
-        uv = uv0;
-    }
-    box.x = min(box.x, uv.x);
-    box.y = min(box.y, uv.y);
-    box.z = max(box.z, uv.x);
-    box.w = max(box.w, uv.y);
-}
-"##);
+// pub const HONE_TRACE_SOURCE: &str = concatcp!(r##"#version 300 es
+// precision highp float;
+// precision highp sampler2D;
+// precision highp isampler2D;
+// uniform isampler2D pair_tex;
+// uniform sampler2D origin_tex;
+// uniform sampler2D uv_tex;
+// uniform sampler2D box_tex;
+// layout(location=0) out vec4 uvs;
+// layout(location=1) out vec4 box;
+// layout(location=2) out vec3 point;
+// "##,
+// FACET_CORE, ARROW_CORE, 
+// "void main() {",
+//     FACET_PARTS, ARROW_DUAL, HONE, 
+//     r##"
+//     box = texelFetch(box_tex, pair_coord, 0);
+//     vec2 uv = vec2(0, 0);
+//     if(i < 1){
+//         uvs = vec4(uv0_a.x, uv0_a.y, uv1_a.x, uv1_a.y);
+//         point = (p0_a + p1_a) / 2.;
+//         uv = uv0_a;
+//     // }else if(i < 2){
+//     //     uvs = vec4(uv0_b.x, uv0_b.y, uv1_b.x, uv1_b.y);
+//     //     point = (p0_b + p1_b) / 2.;
+//     //     uv = uv0_b;
+//     }else if(i < 2){
+//         uvs = vec4(uv0_c.x, uv0_c.y, uv1.x, uv1.y);
+//         point = (p0_c + p1a) / 2.;
+//         uv = uv0_c;
+//     }else{
+//         uvs = vec4(uv0.x, uv0.y, uv1_c.x, uv1_c.y);
+//         point = (p0a + p1_c) / 2.;
+//         uv = uv0;
+//     }
+//     box.x = min(box.x, uv.x);
+//     box.y = min(box.y, uv.y);
+//     box.z = max(box.z, uv.x);
+//     box.w = max(box.w, uv.y);
+// }
+// "##);
 
 
-pub const TRACE_SOURCE: &str = concatcp!(r##"#version 300 es
-precision highp float;
-precision highp sampler2D;
-precision highp isampler2D;
+// pub const TRACE_SOURCE: &str = concatcp!(r##"#version 300 es
+// precision highp float;
+// precision highp sampler2D;
+// precision highp isampler2D;
 
-float step = 0.8;
-float tolerance = 0.005;
-uniform isampler2D pair_tex;
-uniform sampler2D origin_tex;
-uniform sampler2D uv_tex;
-uniform sampler2D box_tex;
-layout(location=0) out vec4 uvs;
-layout(location=1) out vec4 box;
-layout(location=2) out vec4 uvDirs;
-layout(location=3) out vec3 dir;
-"##,
-FACET_CORE, ARROW_CORE, 
-"void main() {",
-    FACET_PARTS, ARROW_DUAL, 
-    r##"
-    float sign = -1.;
-    if(pair_coord.x < pair_size.x/2){
-        sign = 1.;
-    }
-    vec3 normal0 = get_facet_normal(uv0, p0a, p0b, p0c);
-    vec3 normal1 = get_facet_normal(uv1, p1a, p1b, p1c);
-    dir = normalize(cross(normal0, normal1));
-    vec3 target = dir * sign * step;
-    vec2 uv0a = get_uv_from_3d_delta(uv0, p0a, p0b, p0c, target);
-    vec2 uv1a = get_uv_from_3d_delta(uv1, p1a, p1b, p1c, target);
-    uvs = vec4(uv0a.x, uv0a.y, uv1a.x, uv1a.y);
-    box = texelFetch(box_tex, pair_coord, 0);
-    vec2 dirs0 = normalize(uv0a*100.0 - uv0*100.0);
-    vec2 dirs1 = normalize(uv1a*100.0 - uv1*100.0);
-    uvDirs = vec4(dirs0.x, dirs0.y, dirs1.x, dirs1.y);
-}
-"##);
+// float step = 0.8;
+// float tolerance = 0.005;
+// uniform isampler2D pair_tex;
+// uniform sampler2D origin_tex;
+// uniform sampler2D uv_tex;
+// uniform sampler2D box_tex;
+// layout(location=0) out vec4 uvs;
+// layout(location=1) out vec4 box;
+// layout(location=2) out vec4 uvDirs;
+// layout(location=3) out vec3 dir;
+// "##,
+// FACET_CORE, ARROW_CORE, 
+// "void main() {",
+//     FACET_PARTS, ARROW_DUAL, 
+//     r##"
+//     float sign = -1.;
+//     if(pair_coord.x < pair_size.x/2){
+//         sign = 1.;
+//     }
+//     vec3 normal0 = get_facet_normal(uv0, p0a, p0b, p0c);
+//     vec3 normal1 = get_facet_normal(uv1, p1a, p1b, p1c);
+//     dir = normalize(cross(normal0, normal1));
+//     vec3 target = dir * sign * step;
+//     vec2 uv0a = get_uv_from_3d_delta(uv0, p0a, p0b, p0c, target);
+//     vec2 uv1a = get_uv_from_3d_delta(uv1, p1a, p1b, p1c, target);
+//     uvs = vec4(uv0a.x, uv0a.y, uv1a.x, uv1a.y);
+//     box = texelFetch(box_tex, pair_coord, 0);
+//     vec2 dirs0 = normalize(uv0a*100.0 - uv0*100.0);
+//     vec2 dirs1 = normalize(uv1a*100.0 - uv1*100.0);
+//     uvDirs = vec4(dirs0.x, dirs0.y, dirs1.x, dirs1.y);
+// }
+// "##);
 
 
+/////////////////////////////////
 
+        // ivec2 in_pos = out_pos;
+        // int facet_index0 = 0;
+        // int facet_index1 = 0;
+        // if(in_pos.y < pair_size.y){
+        //     facet_index0 = texelFetch(pair_tex, in_pos, 0).r;
+        //     facet_index1 = texelFetch(pair_tex, in_pos + ivec2(0, pair_size.y), 0).g;
+        // }else{
+        //     facet_index0 = texelFetch(pair_tex, in_pos - ivec2(0, pair_size.y), 0).r;
+        //     facet_index1 = texelFetch(pair_tex, in_pos, 0).g;
+        // }
+        // int facet_index0 = texelFetch(pair_tex, in_pos0a, 0).r;
+        // int facet_index1 = texelFetch(pair_tex, in_pos0a, 0).g;
+        // float sign0 = get_facet_texel(facet_index0);
+        // float sign1 = get_facet_texel(facet_index1);
 
 
 // ivec2 box_in_pos = in_pos0a;

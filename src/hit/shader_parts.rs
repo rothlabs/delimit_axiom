@@ -40,7 +40,7 @@ int get_curve_index(int index, int nth){
 
 int get_knot_index(int idx, int knot_count, int order, float u){
     for(int i = 0; i < max_knot_count-1; i++) { 
-        //if(knot_i < 0 && i < knot_count && u >= get_facet_texel(idx + i) && u < get_facet_texel(idx + i + 1)) { 
+            //if(knot_i < 0 && i < knot_count && u >= get_facet_texel(idx + i) && u < get_facet_texel(idx + i + 1)) { 
         if(i < knot_count && u >= get_facet_texel(idx + i) && u < get_facet_texel(idx + i + 1)) { 
             return i; // knot_i = i;
         }

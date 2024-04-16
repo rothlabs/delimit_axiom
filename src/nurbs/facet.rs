@@ -70,19 +70,19 @@ impl FacetShape {
         self
     }
 
-    pub fn reverse_normal(&mut self) -> &mut Self {
-        //let max_knot = *self.nurbs.knots.last().unwrap(); 
-        self.nurbs.knots.reverse();
-        for i in 0..self.nurbs.knots.len() {
-            self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
-        }
-        self.nurbs.weights.reverse();
-        self.controls.reverse();
-        for bndry in &mut self.boundaries {
-            bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
-        }
-        self
-    }
+    // pub fn reverse_normal(&mut self) -> &mut Self {
+    //     //let max_knot = *self.nurbs.knots.last().unwrap(); 
+    //     self.nurbs.knots.reverse();
+    //     for i in 0..self.nurbs.knots.len() {
+    //         self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
+    //     }
+    //     self.nurbs.weights.reverse();
+    //     self.controls.reverse();
+    //     for bndry in &mut self.boundaries {
+    //         bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
+    //     }
+    //     self
+    // }
 
     pub fn reshape(&mut self, mat4: Mat4) -> &mut Self {
         for control in &mut self.controls {

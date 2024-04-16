@@ -1,7 +1,7 @@
 
 use std::f32::consts::PI;
 use std::f32::EPSILON;
-use crate::log;
+use crate::{log, FacetShape};
 use crate::{get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, arrow::Arrow, scene::Polyline, Model, Shape};
 use glam::*;
 use serde::{Deserialize, Serialize};
@@ -40,6 +40,7 @@ impl Curve {
             nurbs: self.nurbs.clone(),
             min: self.min, 
             max: self.max, 
+            rectifier: None,
         }.get_valid())];
 
         //let mut shapes = revolve.get_shapes();
@@ -60,11 +61,18 @@ impl Curve {
 }
 
 #[derive(Clone)]
+pub struct CurveRectifier {
+    pub curve: CurveShape,
+    pub facet: FacetShape,
+}
+
+#[derive(Clone)]
 pub struct CurveShape {
     pub controls: Vec<Vec3>,
     pub nurbs: Nurbs,
     pub min:  f32,
     pub max:  f32,
+    pub rectifier: Option<Box<CurveRectifier>>,
 }
 
 impl Default for CurveShape {
@@ -74,6 +82,7 @@ impl Default for CurveShape {
             nurbs: Nurbs::default(),
             min: 0.,
             max: 1.,  
+            rectifier: None,
         }
     }
 }
@@ -83,6 +92,13 @@ impl CurveShape {
         let mut curve = Self::default();
         curve.nurbs.order = order;
         curve.nurbs.knots.extend(vec![0.; order]);
+        curve
+    }
+
+    pub fn from_nurbs_and_controls(nurbs: Nurbs, controls: Vec<Vec3>) -> Self {
+        let mut curve = Self::default();
+        curve.nurbs = nurbs;
+        curve.controls = controls;
         curve
     }
 
@@ -126,60 +142,17 @@ impl CurveShape {
         curve
     }
 
-    pub fn get_inflection_params(&self) -> Vec<f32> {
-        if self.nurbs.order == 2 && self.controls.len() == 2 {
-            return vec![0., 0.5, 1.];
-        }
+    pub fn get_unique_knots(&self) -> Vec<f32> {
         let mut knots = vec![0.];
-        //let last_knot = self.nurbs.knots.last().unwrap();
-        if self.controls.len() > 1 {
-            let mut direction_basis = (self.controls[1].truncate() - self.controls[0].truncate()).normalize();
-            let mut turn_basis = 0.;
-            for i in 1..self.controls.len()-1 {
-                let dir = (self.controls[i+1].truncate() - self.controls[i].truncate()).normalize();
-                let turn = direction_basis.angle_between(dir);
-                if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
-                    let u0 = self.nurbs.knots[self.nurbs.order + i - 2];// / last_knot;
-                    let u1 = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
-                    let u = (u0 + u1) / 2.;
-                    if u >= self.min && u <= self.max {
-                        knots.push(u);
-                    }
-                }
-                direction_basis = dir;
-                turn_basis = turn;
+        for k in self.nurbs.knots.windows(2) {
+            if k[0] < k[1] {
+                knots.push(k[1]);
             }
         }
-        //knots.push(0.3);
-        knots.push(0.5);
-        //knots.push(0.8);
-        knots.push(1.);
-        // console_log!("full knots! {:?}", self.nurbs.knots);
-        //console_log!("knots! {:?}", knots);
         knots
     }
 
-    pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
-        let mut step = 0.0001; // 0.0001
-        if u + step > 1. {step = -step;}
-        let p0 = self.get_point(u);
-        let p1 = self.get_point(u + step);
-        // if let Some(_) = (p1 - p0).try_normalize() {
-
-        // }else{
-        //     log("failed to normalize");
-        // }
-        (p1 - p0).normalize() * step.signum()
-    }
-
     pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
-        // let mut step = 0.0001;
-        // if u + step > 1. {step = -step;}
-        // let p0 = self.get_point(u);
-        // let p1 = self.get_point(u + step);
-        // let length_ratio = (target.length() / p0.distance(p1)) * step;
-        // let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
-
         let ray = self.get_arrow(u);
         let length_ratio = target.length() / ray.delta.length();
         let u_dir = ray.delta.normalize().dot(target.normalize()) * length_ratio;
@@ -213,45 +186,27 @@ impl CurveShape {
     }
 
     pub fn get_point(&self, u: f32) -> Vec3 {
-        //let mut point = Vec3::ZERO; 
         let u = self.min * (1.-u) + self.max * u;
-        // let knot_index = self.nurbs.get_knot_index(u);       
-        // if let Some(ki) = knot_index {
-            let ki = self.nurbs.get_knot_index(u);      
-            let basis = self.nurbs.get_basis(ki, u);
-            //for component in 0..3 { 
-                return (0..self.nurbs.order).map(|k| {
-                    let i = 4 - self.nurbs.order + k;
-                    self.controls[ki + i - 3] * basis.0[i]
-                }).sum()
-            //}
-        // }else{
-        //     return *self.controls.last().expect(TWO_CONTROL_POINTS);
-        // }
-        //point
+        let ki = self.nurbs.get_knot_index(u);      
+        let basis = self.nurbs.get_basis(ki, u);
+        return (0..self.nurbs.order).map(|k| {
+            let i = 4 - self.nurbs.order + k;
+            self.controls[ki + i - 3] * basis.0[i]
+        }).sum()
     }
 
     pub fn get_arrow(&self, u: f32) -> Arrow {
         let mut ray = Arrow::new(Vec3::ZERO, Vec3::ZERO);
-        //let velocity_scale = self.max - self.min;
         let u = self.min * (1.-u) + self.max * u;    
-        // let knot_index = self.nurbs.get_knot_index(u);       
-        // if let Some(ki) = knot_index {
-            let ki = self.nurbs.get_knot_index(u);  
-            let basis = self.nurbs.get_basis(ki, u);
-            for k in 0..self.nurbs.order {
-                let i = 4 - self.nurbs.order + k;
-                let ci = ki - 3 + i;
-                ray.point += self.controls[ci] * basis.0[i];
-                ray.delta += self.controls[ci] * basis.1[i];
-            }
-        // }else{
-        //     ray.origin = *self.controls.last().expect(TWO_CONTROL_POINTS);
-        //     ray.vector = ray.origin - *self.controls.get(self.controls.len()-2).expect(TWO_CONTROL_POINTS);
-        //     let lki = self.nurbs.knots.len()-1;
-        //     ray.vector = ray.vector / (self.nurbs.knots[lki] - self.nurbs.knots[lki-self.nurbs.order]);
-        // }
-        ray.delta *= self.max - self.min;
+        let ki = self.nurbs.get_knot_index(u);  
+        let basis = self.nurbs.get_basis(ki, u);
+        for k in 0..self.nurbs.order {
+            let i = 4 - self.nurbs.order + k;
+            let ci = ki - 3 + i;
+            ray.point += self.controls[ci] * basis.0[i];
+            ray.delta += self.controls[ci] * basis.1[i];
+        }
+        ray.delta = ray.delta * (self.max - self.min);
         ray
     }
 
@@ -269,10 +224,65 @@ impl CurveShape {
             controls: self.controls.clone(), 
             min: self.min,
             max: self.max,
+            rectifier: self.rectifier.clone(),
         }
     }
 }
 
+
+
+    // pub fn get_tangent_at_u(&self, u: f32) -> Vec3 {
+    //     let mut step = 0.0001; // 0.0001
+    //     if u + step > 1. {step = -step;}
+    //     let p0 = self.get_point(u);
+    //     let p1 = self.get_point(u + step);
+    //     // if let Some(_) = (p1 - p0).try_normalize() {
+
+    //     // }else{
+    //     //     log("failed to normalize");
+    //     // }
+    //     (p1 - p0).normalize() * step.signum()
+    // }
+
+    // pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
+        // let mut step = 0.0001;
+        // if u + step > 1. {step = -step;}
+        // let p0 = self.get_point(u);
+        // let p1 = self.get_point(u + step);
+        // let length_ratio = (target.length() / p0.distance(p1)) * step;
+        // let u_dir = (p1-p0).normalize().dot(target.normalize()) * length_ratio;
+
+
+        // pub fn get_inflection_params(&self) -> Vec<f32> {
+        //     if self.nurbs.order == 2 && self.controls.len() == 2 {
+        //         return vec![0., 0.5, 1.];
+        //     }
+        //     let mut knots = vec![0.];
+        //     //let last_knot = self.nurbs.knots.last().unwrap();
+        //     if self.controls.len() > 1 {
+        //         let mut direction_basis = (self.controls[1].truncate() - self.controls[0].truncate()).normalize();
+        //         let mut turn_basis = 0.;
+        //         for i in 1..self.controls.len()-1 {
+        //             let dir = (self.controls[i+1].truncate() - self.controls[i].truncate()).normalize();
+        //             let turn = direction_basis.angle_between(dir);
+        //             if (turn_basis < -0.01 && turn > 0.01) || (turn_basis > 0.01 && turn < -0.01) {
+        //                 let u0 = self.nurbs.knots[self.nurbs.order + i - 2];// / last_knot;
+        //                 let u1 = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
+        //                 let u = (u0 + u1) / 2.;
+        //                 if u >= self.min && u <= self.max {
+        //                     knots.push(u);
+        //                 }
+        //             }
+        //             direction_basis = dir;
+        //             turn_basis = turn;
+        //         }
+        //     }
+        //     //knots.push(0.3);
+        //     knots.push(0.5);
+        //     //knots.push(0.8);
+        //     knots.push(1.);
+        //     knots
+        // }
 
 
                     // if ci > 0 && i > 1 {

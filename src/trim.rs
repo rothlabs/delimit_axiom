@@ -92,8 +92,8 @@ impl Trim {
                 if i0 == i1 {continue}
                 self.tester.curves.0 = self.group[i0].clone();
                 self.tester.curves.1 = self.group[i1].clone();
-                for u0 in vec![0., 0.25, 0.5, 0.75, 1.] { // self.group[i0].get_inflection_params() {
-                    for u1 in vec![0., 0.25, 0.5, 0.75, 1.] { // self.group[i1].get_inflection_params() {
+                for u0 in self.group[i0].get_unique_knots() { // vec![0., 0.25, 0.5, 0.75, 1.] { //
+                    for u1 in self.group[i1].get_unique_knots() { // vec![0., 0.25, 0.5, 0.75, 1.] { //
                         self.test_curves(i0, i1, u0, u1);
                     }
                 }

@@ -42,12 +42,16 @@ impl Extrude {
             }
             match &shape {
                 Shape::Point(point) => {
-                    let mut curve = CurveShape {
-                        nurbs: basis.nurbs.clone(),
-                        controls: vec![*point, get_reshaped_point(point, basis.mat4)], 
-                        min: 0.,
-                        max: 1.,
-                    };
+                    // let mut curve = CurveShape {
+                    //     nurbs: basis.nurbs.clone(),
+                    //     controls: vec![*point, get_reshaped_point(point, basis.mat4)], 
+                    //     min: 0.,
+                    //     max: 1.,
+                    // };
+                    let mut curve = CurveShape::from_nurbs_and_controls(
+                        basis.nurbs.clone(), 
+                        vec![*point, get_reshaped_point(point, basis.mat4)]
+                    );
                     if self.length < 0. {
                         curve.controls.reverse();
                     }

@@ -32,11 +32,6 @@ impl HitTester2 {
         let mut u1 = start_u1;
         let mut p0 = self.curves.0.get_point(u0);
         let mut p1 = self.curves.1.get_point(u1);
-        //let mut center = Vec3::ZERO;
-        //let mut distance = INFINITY;
-        let mut distance_basis = INFINITY;
-        // let mut u0_prev = u0;
-        // let mut u1_prev = u1;
         for _ in 0..10 {
             if p0.distance(p1) < EPSILON {
                 break;
@@ -44,53 +39,29 @@ impl HitTester2 {
             let target = self.get_tangent_intersection(u0, u1, p0, p1);
             let (u0_t0, p0_t0) = self.curves.0.get_u_and_point_from_target(u0, target - p0);
             let (u1_t0, p1_t0) = self.curves.1.get_u_and_point_from_target(u1, target - p1);
-            let center = (p0 + p1) / 2.;
-            let (u0_t1, p0_t1) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
-            let (u1_t1, p1_t1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
-
-            // let (u0_c, p0_c) = self.curves.0.get_u_and_point_from_target(u0, p1 - p0);
-            // let (u1_c, p1_c) = self.curves.1.get_u_and_point_from_target(u1, p0 - p1);
-
-            // let distances = vec![p0_t0.distance(p1_t0), p0_t1.distance(p1_t1), p1.distance(p0_c), p0.distance(p1_c)];
-            // let mut min_dist = 10000.;
-            // let mut i = 3;
-            // for k in 0..4 {
-            //     if min_dist > distances[k] {
-            //         min_dist = distances[k];
-            //         i = k;
-            //     }
-            // }
-
-            // if i < 1 {
-            //     p0 = p0_t0;
-            //     p1 = p1_t0;
-            //     u0 = u0_t0;
-            //     u1 = u1_t0;
-            // } else if i < 2 {
-            //     p0 = p0_t1;
-            //     p1 = p1_t1;
-            //     u0 = u0_t1;
-            //     u1 = u1_t1;
-            // } else if i < 3 {
-            //     p0 = p0_c;
-            //     u0 = u0_c;
-            // } else {
-            //     p1 = p1_c;
-            //     u1 = u1_c;
-            // }
-
-            if p0_t0.distance(p1_t0) < p0_t1.distance(p1_t1) {
+            let (u0_c, p0_c) = self.curves.0.get_u_and_point_from_target(u0, p1 - p0);
+            let (u1_c, p1_c) = self.curves.1.get_u_and_point_from_target(u1, p0 - p1);
+            let distances = vec![p0_t0.distance(p1_t0), p1.distance(p0_c), p0.distance(p1_c)];
+            let mut min_dist = 10000.;
+            let mut i = 3;
+            for k in 0..3 {
+                if min_dist > distances[k] {
+                    min_dist = distances[k];
+                    i = k;
+                }
+            }
+            if i < 1 {
                 p0 = p0_t0;
                 p1 = p1_t0;
                 u0 = u0_t0;
                 u1 = u1_t0;
+            } else if i < 2 {
+                p0 = p0_c;
+                u0 = u0_c;
             } else {
-                p0 = p0_t1;
-                p1 = p1_t1;
-                u0 = u0_t1;
-                u1 = u1_t1;
+                p1 = p1_c;
+                u1 = u1_c;
             }
-
         }
         //let distance = p0.distance(p1);
         if p0.distance(p1) < self.tolerance  {
@@ -109,8 +80,8 @@ impl HitTester2 {
             if !duplicate {
                 // let tangent0 = -self.curves.0.get_tangent_at_u(u0);
                 // let tangent1 = -self.curves.1.get_tangent_at_u(u1);
-                let tangent0 = -self.curves.0.get_arrow(u0).delta.normalize();
-                let tangent1 = -self.curves.1.get_arrow(u1).delta.normalize();
+                let tangent0 = self.curves.0.get_arrow(u0).delta.normalize();
+                let tangent1 = self.curves.1.get_arrow(u1).delta.normalize();
                 if tangent0.is_nan() {
                     log("hit tangent0 NaN!!!");
                     //break;
@@ -121,8 +92,10 @@ impl HitTester2 {
                 }
                 if tangent0.dot(tangent1).abs() > 0.995 {
                     return Err((
-                        Miss{dot:self.curves.0.nurbs.sign, distance:0.}, // , point: p0 
-                        Miss{dot:self.curves.1.nurbs.sign, distance:0.}, // , point: p1
+                        // Miss{dot:self.curves.0.nurbs.sign, distance:0.}, // , point: p0 
+                        // Miss{dot:self.curves.1.nurbs.sign, distance:0.}, // , point: p1
+                        Miss{dot:0., distance:0.}, // , point: p0 
+                        Miss{dot:0., distance:0.}, // , point: p1
                     ))
                 }
                 let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
@@ -171,8 +144,8 @@ impl HitTester2 {
 
 
         Err((
-            Miss{dot:cross0.dot(-tangent1), distance}, // , point: p0 
-            Miss{dot:cross1.dot(-tangent0), distance}, // , point: p1
+            Miss{dot:cross0.dot(tangent1), distance}, // , point: p0 
+            Miss{dot:cross1.dot(tangent0), distance}, // , point: p1
         ))
     }
 

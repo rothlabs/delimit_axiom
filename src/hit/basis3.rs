@@ -1,5 +1,5 @@
 use glam::*;
-use crate::FacetShape;
+use crate::{log, FacetShape};
 use super::{IndexPair, MissPair};
 
 struct IndexedUV {
@@ -37,7 +37,7 @@ impl HoneBasis {
                 }
                 let texel_i = facet_texels.len();
                 facet_texels.extend([
-                    10000000.,
+                    facet.nurbs.sign, //10000000.,
                     facet.controls.len() as f32,
                     facet.nurbs.order as f32,
                 ]);
@@ -127,9 +127,13 @@ impl TraceBasis {
                     box_texels.extend([1., 1., 0., 0.]);
                     //length += 4;
                 }else{
-                    if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() || hit_miss[i*4+2].abs() < 0.011 {
+                    if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() {
+                        log("nan hit_miss in union3!");
                         continue;
                     }
+                    // if hit_miss[i*4+1].abs() < 0.01 || hit_miss[i*4+2].abs() < 0.01 || hit_miss[i*4+3].abs() < 0.01 {
+                    //     continue;
+                    // }
                     misses.push(MissPair { 
                         index:    basis.index_pairs[i].clone(),
                         distance: hit_miss[i*4+1],

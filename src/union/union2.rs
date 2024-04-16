@@ -45,7 +45,7 @@ impl UnionBasis2 {
                         |a| !a.distance.is_nan() && !a.dot.is_nan() && a.dot.abs() > 0.01
                     ).collect();
                     self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                    if self.miss[g][i].is_empty() || self.miss[g][i][0].dot > -0.01 || self.same_groups {
+                    if self.miss[g][i].is_empty() || self.miss[g][i][0].dot < 0.01 || self.same_groups { // * self.groups[g][i].nurbs.sign
                         self.curves.push(self.groups[g][i].clone());   
                     }
                 }else{
@@ -107,9 +107,9 @@ impl UnionBasis2 {
                 }
                 self.tester.curves.0 = self.groups[0][i0].clone();
                 self.tester.curves.1 = self.groups[1][i1].clone();
-                for u0 in self.groups[0][i0].get_inflection_params() { // 0..5 {//
-                    for u1 in self.groups[1][i1].get_inflection_params() { // 0..5 {//vec![0., 0.25, 0.5, 0.75, 0.85, 1.] {//
-                        self.test_curves(i0, i1, u0, u1);// u0 as f32 / 10., u1 as f32 / 10.);
+                for u0 in self.groups[0][i0].get_unique_knots() { 
+                    for u1 in self.groups[1][i1].get_unique_knots() { 
+                        self.test_curves(i0, i1, u0, u1);
                     }
                 }
             }

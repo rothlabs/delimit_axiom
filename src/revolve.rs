@@ -47,12 +47,16 @@ impl Revolve {
             }
             match &shape {
                 Shape::Point(point) => {
-                    let mut curve = CurveShape {
-                        nurbs: basis.nurbs.clone(),
-                        controls: vec![*point], 
-                        min: 0.,
-                        max: 1.,
-                    };
+                    // let mut curve = CurveShape {
+                    //     nurbs: basis.nurbs.clone(),
+                    //     controls: vec![*point], 
+                    //     min: 0.,
+                    //     max: 1.,
+                    // };
+                    let mut curve = CurveShape::from_nurbs_and_controls(
+                        basis.nurbs.clone(), 
+                        vec![*point]
+                    );
                     for &mat4 in &basis.transforms {
                         curve.controls.push(get_reshaped_point(point, mat4)); 
                     }

@@ -293,18 +293,12 @@ pub const HONE: &str = r##"
         if(out_pos.x < pair_size.x * 2){
             delta = pb - pa;
         }else{
-            delta = get_point_between_facet_tangents(p0, d0u, d0v, p1, d1u, d1v) - pa;
+            delta = get_facet_convergence_point(p0, d0u, d0v, p1, d1u, d1v) - pa;
         }
         uv = get_uv_from_3d_delta(uv, du, dv, delta);
         output_arrows(facet_index, uv);
     }
 "##;
-
-// pub const RAY_OUT: &str = r##"
-//     origin   = vec3(arrows[0], arrows[1], arrows[2]);
-//     vector_u = vec3(arrows[3], arrows[4], arrows[5]);
-//     vector_v = vec3(arrows[6], arrows[7], arrows[8]);
-// "##;
 
 pub const ARROW_CORE: &str = r##"
 
@@ -319,31 +313,29 @@ vec2 get_line_intersection(vec2 alt, vec2 p1, vec2 p2, vec2 p3, vec2 p4) {
     return vec2(x, y);
 }
 
-vec3 get_point_between_lines(vec3 p0, vec3 d1, vec3 p1, vec3 d2) {
-    if(dot(normalize(d1), normalize(d2)) > 0.99) {
-        return (p0 + p1) / 2.0;
+vec3 get_arrow_middle(vec3 p0, vec3 delta0, vec3 p1, vec3 delta1) {
+    float dotx = dot(delta0, delta1);
+    if(abs(dotx) > 0.99) {
+        return (p0 + p1) / 2.;
     }
-    float a = dot(d1, d1);
-    float b = dot(d1, d2);
-    float c = dot(d2, d2);
-    vec3 v = p0 - p1;
-    float d = dot(d1, v);
-    float e = dot(d2, v);
-    float denom = a * c - b * b;
-    float t = (b * e - c * d) / denom;
-    float s = (a * e - b * d) / denom;
-    vec3 closest0 = p0 + t * d1;
-    vec3 closest1 = p1 + s * d2;
+    vec3 delta = p0 - p1;
+    float dot0 = dot(delta, delta0);
+    float dot1 = dot(delta, delta1);
+    float denom = 1. - dotx * dotx;
+    float t = (dotx * dot1 - dot0) / denom;
+    float s = (dot1 - dotx * dot0) / denom;
+    vec3 closest0 = p0 + t * delta0;
+    vec3 closest1 = p1 + s * delta1;
     return (closest0 + closest1) / 2.;
 }
 
-vec3 get_point_between_facet_tangents(vec3 p0, vec3 d0u, vec3 d0v, vec3 p1, vec3 d1u, vec3 d1v){
-    vec3 normal0 = normalize(cross(d0u, d0v));
-    vec3 normal1 = normalize(cross(d1u, d1v));
-    vec3 normal_cross = normalize(cross(normal0, normal1));
+vec3 get_facet_convergence_point(vec3 p0, vec3 d0u, vec3 d0v, vec3 p1, vec3 d1u, vec3 d1v){
+    vec3 normal0 = cross(d0u, d0v);
+    vec3 normal1 = cross(d1u, d1v);
+    vec3 normal_cross = cross(normal0, normal1);
     vec3 cross0 = normalize(cross(normal0, normal_cross));
     vec3 cross1 = normalize(cross(normal1, normal_cross));
-    return get_point_between_lines(p0, cross0, p1, cross1);
+    return get_arrow_middle(p0, cross0, p1, cross1);
 }
 
 vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
@@ -370,6 +362,26 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
     return uv;
 }
 "##;
+
+
+
+// vec3 get_arrow_middle(vec3 p0, vec3 d0, vec3 p1, vec3 d1) {
+//     float b = dot(d0, d1);
+//     if(abs(b) > 0.99) {
+//         return (p0 + p1) / 2.;
+//     }
+//     float a = dot(d0, d0);
+//     float c = dot(d1, d1);
+//     vec3 delta = p0 - p1;
+//     float d = dot(d0, delta);
+//     float e = dot(d1, delta);
+//     float denom = a * c - b * b;
+//     float t = (b * e - c * d) / denom;
+//     float s = (a * e - b * d) / denom;
+//     vec3 closest0 = p0 + t * d0;
+//     vec3 closest1 = p1 + s * d1;
+//     return (closest0 + closest1) / 2.;
+// }
 
 
 
@@ -486,7 +498,7 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
 //     delta = p0 - pnt;
 // }
 // if(out_pos.x < pair_size.x){
-//     delta = get_point_between_facet_tangents(p0, d0u, d0v, p1, d1u, d1v) - pnt;
+//     delta = get_facet_convergence_point(p0, d0u, d0v, p1, d1u, d1v) - pnt;
 // }
 // vec2 uv_out = get_uv_from_3d_delta(uv_in, pdu, pdv, delta);
 // float[9] arrows = get_facet_arrows(fi, uv_out);
@@ -628,7 +640,7 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
 
 
 // pub const HONE_PARTS: &str = r##"
-//     vec3 center = get_point_between_facet_tangents(uv0, p0a, p0b, p0c, uv1, p1a, p1b, p1c);
+//     vec3 center = get_facet_convergence_point(uv0, p0a, p0b, p0c, uv1, p1a, p1b, p1c);
 //     vec2 uv0_a = get_uv_from_3d_delta(uv0, p0a, p0b, p0c, center - p0a);
 //     vec3 p0_a  = get_point_on_facet(facet_i.r, uv0_a);
 //     vec2 uv1_a = get_uv_from_3d_delta(uv1, p1a, p1b, p1c, center - p1a);

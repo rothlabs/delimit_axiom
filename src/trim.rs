@@ -55,32 +55,29 @@ impl Trim {
     fn add_bounded_curves(&mut self, i: usize) {
         let mut curve = self.group[i].clone();
         let min_basis = curve.min;
-        let mut start_k = 0;
+        // let mut start_k = 0;
         let mut set_min = false;
-        //let mut use_hits = false;
-        for k in 0..self.hits[i].len() {
-            if self.hits[i][k].u > 0.01 && self.hits[i][k].u < 0.99 {
-                start_k = k;
-                //use_hits = true;
-                break;
-            }
-        }
-        //if use_hits {
-            //let first = &self.hits[i][start_k];//.first().unwrap();
-            if self.hits[i][start_k].dot > 0. {set_min = true;} //  * curve.nurbs.sign
-            for curve_hit in self.hits[i].iter().skip(start_k) { //for curve_hit in &self.hits[i] { 
-                if curve_hit.u < 0.99 {
-                    if set_min {
-                        curve.set_min(curve_hit.u);
-                    }else{
-                        curve.set_max(min_basis, curve_hit.u);
-                        self.curves.push(curve);
-                        curve = self.group[i].clone();
-                    }
-                    set_min = !set_min;
+        // for k in 0..self.hits[i].len() {
+        //     if self.hits[i][k].u > 0.01 && self.hits[i][k].u < 0.99 {
+        //         start_k = k;
+        //         break;
+        //     }
+        // }
+        if self.hits[i][0].dot > 0. {set_min = true;} //  * curve.nurbs.sign
+        for curve_hit in self.hits[i].iter() { // .skip(start_k) { //for curve_hit in &self.hits[i] { 
+            //if 0.01 < curve_hit.u && curve_hit.u < 0.99 {
+            //if curve_hit.u < 0.99 {
+                //if curve_hit.dot > 0. {
+                if set_min {
+                    curve.set_min(curve_hit.u);
+                }else{
+                    curve.set_max(min_basis, curve_hit.u);
+                    self.curves.push(curve);
+                    curve = self.group[i].clone();
                 }
-            }
-        //}
+                set_min = !set_min;
+            //}
+        }
         if !set_min {
             self.curves.push(curve);
         }

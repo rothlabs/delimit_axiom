@@ -1,4 +1,4 @@
-use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, FRAC_PI_8};
+use std::f32::{consts::{FRAC_PI_2, FRAC_PI_4, FRAC_PI_8}, EPSILON};
 use glam::*;
 use crate::{log, CurveShape};
 
@@ -11,29 +11,25 @@ pub struct Arrow {
 }
 
 impl Arrow {
-    pub fn new(origin: Vec3, vector: Vec3) -> Self {
-        Self {point: origin, delta: vector}
+    pub fn new(point: Vec3, delta: Vec3) -> Self {
+        Self {point, delta}
     }
     pub fn middle(&self, arrow: &Arrow) -> Vec3 {
-        let v0 = self.delta.normalize();
-        let v1 = arrow.delta.normalize();
-        //if v0.dot(v1) > 0.95 { 
-        if v0.cross(v1).length() < 0.001 { // parallel case
+        let delta0 = self.delta.normalize();
+        let delta1 = arrow.delta.normalize();
+        let dotx = delta0.dot(delta1);
+        if dotx.abs() > 0.99 { 
             return (self.point + arrow.point) / 2.;
         }
-        let a = v0.dot(v0);
-        let b = v0.dot(v1);
-        let c = v1.dot(v1);
         let delta = self.point - arrow.point;
-        let d = v0.dot(delta);
-        let e = v1.dot(delta);
-        let denom = a * c - b * b;
-        let u0 = (b * e - c * d) / denom;
-        let u1 = (a * e - b * d) / denom;
-        let p0 = self.point + v0 * u0;
-        let p1 = arrow.point  + v1  * u1;
-
-        let point = (p0 + p1) / 2.;
+        let dot0 = delta.dot(delta0);
+        let dot1 = delta.dot(delta1);
+        let denom = 1. - dotx * dotx;
+        let u0 = (dotx * dot1 - dot0) / denom;
+        let u1 = (dot1 - dotx * dot0) / denom;
+        let closest0 = self.point  + delta0 * u0;
+        let closest1 = arrow.point + delta1 * u1;
+        let point = (closest0 + closest1) / 2.;
         if point.is_nan() {
             log("arrow.middle -> nan!");
         }
@@ -71,6 +67,8 @@ impl ArrowsToCurve {
         for (i, arrow) in arrows.windows(2).enumerate() {
             if i > 0 {
                 let angle = self.arrow.delta.angle_between(arrow[1].delta);
+                //let dist = self.arrow.point.distance(arrow[1].point);
+                //if dist > 0.01 && (angle > FRAC_PI_8 || angle < base_angle - 0.001) {
                 if angle > FRAC_PI_8 || angle < base_angle - 0.001 {
                     self.add_arc(&arrow[0]);
                     base_angle = 0.;
@@ -98,7 +96,7 @@ impl ArrowsToCurve {
         //     log("arrow and middle the same");
         //     console_log!("diff of self.arrow and arrow {}", (self.arrow.point - arrow.point).length());
         // }
-        self.knot += (arrow.point - self.arrow.point).length();
+        self.knot += self.arrow.point.distance(arrow.point);
         //self.knot += 1.;
         self.curve.nurbs.knots.extend(&[self.knot, self.knot]);
         let angle = self.arrow.delta.angle_between(arrow.delta);
@@ -108,6 +106,36 @@ impl ArrowsToCurve {
 }
 
 
+
+
+// impl Arrow {
+//     pub fn new(point: Vec3, delta: Vec3) -> Self {
+//         Self {point, delta}
+//     }
+//     pub fn middle(&self, arrow: &Arrow) -> Vec3 {
+//         let d0 = self.delta.normalize();
+//         let d1 = arrow.delta.normalize();
+//         let b = d0.dot(d1);
+//         if b.abs() > 0.99 { 
+//             return (self.point + arrow.point) / 2.;
+//         }
+//         let a = d0.dot(d0);
+//         let c = d1.dot(d1);
+//         let delta = self.point - arrow.point;
+//         let d = d0.dot(delta);
+//         let e = d1.dot(delta);
+//         let denom = a * c - b * b;
+//         let u0 = (b * e - c * d) / denom;
+//         let u1 = (a * e - b * d) / denom;
+//         let closest0 = self.point  + d0 * u0;
+//         let closest1 = arrow.point + d1 * u1;
+//         let point = (closest0 + closest1) / 2.;
+//         if point.is_nan() {
+//             log("arrow.middle -> nan!");
+//         }
+//         point
+//     }
+// }
 
 
 

@@ -227,20 +227,20 @@ pub fn get_reshaped_point(point: &Vec3, mat4: Mat4) -> Vec3 { // [f32; 3] {
     mat4.mul_vec4(point.extend(1.)).truncate() //mat4.mul_vec4(Vec3::from_slice(point).extend(1.)).truncate().to_array()
 }
 
-pub fn get_line_intersection2(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<Vec2> {
-    // let t = ((p1.x - p3.x)*(p3.y - p4.y) - (p1.y - p3.y)*(p3.x - p4.x)) 
-    //     / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
-    // let x = p1.x + t*(p2.x - p1.x);
-    // let y = p1.y + t*(p2.y - p1.y);
-    let u = - ((p1.x - p2.x)*(p1.y - p3.y) - (p1.y - p2.y)*(p1.x - p3.x))
-        / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
-    let x = p3.x + u*(p4.x - p3.x);
-    let y = p3.y + u*(p4.y - p3.y);
-    if x.is_nan() || y.is_nan() {
-        return None;
-    }
-    Some(vec2(x, y))
-}
+// pub fn get_line_intersection2(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<Vec2> {
+//     // let t = ((p1.x - p3.x)*(p3.y - p4.y) - (p1.y - p3.y)*(p3.x - p4.x)) 
+//     //     / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
+//     // let x = p1.x + t*(p2.x - p1.x);
+//     // let y = p1.y + t*(p2.y - p1.y);
+//     let u = - ((p1.x - p2.x)*(p1.y - p3.y) - (p1.y - p2.y)*(p1.x - p3.x))
+//         / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
+//     let x = p3.x + u*(p4.x - p3.x);
+//     let y = p3.y + u*(p4.y - p3.y);
+//     if x.is_nan() || y.is_nan() {
+//         return None;
+//     }
+//     Some(vec2(x, y))
+// }
 
 pub fn get_vector_hash(vecf32: &Vec<f32>) -> u64 {
     let veci32: Vec<u64> = vecf32.iter().enumerate().map(|(i, v)| i as u64 * (v * 10000.).floor() as u64).collect();

@@ -48,7 +48,7 @@ pub fn get_traced_curves(
         for y in 0..buf_size.y as usize{
             let j = (y * buf_size.x as usize + i) * 4;
             let point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
-            if prev_point.distance(point) < 0.01 {break;}
+            if prev_point.distance(point) < 0.05 {break;}
             prev_point = point;
             //curve0.controls.push(vec3(traces[j+0], traces[j+1], 0.));
             rays0a.push(Arrow{ 
@@ -78,7 +78,7 @@ pub fn get_traced_curves(
         for y in 1..buf_size.y as usize {
             let j = (y * buf_size.x as usize + half + i) * 4;
             let point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
-            if prev_point.distance(point) < 0.01 {break;}
+            if prev_point.distance(point) < 0.05 {break;}
             prev_point = point;
             //points0.push(vec3(traces[j+0], traces[j+1], 0.));
             rays0b.push(Arrow{ 
@@ -157,15 +157,15 @@ pub fn get_traced_curves(
                 // }
         // console_log!("dirs0 {:?}", rays0a.iter().map(|x| x.vector).collect::<Vec<Vec3>>());
         // console_log!("dirs1 {:?}", rays1a.iter().map(|x| x.vector).collect::<Vec<Vec3>>());
-        // let mut curve0 = CurveShape::default();
-        // let mut curve1 = CurveShape::default();
-        // let mut curve2 = CurveShape::default();
-        // curve0.controls.extend(rays0a.iter().map(|x| x.point));
-        // curve1.controls.extend(rays1a.iter().map(|x| x.point));
-        // curve2.controls.extend(rays2a.iter().map(|x| x.point));
-        let mut curve0 = rays0a.to_curve();//RaysToCurve::new(rays0a);
-        let mut curve1 = rays1a.to_curve();//RaysToCurve::new(rays1a);
-        let mut curve2 = rays2a.to_curve();//RaysToCurve::new(rays1a);
+        let mut curve0 = CurveShape::default();
+        let mut curve1 = CurveShape::default();
+        let mut curve2 = CurveShape::default();
+        curve0.controls.extend(rays0a.iter().map(|x| x.point));
+        curve1.controls.extend(rays1a.iter().map(|x| x.point));
+        curve2.controls.extend(rays2a.iter().map(|x| x.point));
+        // let mut curve0 = rays0a.to_curve();//RaysToCurve::new(rays0a);
+        // let mut curve1 = rays1a.to_curve();//RaysToCurve::new(rays1a);
+        // let mut curve2 = rays2a.to_curve();//RaysToCurve::new(rays1a);
         curve0.negate();
         curve1.negate();
         curve0 = curve0.get_valid();

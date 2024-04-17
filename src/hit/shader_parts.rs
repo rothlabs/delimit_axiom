@@ -302,15 +302,20 @@ pub const HONE: &str = r##"
 
 pub const ARROW_CORE: &str = r##"
 
-vec2 get_line_intersection(vec2 alt, vec2 p1, vec2 p2, vec2 p3, vec2 p4) {
-    float u = - ((p1.x - p2.x)*(p1.y - p3.y) - (p1.y - p2.y)*(p1.x - p3.x))
-              / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
-    float x = p3.x + u * (p4.x - p3.x);
-    float y = p3.y + u * (p4.y - p3.y);
-    if(isnan(x) || isnan(y)){
-        return alt;
+vec2 get_arrow_middle_2d(vec2 p0, vec2 delta0, vec2 p1, vec2 delta1, vec2 alt) {
+    float dotx = dot(delta0, delta1);
+    if(abs(dotx) > 0.99) {
+        return alt; 
     }
-    return vec2(x, y);
+    vec2 delta = p0 - p1;
+    float dot0 = dot(delta, delta0);
+    float dot1 = dot(delta, delta1);
+    float denom = 1. - dotx * dotx;
+    float t = (dotx * dot1 - dot0) / denom;
+    float s = (dot1 - dotx * dot0) / denom;
+    vec2 closest0 = p0 + t * delta0;
+    vec2 closest1 = p1 + s * delta1;
+    return (closest0 + closest1) / 2.;
 }
 
 vec3 get_arrow_middle(vec3 p0, vec3 delta0, vec3 p1, vec3 delta1) {
@@ -339,7 +344,7 @@ vec3 get_facet_convergence_point(vec3 p0, vec3 d0u, vec3 d0v, vec3 p1, vec3 d1u,
 }
 
 vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
-    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){
+    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  // 0.0001
         return uv_in;
     }
     vec2 uv_delta = vec2(
@@ -347,21 +352,68 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
         dot(normalize(dv), normalize(target)) * length(target) / length(dv)
     );
     vec2 uv = uv_in + uv_delta;
-    if(uv.x > 1. && abs(dot(normalize(uv_delta), vec2(0., 1.))) < 0.95){
-        uv = get_line_intersection(uv, uv_in, uv_in + uv_delta*100., vec2(1., 0.), vec2(1., 1.));
-    }else if(uv.x < 0. && abs(dot(normalize(uv_delta), vec2(0., 1.))) < 0.95){
-        uv = get_line_intersection(uv, uv_in, uv_in + uv_delta*100., vec2(0., 0.), vec2(0., 1.));
-    }
-    if(uv.y > 1. && abs(dot(normalize(uv_delta), vec2(1., 0.))) < 0.95){
-        uv = get_line_intersection(uv, uv_in, uv_in + uv_delta*100., vec2(0., 1.), vec2(1., 1.));
-    }else if(uv.y < 0. && abs(dot(normalize(uv_delta), vec2(1., 0.))) < 0.95){
-        uv = get_line_intersection(uv, uv_in, uv_in + uv_delta*100., vec2(0., 0.), vec2(1., 0.));
-    }
+        // if(uv.x > 1.){ 
+        //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(1., 0.), vec2(0., 1.),  uv);
+        // }else if(uv.x < 0.){ 
+        //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 0.), vec2(0., 1.),  uv);
+        // }
+        // if(uv.y > 1.){ 
+        //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 1.), vec2(1., 0.),  uv);
+        // }else if(uv.y < 0.){ 
+        //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 0.), vec2(1., 0.),  uv);
+        // }
     uv.x = clamp(uv.x, 0., 1.);
     uv.y = clamp(uv.y, 0., 1.);
     return uv;
 }
 "##;
+
+
+
+
+// vec2 get_line_intersection(vec2 alt, vec2 p1, vec2 p2, vec2 p3, vec2 p4) {
+//     float u = - ((p1.x - p2.x)*(p1.y - p3.y) - (p1.y - p2.y)*(p1.x - p3.x))
+//               / ((p1.x - p2.x)*(p3.y - p4.y) - (p1.y - p2.y)*(p3.x - p4.x));
+//     float x = p3.x + u * (p4.x - p3.x);
+//     float y = p3.y + u * (p4.y - p3.y);
+//     if(isnan(x) || isnan(y)){
+//         return alt;
+//     }
+//     return vec2(x, y);
+// }
+
+
+
+// vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
+//     if(length(target) < 0.0001){ // isnan(target.x) || isnan(target.y) || isnan(target.z) || 
+//         return uv_in;
+//     }
+//     vec2 uv_delta = vec2(
+//         dot(normalize(du), normalize(target)) * length(target) / length(du), 
+//         dot(normalize(dv), normalize(target)) * length(target) / length(dv)
+//     );
+//     vec2 uv = uv_in + uv_delta;
+//     //vec2 normalized_delta = normalize(uv_delta);
+//     if(uv.x > 1.){ //  && abs(dot(normalize(uv_delta), vec2(0., 1.))) < 0.95
+//         // uv = get_line_intersection(uv, uv_in, uv_in + uv_delta*100., vec2(1., 0.), vec2(1., 1.));
+//         uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(1., 0.), vec2(0., 1.),  uv);
+//     }else if(uv.x < 0.){ //  && abs(dot(normalize(uv_delta), vec2(0., 1.))) < 0.95
+//         // uv = get_line_intersection(uv, uv_in, uv_in + uv_delta*100., vec2(0., 0.), vec2(0., 1.));
+//         uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 0.), vec2(0., 1.),  uv);
+//     }
+//     if(uv.y > 1.){ //  && abs(dot(normalize(uv_delta), vec2(1., 0.))) < 0.95
+//         // uv = get_line_intersection(uv, uv_in, uv_in + uv_delta*100., vec2(0., 1.), vec2(1., 1.));
+//         uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 1.), vec2(1., 0.),  uv);
+//     }else if(uv.y < 0.){ //  && abs(dot(normalize(uv_delta), vec2(1., 0.))) < 0.95
+//         // uv = get_line_intersection(uv, uv_in, uv_in + uv_delta*100., vec2(0., 0.), vec2(1., 0.));
+//         uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 0.), vec2(1., 0.),  uv);
+//     }
+//     uv.x = clamp(uv.x, 0., 1.);
+//     uv.y = clamp(uv.y, 0., 1.);
+//     return uv;
+// }
+
+
 
 
 

@@ -118,14 +118,14 @@ void main() {"##,
 "##);
 
 pub const TRACE_SEGMENT_SOURCE: &str = concatcp!( // TODO: does not need pair_tex, only size!
-HEADER, ARROW_IN, r##"
+HEADER, ARROW_IN, FACET_CORE, r##"
 layout(location=0) out vec3 point;
 layout(location=1) out vec3 delta;
 layout(location=2) out vec4 uvs_out;
 layout(location=3) out vec4 uv_deltas;
 layout(location=4) out vec4 uv_deltas_local;
 void main() {"##,
-    CORE_PARTS, r##"
+    CORE_PARTS, FACET_PARTS, r##"
     int y = out_pos.x / pair_size.x;
     ivec2 in_pos0a = ivec2(out_pos.x % pair_size.x,  y);
     ivec2 in_pos0b = ivec2(in_pos0a.x + pair_size.x, y);
@@ -145,12 +145,17 @@ void main() {"##,
     float du1 = dot(normalize(d1u), delta) * 100. / length(d1u);
     float dv1 = dot(normalize(d1v), delta) * 100. / length(d1v);
     uv_deltas = vec4(du0, dv0, du1, dv1);
+        // int facet_index0 = texelFetch(pair_tex, in_pos0a, 0).r;
+        // int facet_index1 = texelFetch(pair_tex, in_pos0a, 0).g;
+        // float sign0 = get_facet_texel(facet_index0);
+        // float sign1 = get_facet_texel(facet_index1);
+        // uv_deltas = vec4(du0 * sign0 * sign1, dv0 * sign0 * sign1, du1 * sign0 * sign1, dv1 * sign0 * sign1);
 }"##);
 
 
 pub const TRACE_DUAL_SOURCE: &str = concatcp!(
 HEADER, FACET_CORE, ARROW_CORE, ARROW_IN, ARROW_OUT, r##"
-float step = 0.5;
+float step = 0.7;
 uniform int trace_count;
 uniform sampler2D box_tex;
 layout(location=3) out vec4 box;

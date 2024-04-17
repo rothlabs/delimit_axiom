@@ -67,13 +67,27 @@ impl ArrowsToCurve {
         for (i, arrow) in arrows.windows(2).enumerate() {
             if i > 0 {
                 let angle = self.arrow.delta.angle_between(arrow[1].delta);
-                //let dist = self.arrow.point.distance(arrow[1].point);
-                //if dist > 0.01 && (angle > FRAC_PI_8 || angle < base_angle - 0.001) {
+                let dist = self.arrow.point.distance(arrow[1].point);
+                //if dist > 0.05 && (angle > FRAC_PI_8 || angle < base_angle - 0.0001) {
                 if angle > FRAC_PI_8 || angle < base_angle - 0.001 {
-                    self.add_arc(&arrow[0]);
-                    base_angle = 0.;
-                }else{
-                    base_angle = angle;
+                    let middle = self.arrow.middle(&arrow[0]);
+                    //let delta0 = self.arrow.delta.normalize().dot((middle - self.arrow.point).normalize());
+                    //let delta1 = arrow[0].delta.normalize().dot((arrow[0].point - middle).normalize());
+                    let delta0 = self.arrow.point.distance(arrow[0].point);
+                    let delta1 = self.arrow.point.distance(middle);
+                    let delta2 = arrow[0].point.distance(middle);
+                    if delta1 < delta0 && delta2 < delta0 {
+                            self.add_arc(&arrow[0]);
+                            //base_angle = 0.;
+                        //}else{
+                            base_angle = angle;
+                    }
+                    // } else if delta0 > 0. && delta1 > 0. {
+                    //     self.add_arc(&arrow[0]);
+                    //     //base_angle = 0.;
+                    // //}else{
+                    //     base_angle = angle;
+                    // }
                 }
                 if i+3 > arrows.len() {
                     self.add_arc(&arrow[1]);
@@ -86,16 +100,21 @@ impl ArrowsToCurve {
     }
     fn add_arc(&mut self, arrow: &Arrow) { 
         let middle = self.arrow.middle(arrow);
+
+        // if self.arrow.delta.dot(middle - self.arrow.point) < 0.1 {
+        //     return;
+        // }
+
         self.curve.controls.push(middle); 
         self.curve.controls.push(arrow.point);
-        // if (self.arrow.point - middle).length() == 0. {
-        //     log("self.arrow and middle the same");
-        //     console_log!("diff of self.arrow and arrow {}", (self.arrow.point - arrow.point).length());
-        // }
-        // if (arrow.point - middle).length() == 0. {
-        //     log("arrow and middle the same");
-        //     console_log!("diff of self.arrow and arrow {}", (self.arrow.point - arrow.point).length());
-        // }
+        if (self.arrow.point - middle).length() == 0. {
+            log("self.arrow and middle the same");
+            console_log!("diff of self.arrow and arrow {}", (self.arrow.point - arrow.point).length());
+        }
+        if (arrow.point - middle).length() == 0. {
+            log("arrow and middle the same");
+            console_log!("diff of self.arrow and arrow {}", (self.arrow.point - arrow.point).length());
+        }
         self.knot += self.arrow.point.distance(arrow.point);
         //self.knot += 1.;
         self.curve.nurbs.knots.extend(&[self.knot, self.knot]);

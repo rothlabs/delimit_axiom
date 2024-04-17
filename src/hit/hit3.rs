@@ -93,7 +93,7 @@ impl HitBasis3 {
         self.hone_basis = hone_basis;
         self.hone();
         let buff0 = &self.hone_buffer.as_ref().unwrap();
-            // let tex_data = self.gpu.read(&buff0.quad0, 0);
+            // let tex_data = self.gpu.read(&buff0.palette0, 0);
             // console_log!("tex_data len {}", tex_data.len());
             // console_log!("index_pairs len {}", self.hone_basis.index_pairs.len());
             // let len = tex_data.len() / 2;
@@ -104,22 +104,22 @@ impl HitBasis3 {
             //     self.shapes.push(Shape::Point(point));
             // }
         let hit_miss = self.gpu.read(&buff0.uv, 0);
-                // //console_log!("hit_miss len {}", hit_miss.len());
-                // //console_log!("index_pairs len {}", self.hone_basis.index_pairs.len());
-                // for i in 0..self.hone_basis.index_pairs.len() {
-                //     if hit_miss[i*4] > -0.5 {
-                //         let IndexPair{g0, g1, i0, i1} = self.hone_basis.index_pairs[i];
-                //         let point = self.facet_groups[g0][i0].get_point(vec2(hit_miss[i*4], hit_miss[i*4+1]));
-                //         self.shapes.push(Shape::Point(point));
-                //     }
-                // }
+                //console_log!("hit_miss len {}", hit_miss.len());
+                //console_log!("index_pairs len {}", self.hone_basis.index_pairs.len());
+                for i in 0..self.hone_basis.index_pairs.len() {
+                    if hit_miss[i*4] > -0.5 {
+                        let IndexPair{g0, g1, i0, i1} = self.hone_basis.index_pairs[i];
+                        let point = self.facet_groups[g0][i0].get_point(vec2(hit_miss[i*4], hit_miss[i*4+1]));
+                        self.shapes.push(Shape::Point(point));
+                    }
+                }
         let mut trace_basis = TraceBasis::new(&self.hone_basis, hit_miss);
         let (_, pair_buf_size) = self.gpu.texture.make_rg32i(1, &mut trace_basis.pair_texels)?;
         let _ = self.gpu.texture.make_rgba32f(2, &mut trace_basis.uv_texels)?;
                // let _ = self.gpu.texture.make_rgba32f(3, &mut trace_basis.box_texels)?;
         let dual_buf_size    = ivec2(pair_buf_size.x,   pair_buf_size.y*2);
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
-        let trace_length = 300;
+        let trace_length = 50;
         //console_log!("trace_basis.index_pairs.len() {}", trace_basis.index_pairs.len());
         //console_log!("trace_basis.pair_texels.len() {}", trace_basis.pair_texels.len());
         self.trace_count = trace_basis.index_pairs.len() as i32;
@@ -169,7 +169,7 @@ impl HitBasis3 {
     fn hone(&self) {
         let buff = &self.hone_buffer.as_ref().unwrap();
         self.draw_init_hone_palette();
-        for _ in 0..3 {
+        for _ in 0..5 {
             self.draw_hone_palette(&buff.palette1, 3);
             self.draw_hone_palette(&buff.palette0, 6);
         }

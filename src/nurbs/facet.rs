@@ -2,7 +2,7 @@ use std::f32::{EPSILON, INFINITY};
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::scene::Mesh;
-use crate::{get_curves, get_line_intersection2, get_vector_hash, CurveShape, Model, Rectangle, Shape};
+use crate::{get_curves, get_vector_hash, CurveShape, Model, Rectangle, Shape};
 //use euclid::{point3, Box3D, Point3D};
 use glam::*;
 use serde::{Deserialize, Serialize};
@@ -144,38 +144,38 @@ impl FacetShape {
     //     step_u.signum() * step_v.signum() * (p0 - p1).cross(p0 - p2).normalize() // TODO: remove final normalize after Union3 works!!!!
     // }
 
-    pub fn get_uv_and_point_from_target(&self, uv: Vec2, point: Vec3, target: Vec3) -> (Vec2, Vec3) {
-        if target.is_nan() || target.length() < EPSILON {
-            return (uv, point);
-        }
-        let mut step_u = 0.0001;
-        let mut step_v = 0.0001;
-        if uv.x + step_u > 1. {step_u = -step_u;}
-        if uv.y + step_v > 1. {step_v = -step_v;}
-        let p0 = self.get_point(uv);
-        let pu = self.get_point(uv + Vec2::X * step_u);
-        let pv = self.get_point(uv + Vec2::Y * step_v);
-        let length_ratio_u = target.length() / p0.distance(pu) * step_u;
-        let length_ratio_v = target.length() / p0.distance(pv) * step_v;
-        let uv_delta = vec2(
-            (pu-p0).normalize().dot(target.normalize()) * length_ratio_u, 
-            (pv-p0).normalize().dot(target.normalize()) * length_ratio_v
-        );
-        let mut uv1 = uv + uv_delta;
-        if uv1.x > 1. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
-            uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::X, Vec2::ONE).unwrap_or(uv1);
-        }else if uv1.x < 0. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
-            uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::Y).unwrap_or(uv1);
-        }
-        if uv1.y > 1. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
-            uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::Y, Vec2::ONE).unwrap_or(uv1);
-        }else if uv1.y < 0. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
-            uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::X).unwrap_or(uv1);
-        }
-        uv1 = uv1.clamp(Vec2::ZERO, Vec2::ONE); // TODO: might not be needed
-        let point = self.get_point(uv1);
-        (uv1, point)
-    }
+        // pub fn get_uv_and_point_from_target(&self, uv: Vec2, point: Vec3, target: Vec3) -> (Vec2, Vec3) {
+        //     if target.is_nan() || target.length() < EPSILON {
+        //         return (uv, point);
+        //     }
+        //     let mut step_u = 0.0001;
+        //     let mut step_v = 0.0001;
+        //     if uv.x + step_u > 1. {step_u = -step_u;}
+        //     if uv.y + step_v > 1. {step_v = -step_v;}
+        //     let p0 = self.get_point(uv);
+        //     let pu = self.get_point(uv + Vec2::X * step_u);
+        //     let pv = self.get_point(uv + Vec2::Y * step_v);
+        //     let length_ratio_u = target.length() / p0.distance(pu) * step_u;
+        //     let length_ratio_v = target.length() / p0.distance(pv) * step_v;
+        //     let uv_delta = vec2(
+        //         (pu-p0).normalize().dot(target.normalize()) * length_ratio_u, 
+        //         (pv-p0).normalize().dot(target.normalize()) * length_ratio_v
+        //     );
+        //     let mut uv1 = uv + uv_delta;
+        //     if uv1.x > 1. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
+        //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::X, Vec2::ONE).unwrap_or(uv1);
+        //     }else if uv1.x < 0. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
+        //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::Y).unwrap_or(uv1);
+        //     }
+        //     if uv1.y > 1. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
+        //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::Y, Vec2::ONE).unwrap_or(uv1);
+        //     }else if uv1.y < 0. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
+        //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::X).unwrap_or(uv1);
+        //     }
+        //     uv1 = uv1.clamp(Vec2::ZERO, Vec2::ONE); // TODO: might not be needed
+        //     let point = self.get_point(uv1);
+        //     (uv1, point)
+        // }
 
     // pub fn get_curvature(&self, uv0: Vec2, p0: Vec3, dir: Vec3) -> f32 {
     //     let step = 1.;

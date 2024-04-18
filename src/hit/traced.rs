@@ -1,5 +1,5 @@
 use glam::*;
-use crate::arrow::*;
+use crate::{arrow::*, FacetShape};
 use crate::{log, CurveShape};
 use super::IndexPair;
 use std::collections::HashMap;
@@ -13,6 +13,7 @@ pub struct TracedCurve {
 
 //impl TracedCurve {
 pub fn get_traced_curves(
+    facet_groups: &Vec<Vec<FacetShape>>,
     index_pairs: Vec<IndexPair>, buf_size: IVec2, traces: Vec<f32>, boxes: Vec<f32>, 
     centers0: Vec<f32>, uv_dirs: Vec<f32>, dirs: Vec<f32>, 
 ) -> Vec<TracedCurve> {
@@ -42,23 +43,48 @@ pub fn get_traced_curves(
         }
         let mut prev_point = vec3(100000., 100000., 100000.);
         
+        // if index_pairs[i].g0 > index_pairs[i].g1 {
+        //     log("What?!!!!!!!!!!!");
+        // }
+        // //console_log!("group pair: {}, {}", index_pairs[i].g0, index_pairs[i].g1);
+        // console_log!("signs: {}, {}", facet_groups[index_pairs[i].g0][index_pairs[i].i0].nurbs.sign, 
+        //     facet_groups[index_pairs[i].g1][index_pairs[i].i1].nurbs.sign);
+
+
         let mut rays0a = vec![];
         let mut rays1a = vec![];
         let mut rays2a = vec![];
-        for y in 0..buf_size.y as usize{
-            let j = (y * buf_size.x as usize + i) * 4;
-            let point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
-            if prev_point.distance(point) < 0.05 {break;}
-            prev_point = point;
+        let mut add_last_point = true;
+        'trace_loop: for y in 0..buf_size.y as usize{
+            let j = (y * buf_size.x as usize + i) * 4; 
+            let delta0 = vec3(uv_dirs[j+0], uv_dirs[j+1], 0.).normalize();
+            let delta1 = vec3(uv_dirs[j+2], uv_dirs[j+3], 0.).normalize();
+            // for kk in 0..4 {
+            //     if traces[j+kk] > 0.999 || traces[j+kk] < 0.001 { 
+            //         break 'trace_loop;
+            //     }
+            // }
+            if       (delta0.x > 0.01 && traces[j+0] > 0.9999) || (delta0.x < -0.01 && traces[j+0] < 0.0001) { 
+                break;
+            }else if (delta0.y > 0.01 && traces[j+1] > 0.9999) || (delta0.y < -0.01 && traces[j+1] < 0.0001) { 
+                break;
+            }else if (delta1.x > 0.01 && traces[j+2] > 0.9999) || (delta1.x < -0.01 && traces[j+2] < 0.0001) { 
+                break;
+            }else if (delta1.y > 0.01 && traces[j+3] > 0.9999) || (delta1.y < -0.01 && traces[j+3] < 0.0001) { 
+                break;
+            }
+                // let point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
+                // if prev_point.distance(point) < 0.01 {break;}
+                // prev_point = point;
             //curve0.controls.push(vec3(traces[j+0], traces[j+1], 0.));
             rays0a.push(Arrow{ 
                 point: vec3(traces[j+0], traces[j+1], 0.),
-                delta: vec3(uv_dirs[j+0], uv_dirs[j+1], 0.),
+                delta: delta0 // vec3(uv_dirs[j+0], uv_dirs[j+1], 0.),
             });
             //rays1a.push(vec3(traces[j+2], traces[j+3], 0.));
             rays1a.push(Arrow{ 
                 point: vec3(traces[j+2], traces[j+3], 0.),
-                delta: vec3(uv_dirs[j+2], uv_dirs[j+3], 0.), // was negated
+                delta: delta1 // vec3(uv_dirs[j+2], uv_dirs[j+3], 0.), // was negated
             });
             //center.controls.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
             rays2a.push(Arrow{ 
@@ -66,41 +92,109 @@ pub fn get_traced_curves(
                 delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
             });
         }
+        let j = ((buf_size.y-1) as usize * buf_size.x as usize + i) * 4; 
+        rays0a.push(Arrow{ 
+            point: vec3(traces[j+0], traces[j+1], 0.),
+            delta: vec3(uv_dirs[j+0], uv_dirs[j+1], 0.),
+        });
+        rays1a.push(Arrow{ 
+            point: vec3(traces[j+2], traces[j+3], 0.),
+            delta: vec3(uv_dirs[j+2], uv_dirs[j+3], 0.), // was negated
+        });
+        rays2a.push(Arrow{ 
+            point: vec3(centers0[j+0], centers0[j+1], centers0[j+2]),
+            delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
+        });
+
         rays1a.reverse();
 
-        let j = i * 4;
-        prev_point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
+        
+        ///prev_point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
         // let mut points0 = vec![];
         // let mut centers1 = vec![];
-        let mut rays0b = vec![];
-        let mut rays1b = vec![];
-        let mut rays2b = vec![];
-        for y in 1..buf_size.y as usize {
-            let j = (y * buf_size.x as usize + half + i) * 4;
-            let point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
-            if prev_point.distance(point) < 0.05 {break;}
-            prev_point = point;
-            //points0.push(vec3(traces[j+0], traces[j+1], 0.));
+        let mut add_reverse_trace = true;
+        if rays0a.len() > 1 {
+            // if traces[j+0] < 0.0001 || traces[j+0] > 0.9999 || traces[j+1] < 0.0001 || traces[j+1] > 0.9999 {
+            //     add_reverse_trace = false;
+            // }else if traces[j+2] < 0.0001 || traces[j+2] > 0.9999 || traces[j+3] < 0.0001 || traces[j+3] > 0.9999 {
+            //     add_reverse_trace = false;
+            // }
+            let j = i * 4;
+            let delta0 = vec3(uv_dirs[j+0], uv_dirs[j+1], 0.).normalize();
+            let delta1 = vec3(uv_dirs[j+2], uv_dirs[j+3], 0.).normalize();
+            if       delta0.x.abs() > 0.01 && (traces[j+0] < 0.0001 || traces[j+0] > 0.9999) { 
+                add_reverse_trace = false;
+            }else if delta0.y.abs() > 0.01 && (traces[j+1] < 0.0001 || traces[j+1] > 0.9999) { 
+                add_reverse_trace = false;
+            }else if delta1.x.abs() > 0.01 && (traces[j+2] < 0.0001 || traces[j+2] > 0.9999) { 
+                add_reverse_trace = false;
+            }else if delta1.y.abs() > 0.01 && (traces[j+3] < 0.0001 || traces[j+3] > 0.9999) { 
+                add_reverse_trace = false;
+            }
+        }
+        if add_reverse_trace {
+            let mut rays0b = vec![];
+            let mut rays1b = vec![];
+            let mut rays2b = vec![];
+            //let mut add_last_point = true;
+            'trace_loop: for y in 1..buf_size.y as usize {
+                let j = (y * buf_size.x as usize + half + i) * 4;
+                // for kk in 0..4 {
+                //     if traces[j+kk] > 0.999 || traces[j+kk] < 0.001 { 
+                //         break 'trace_loop;
+                //     }
+                // }
+                let delta0 = -vec3(uv_dirs[j+0], uv_dirs[j+1], 0.).normalize();
+                let delta1 = -vec3(uv_dirs[j+2], uv_dirs[j+3], 0.).normalize();
+                if       (delta0.x > 0.01 && traces[j+0] > 0.9999) || (delta0.x < -0.01 && traces[j+0] < 0.0001) { 
+                    break;
+                }else if (delta0.y > 0.01 && traces[j+1] > 0.9999) || (delta0.y < -0.01 && traces[j+1] < 0.0001) { 
+                    break;
+                }else if (delta1.x > 0.01 && traces[j+2] > 0.9999) || (delta1.x < -0.01 && traces[j+2] < 0.0001) { 
+                    break;
+                }else if (delta1.y > 0.01 && traces[j+3] > 0.9999) || (delta1.y < -0.01 && traces[j+3] < 0.0001) { 
+                    break;
+                }
+                //add_last_point = true;
+                    // let point = vec3(centers0[j+0], centers0[j+1], centers0[j+2]);
+                    // if prev_point.distance(point) < 0.01 {break;}
+                    // prev_point = point;
+                //points0.push(vec3(traces[j+0], traces[j+1], 0.));
+                rays0b.push(Arrow{ 
+                    point:  vec3(traces[j+0],  traces[j+1],  0.),
+                    delta:  delta0 // vec3(uv_dirs[j+0], uv_dirs[j+1], 0.), // was negated
+                });
+                //curve1.controls.push(vec3(traces[j+2], traces[j+3], 0.));
+                rays1b.push(Arrow{ 
+                    point: vec3(traces[j+2],  traces[j+3],  0.),
+                    delta: delta1 // vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
+                });
+                //centers1.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
+                rays2b.push(Arrow{ 
+                    point: vec3(centers0[j+0], centers0[j+1], centers0[j+2]),
+                    delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
+                });
+            }
+        //if add_last_point {
+            let j = ((buf_size.y-1) as usize * buf_size.x as usize + half + i) * 4; 
             rays0b.push(Arrow{ 
                 point:  vec3(traces[j+0],  traces[j+1],  0.),
                 delta:  vec3(uv_dirs[j+0], uv_dirs[j+1], 0.), // was negated
             });
-            //curve1.controls.push(vec3(traces[j+2], traces[j+3], 0.));
             rays1b.push(Arrow{ 
                 point: vec3(traces[j+2],  traces[j+3],  0.),
                 delta: vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
             });
-            //centers1.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
             rays2b.push(Arrow{ 
                 point: vec3(centers0[j+0], centers0[j+1], centers0[j+2]),
                 delta: vec3(dirs[j+0], dirs[j+1], dirs[j+2]),
             });
+            rays0b.reverse();
+            rays0a.splice(0..0, rays0b);
+            rays1a.extend(rays1b);
+            rays2b.reverse();
+            rays2a.splice(0..0, rays2b);
         }
-        rays0b.reverse();
-        rays0a.splice(0..0, rays0b);
-        rays1a.extend(rays1b);
-        rays2b.reverse();
-        rays2a.splice(0..0, rays2b);
         //curve0.controls.splice(0..0, points0);
         
         // for t in 0..rays0a.len()-1 {
@@ -118,18 +212,18 @@ pub fn get_traced_curves(
         //         log("double point on rays2a!!!");
         //     }
         // }
-        if rays0a.len() < 3 {
-            console_log!("rays0: {}", rays0a.len());
-            continue;
-        }
-        if rays1a.len() < 3 {
-            console_log!("rays1: {}", rays1a.len());
-            continue;
-        }
-        if rays2a.len() < 3 {
-            console_log!("rays2: {}", rays2a.len());
-            continue;
-        }
+                    // if rays0a.len() < 3 {
+                    //     console_log!("rays0: {}", rays0a.len());
+                    //     continue;
+                    // }
+                    // if rays1a.len() < 3 {
+                    //     console_log!("rays1: {}", rays1a.len());
+                    //     continue;
+                    // }
+                    // if rays2a.len() < 3 {
+                    //     console_log!("rays2: {}", rays2a.len());
+                    //     continue;
+                    // }
         //if duplicate {continue}
                 // for i in 0..rays0a.len()-1 {
                 //     if rays0a[i+1].delta.is_nan() {

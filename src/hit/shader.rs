@@ -1,8 +1,10 @@
 use const_format::concatcp;
 use super::shader_parts::{
     HEADER, CORE_PARTS,
-    FACET_CORE, FACET_PARTS, ARROW_CORE, ARROW_DUAL, 
+    FACET_CORE, FACET_PARTS, ARROW_DUAL, 
     ARROW_IN_POS, ARROW_PALETTE, ARROW_IN, ARROW_OUT, HONE,
+    ARROW_CORE, MOVE_UV, MOVE_UV_STICKY, MOVE_UV_STOP,
+    INTERSECT_FACET, INTERSECT_FACET_EDGE,
 };
 
 pub const INIT_HONE_PALETTE_SOURCE: &str = concatcp!(
@@ -33,7 +35,7 @@ void main() {"##,
 "##);
 
 pub const HONE_PALETTE_SOURCE: &str = concatcp!(
-HEADER, FACET_CORE, ARROW_CORE, ARROW_IN, ARROW_OUT,
+HEADER, FACET_CORE, ARROW_CORE, MOVE_UV, INTERSECT_FACET, ARROW_IN, ARROW_OUT,
 "void main() {",
     CORE_PARTS, FACET_PARTS, ARROW_IN_POS, ARROW_PALETTE, HONE, r##"
 }"##);
@@ -149,13 +151,14 @@ void main() {"##,
         // int facet_index1 = texelFetch(pair_tex, in_pos0a, 0).g;
         // float sign0 = get_facet_texel(facet_index0);
         // float sign1 = get_facet_texel(facet_index1);
-        // uv_deltas = vec4(du0 * sign0 * sign1, dv0 * sign0 * sign1, du1 * sign0 * sign1, dv1 * sign0 * sign1);
+        // uv_deltas = vec4(du0 * sign0, dv0 * sign0, du1 * sign1, dv1 * sign1);
 }"##);
 
 
 pub const TRACE_DUAL_SOURCE: &str = concatcp!(
-HEADER, FACET_CORE, ARROW_CORE, ARROW_IN, ARROW_OUT, r##"
+HEADER, FACET_CORE, ARROW_CORE, MOVE_UV_STOP, ARROW_IN, ARROW_OUT, r##"
 float step = 0.7;
+uniform int current_segment;
 uniform int trace_count;
 uniform sampler2D box_tex;
 layout(location=3) out vec4 box;
@@ -165,16 +168,21 @@ void main() {"##,
     vec2 uv = vec2(0., 0.);
     vec3 du = vec3(0., 0., 0.);
     vec3 dv = vec3(0., 0., 0.);
+    vec2 uv_b = vec2(0., 0.);
+    vec3 du_b = vec3(0., 0., 0.);
+    vec3 dv_b = vec3(0., 0., 0.);
     ivec2 box_in_pos = ivec2(in_pos0a.x, out_pos.y);
     if(out_pos.y < pair_size.y){
         facet_index = texelFetch(pair_tex, in_pos0a, 0).r;
         uv = uvs.rg; du = d0u; dv = d0v;
+        uv_b = uvs.ba; du_b = d1u; dv_b = d1v;
         if(pick > 0){
             box_in_pos.x = in_pos0b.x;
         }
     }else{
         facet_index = texelFetch(pair_tex, in_pos0a, 0).g;
         uv = uvs.ba; du = d1u; dv = d1v;
+        uv_b = uvs.rg; du_b = d0u; dv_b = d0v;
         if(pick < 1){
             box_in_pos.x = in_pos0b.x;
         }
@@ -182,22 +190,33 @@ void main() {"##,
     if(pick > 1){
         box_in_pos.x = in_pos0c.x;
     }
-    int trace_index = in_pos0a.y * pair_size.x + in_pos0a.x;
-    float sign = -1.;
-    if(trace_index < trace_count){
-        sign = 1.;
-    }
-    vec3 cross0 = cross(d0u, d0v);
-    vec3 cross1 = cross(d1u, d1v);
-    vec3 delta = normalize(cross(cross0, cross1));
-    delta = sign * delta * step;
-    uv = get_uv_from_3d_delta(uv, du, dv, delta);
+            // bool continue_trace = true;
+            // if(current_segment > 1){
+            //     if(uvs.x > 0.9999 || uvs.x < 0.0001 || uvs.y > 0.9999 || uvs.y < 0.0001){ 
+            //         continue_trace = false;
+            //     }
+            //     if(uvs.z > 0.9999 || uvs.z < 0.0001 || uvs.w > 0.9999 || uvs.w < 0.0001){ 
+            //         continue_trace = false;
+            //     }
+            // }
+            // if(continue_trace){
+        int trace_index = in_pos0a.y * pair_size.x + in_pos0a.x;
+        float sign = -1.;
+        if(trace_index < trace_count){
+            sign = 1.;
+        }
+        vec3 cross0 = cross(d0u, d0v);
+        vec3 cross1 = cross(d1u, d1v);
+        vec3 delta = normalize(cross(cross0, cross1));
+        delta = sign * delta * step;
+        uv = get_moved_uv(uv, du, dv, uv_b, du_b, dv_b, delta);
+            // }
     output_arrows(facet_index, uv);
     box = texelFetch(box_tex, box_in_pos, 0);
 }"##);
 
 pub const TRACE_PALETTE_SOURCE: &str = concatcp!(
-HEADER, FACET_CORE, ARROW_CORE, ARROW_IN, ARROW_OUT, r##"
+HEADER, FACET_CORE, ARROW_CORE, MOVE_UV, INTERSECT_FACET_EDGE, ARROW_IN, ARROW_OUT, r##"
 uniform sampler2D box_tex;
 layout(location=3) out vec4 box;
 void main() {"##,
@@ -313,8 +332,8 @@ void main() {"##,
 //     vec3 normal1 = get_facet_normal(uv1, p1a, p1b, p1c);
 //     dir = normalize(cross(normal0, normal1));
 //     vec3 target = dir * sign * step;
-//     vec2 uv0a = get_uv_from_3d_delta(uv0, p0a, p0b, p0c, target);
-//     vec2 uv1a = get_uv_from_3d_delta(uv1, p1a, p1b, p1c, target);
+//     vec2 uv0a = get_moved_uv(uv0, p0a, p0b, p0c, target);
+//     vec2 uv1a = get_moved_uv(uv1, p1a, p1b, p1c, target);
 //     uvs = vec4(uv0a.x, uv0a.y, uv1a.x, uv1a.y);
 //     box = texelFetch(box_tex, pair_coord, 0);
 //     vec2 dirs0 = normalize(uv0a*100.0 - uv0*100.0);

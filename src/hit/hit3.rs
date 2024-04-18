@@ -119,7 +119,7 @@ impl HitBasis3 {
                // let _ = self.gpu.texture.make_rgba32f(3, &mut trace_basis.box_texels)?;
         let dual_buf_size    = ivec2(pair_buf_size.x,   pair_buf_size.y*2);
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
-        let trace_length = 50;
+        let trace_length = 250;
         //console_log!("trace_basis.index_pairs.len() {}", trace_basis.index_pairs.len());
         //console_log!("trace_basis.pair_texels.len() {}", trace_basis.pair_texels.len());
         self.trace_count = trace_basis.index_pairs.len() as i32;
@@ -139,7 +139,7 @@ impl HitBasis3 {
         let vectors    = self.gpu.read(&buff1.trace, 1);
         let uvs        = self.gpu.read(&buff1.trace, 2);
         let uv_vectors = self.gpu.read(&buff1.trace, 3);
-        let traced_curves = get_traced_curves(trace_basis.index_pairs, trace_buf_size, uvs, boxes, origins, uv_vectors, vectors);
+        let traced_curves = get_traced_curves(&self.facet_groups, trace_basis.index_pairs, trace_buf_size, uvs, boxes, origins, uv_vectors, vectors);
         for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
             let IndexPair{g0, g1, i0, i1} = index_pair;
             self.facet_hits[g0][i0][g1-g0-1].push(curve0);
@@ -204,7 +204,7 @@ impl HitBasis3 {
         self.draw_init_trace_palette();
         self.draw_trace_segments(0);
         for y in 1..length {
-            self.draw_trace_dual();
+            self.draw_trace_dual(y);
             self.draw_trace_palette();
             self.draw_trace_segments(y);
         }
@@ -228,9 +228,10 @@ impl HitBasis3 {
         self.gpu.draw_at_y(&self.trace_buffer.as_ref().unwrap().trace, y, 1);
     }
 
-    fn draw_trace_dual(&self){
+    fn draw_trace_dual(&self, y: i32){
         self.gpu.gl.use_program(Some(&self.trace_dual));
         self.gpu.set_uniform_1i(&self.trace_dual, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.trace_dual, "current_segment", y);
         self.gpu.set_uniform_1i(&self.trace_dual, "trace_count", self.trace_count);
         self.set_facet_uniforms(&self.trace_dual);
         self.set_arrow_uniforms(&self.trace_dual, 8);

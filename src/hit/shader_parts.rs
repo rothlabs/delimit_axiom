@@ -293,11 +293,134 @@ pub const HONE: &str = r##"
         if(out_pos.x < pair_size.x * 2){
             delta = pb - pa;
         }else{
-            delta = get_facet_convergence_point(p0, d0u, d0v, p1, d1u, d1v) - pa;
+            delta = get_facet_convergence_point(uvs.rg, p0, d0u, d0v, uvs.ba, p1, d1u, d1v) - pa;
         }
-        uv = get_uv_from_3d_delta(uv, du, dv, delta);
+        uv = get_moved_uv(uv, du, dv, delta);
         output_arrows(facet_index, uv);
     }
+"##;
+
+pub const INTERSECT_FACET: &str = r##"
+vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1, vec3 p1, vec3 d1u, vec3 d1v){
+    vec3 normal0 = cross(d0u, d0v);
+    vec3 normal1 = cross(d1u, d1v);
+    vec3 normal_cross = cross(normal0, normal1);
+    vec3 cross0 = normalize(cross(normal0, normal_cross));
+    vec3 cross1 = normalize(cross(normal1, normal_cross));
+    return get_arrow_middle(p0, cross0, p1, cross1);
+}
+"##;
+
+pub const INTERSECT_FACET_EDGE: &str = r##"
+vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1, vec3 p1, vec3 d1u, vec3 d1v){
+    vec3 normal0 = cross(d0u, d0v);
+    vec3 normal1 = cross(d1u, d1v);
+    if(uv0.x < 0.0001 || uv0.x > 0.9999){
+        normal0 = d0v;
+    }else if(uv0.y < 0.0001 || uv0.y > 0.9999){
+        normal0 = d0u;
+    }
+    if(uv1.x < 0.0001 || uv1.x > 0.9999){
+        normal1 = d1v;
+    }else if(uv1.y < 0.0001 || uv1.y > 0.9999){
+        normal1 = d1u;
+    }
+    vec3 normal_cross = cross(normal0, normal1);
+    vec3 cross0 = normalize(cross(normal0, normal_cross));
+    vec3 cross1 = normalize(cross(normal1, normal_cross));
+    if(uv0.x < 0.0001 || uv0.x > 0.9999){
+        cross0 = d0v;
+    }else if(uv0.y < 0.0001 || uv0.y > 0.9999){
+        cross0 = d0u;
+    }
+    if(uv1.x < 0.0001 || uv1.x > 0.9999){
+        cross1 = d1v;
+    }else if(uv1.y < 0.0001 || uv1.y > 0.9999){
+        cross1 = d1u;
+    }
+    return get_arrow_middle(p0, cross0, p1, cross1);
+}
+"##;
+
+pub const MOVE_UV: &str = r##"
+vec2 get_moved_uv(vec2 uv, vec3 du, vec3 dv, vec3 target) {
+    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  // 0.0001
+        return uv;
+    }
+    uv = uv + vec2(
+        dot(normalize(du), normalize(target)) * length(target) / length(du), 
+        dot(normalize(dv), normalize(target)) * length(target) / length(dv)
+    );
+    uv.x = clamp(uv.x, 0., 1.);
+    uv.y = clamp(uv.y, 0., 1.);
+    return uv;
+}
+"##;
+
+pub const MOVE_UV_STICKY: &str = r##"
+vec2 get_moved_uv(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
+    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  // 0.0001
+        return uv_in;
+    }
+    vec2 uv_delta = vec2(
+        dot(normalize(du), normalize(target)) * length(target) / length(du), 
+        dot(normalize(dv), normalize(target)) * length(target) / length(dv)
+    );
+    vec2 uv = uv_in + uv_delta;
+    if(uv_in.x > 0.99999){ 
+        uv.x = 1.;
+    }else if(uv_in.x < 0.00001){ 
+        uv.x = 0.;
+    }
+    if(uv_in.y > 0.99999){ 
+        uv.y = 1.;
+    }else if(uv_in.y < 0.00001){ 
+        uv.y = 0.;
+    }
+    uv.x = clamp(uv.x, 0., 1.);
+    uv.y = clamp(uv.y, 0., 1.);
+    return uv;
+}
+"##;
+
+pub const MOVE_UV_STOP: &str = r##"
+vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, vec3 target) {
+    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  // 0.0001
+        return uv0;
+    }
+    vec2 delta0 = vec2(
+        dot(normalize(du0), normalize(target)) * length(target) / length(du0), 
+        dot(normalize(dv0), normalize(target)) * length(target) / length(dv0)
+    );
+    vec2 delta1 = vec2(
+        dot(normalize(du1), normalize(target)) * length(target) / length(du1), 
+        dot(normalize(dv1), normalize(target)) * length(target) / length(dv1)
+    );
+    vec2 nd0 = normalize(delta0);
+    vec2 nd1 = normalize(delta1);
+    if      (nd0.x >  0.01 && uv0.x > 0.9999){ 
+        return uv0;
+    }else if(nd0.x < -0.01 && uv0.x < 0.0001){ 
+        return uv0;
+    }else if(nd0.y >  0.01 && uv0.y > 0.9999){ 
+        return uv0;
+    }else if(nd0.y < -0.01 && uv0.y < 0.0001){ 
+        return uv0;
+    }
+    if      (nd1.x >  0.01 && uv1.x > 0.9999){ 
+        return uv0;
+    }else if(nd1.x < -0.01 && uv1.x < 0.0001){ 
+        return uv0;
+    }else if(nd1.y >  0.01 && uv1.y > 0.9999){ 
+        return uv0;
+    }else if(nd1.y < -0.01 && uv1.y < 0.0001){ 
+        return uv0;
+    }
+    vec2 uv = uv0 + delta0;
+    uv.x = clamp(uv.x, 0., 1.);
+    uv.y = clamp(uv.y, 0., 1.);
+    return uv;
+}
 "##;
 
 pub const ARROW_CORE: &str = r##"
@@ -334,39 +457,42 @@ vec3 get_arrow_middle(vec3 p0, vec3 delta0, vec3 p1, vec3 delta1) {
     return (closest0 + closest1) / 2.;
 }
 
-vec3 get_facet_convergence_point(vec3 p0, vec3 d0u, vec3 d0v, vec3 p1, vec3 d1u, vec3 d1v){
-    vec3 normal0 = cross(d0u, d0v);
-    vec3 normal1 = cross(d1u, d1v);
-    vec3 normal_cross = cross(normal0, normal1);
-    vec3 cross0 = normalize(cross(normal0, normal_cross));
-    vec3 cross1 = normalize(cross(normal1, normal_cross));
-    return get_arrow_middle(p0, cross0, p1, cross1);
-}
 
-vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
-    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  // 0.0001
-        return uv_in;
-    }
-    vec2 uv_delta = vec2(
-        dot(normalize(du), normalize(target)) * length(target) / length(du), 
-        dot(normalize(dv), normalize(target)) * length(target) / length(dv)
-    );
-    vec2 uv = uv_in + uv_delta;
-        // if(uv.x > 1.){ 
-        //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(1., 0.), vec2(0., 1.),  uv);
-        // }else if(uv.x < 0.){ 
-        //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 0.), vec2(0., 1.),  uv);
-        // }
-        // if(uv.y > 1.){ 
-        //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 1.), vec2(1., 0.),  uv);
-        // }else if(uv.y < 0.){ 
-        //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 0.), vec2(1., 0.),  uv);
-        // }
-    uv.x = clamp(uv.x, 0., 1.);
-    uv.y = clamp(uv.y, 0., 1.);
-    return uv;
-}
 "##;
+
+
+// vec3 get_facet_convergence_point(vec3 p0, vec3 d0u, vec3 d0v, vec3 p1, vec3 d1u, vec3 d1v){
+//     vec3 normal0 = cross(d0u, d0v);
+//     vec3 normal1 = cross(d1u, d1v);
+//     vec3 normal_cross = cross(normal0, normal1);
+//     vec3 cross0 = normalize(cross(normal0, normal_cross));
+//     vec3 cross1 = normalize(cross(normal1, normal_cross));
+//     return get_arrow_middle(p0, cross0, p1, cross1);
+// }
+
+// vec2 get_moved_uv(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
+//     if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  // 0.0001
+//         return uv_in;
+//     }
+//     vec2 uv_delta = vec2(
+//         dot(normalize(du), normalize(target)) * length(target) / length(du), 
+//         dot(normalize(dv), normalize(target)) * length(target) / length(dv)
+//     );
+//     vec2 uv = uv_in + uv_delta;
+//         // if(uv.x > 1.){ 
+//         //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(1., 0.), vec2(0., 1.),  uv);
+//         // }else if(uv.x < 0.){ 
+//         //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 0.), vec2(0., 1.),  uv);
+//         // }
+//         // if(uv.y > 1.){ 
+//         //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 1.), vec2(1., 0.),  uv);
+//         // }else if(uv.y < 0.){ 
+//         //     uv = get_arrow_middle_2d(uv_in, normalize(uv_delta), vec2(0., 0.), vec2(1., 0.),  uv);
+//         // }
+//     uv.x = clamp(uv.x, 0., 1.);
+//     uv.y = clamp(uv.y, 0., 1.);
+//     return uv;
+// }
 
 
 
@@ -384,7 +510,7 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
 
 
 
-// vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
+// vec2 get_moved_uv(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
 //     if(length(target) < 0.0001){ // isnan(target.x) || isnan(target.y) || isnan(target.z) || 
 //         return uv_in;
 //     }
@@ -552,7 +678,7 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
 // if(out_pos.x < pair_size.x){
 //     delta = get_facet_convergence_point(p0, d0u, d0v, p1, d1u, d1v) - pnt;
 // }
-// vec2 uv_out = get_uv_from_3d_delta(uv_in, pdu, pdv, delta);
+// vec2 uv_out = get_moved_uv(uv_in, pdu, pdv, delta);
 // float[9] arrows = get_facet_arrows(fi, uv_out);
 // origin   = vec3(arrows[0], arrows[1], arrows[2]);
 // vector_u = vec4(arrows[3], arrows[4], arrows[5], uv_out.x);
@@ -650,7 +776,7 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
 //     if(out_pos.y < pair_size.y){
 //         fi = facet_i.r;
 //     }
-//     vec2 uv_out = get_uv_from_3d_delta(uv0, d0u, d0v, p1 - p0);
+//     vec2 uv_out = get_moved_uv(uv0, d0u, d0v, p1 - p0);
 //     float[9] arrows = get_facet_arrows(fi, uv_out);
 //     origin   = vec3(arrows[0], arrows[1], arrows[2]);
 //     vector_u = vec4(arrows[3], arrows[4], arrows[5], uv_out.x);
@@ -693,14 +819,14 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
 
 // pub const HONE_PARTS: &str = r##"
 //     vec3 center = get_facet_convergence_point(uv0, p0a, p0b, p0c, uv1, p1a, p1b, p1c);
-//     vec2 uv0_a = get_uv_from_3d_delta(uv0, p0a, p0b, p0c, center - p0a);
+//     vec2 uv0_a = get_moved_uv(uv0, p0a, p0b, p0c, center - p0a);
 //     vec3 p0_a  = get_point_on_facet(facet_i.r, uv0_a);
-//     vec2 uv1_a = get_uv_from_3d_delta(uv1, p1a, p1b, p1c, center - p1a);
+//     vec2 uv1_a = get_moved_uv(uv1, p1a, p1b, p1c, center - p1a);
 //     vec3 p1_a  = get_point_on_facet(facet_i.g, uv1_a);
     
-//     vec2 uv0_c = get_uv_from_3d_delta(uv0, p0a, p0b, p0c, p1a - p0a);
+//     vec2 uv0_c = get_moved_uv(uv0, p0a, p0b, p0c, p1a - p0a);
 //     vec3 p0_c  = get_point_on_facet(facet_i.r, uv0_c);
-//     vec2 uv1_c = get_uv_from_3d_delta(uv1, p1a, p1b, p1c, p0a - p1a);
+//     vec2 uv1_c = get_moved_uv(uv1, p1a, p1b, p1c, p0a - p1a);
 //     vec3 p1_c  = get_point_on_facet(facet_i.g, uv1_c);
 //     vec3 lengths = vec3(
 //         length(p0_a - p1_a), 
@@ -830,13 +956,13 @@ vec2 get_uv_from_3d_delta(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
 
 
 // center = (p0a + p1a) / 2.;
-    // vec2 uv0_b = get_uv_from_3d_delta(uv0, p0a, p0b, p0c, center - p0a);
+    // vec2 uv0_b = get_moved_uv(uv0, p0a, p0b, p0c, center - p0a);
     // vec3 p0_b  = get_point_on_facet(facet_i.r, uv0_b);
-    // vec2 uv1_b = get_uv_from_3d_delta(uv1, p1a, p1b, p1c, center - p1a);
+    // vec2 uv1_b = get_moved_uv(uv1, p1a, p1b, p1c, center - p1a);
     // vec3 p1_b  = get_point_on_facet(facet_i.g, uv1_b);
 
 
-    // vec2 get_uv_from_3d_delta(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 target) {
+    // vec2 get_moved_uv(vec2 uv, vec3 p0, vec3 p1, vec3 p2, vec3 target) {
     //     if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){
     //         return uv;
     //     }

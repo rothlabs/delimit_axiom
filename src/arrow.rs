@@ -70,18 +70,18 @@ impl ArrowsToCurve {
                 let dist = self.arrow.point.distance(arrow[1].point);
                 //if dist > 0.05 && (angle > FRAC_PI_8 || angle < base_angle - 0.0001) {
                 if angle > FRAC_PI_8 || angle < base_angle - 0.001 {
-                    let middle = self.arrow.middle(&arrow[0]);
+                                            // let middle = self.arrow.middle(&arrow[0]);
                     //let delta0 = self.arrow.delta.normalize().dot((middle - self.arrow.point).normalize());
                     //let delta1 = arrow[0].delta.normalize().dot((arrow[0].point - middle).normalize());
-                    let delta0 = self.arrow.point.distance(arrow[0].point);
-                    let delta1 = self.arrow.point.distance(middle);
-                    let delta2 = arrow[0].point.distance(middle);
-                    if delta1 < delta0 && delta2 < delta0 {
+                                            // let delta0 = self.arrow.point.distance(arrow[0].point);
+                                            // let delta1 = self.arrow.point.distance(middle);
+                                            // let delta2 = arrow[0].point.distance(middle);
+                                            // if delta1 < delta0 && delta2 < delta0 {
                             self.add_arc(&arrow[0]);
                             //base_angle = 0.;
                         //}else{
                             base_angle = angle;
-                    }
+                                            // }
                     // } else if delta0 > 0. && delta1 > 0. {
                     //     self.add_arc(&arrow[0]);
                     //     //base_angle = 0.;

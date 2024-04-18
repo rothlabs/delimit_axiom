@@ -147,11 +147,6 @@ void main() {"##,
     float du1 = dot(normalize(d1u), delta) * 100. / length(d1u);
     float dv1 = dot(normalize(d1v), delta) * 100. / length(d1v);
     uv_deltas = vec4(du0, dv0, du1, dv1);
-        // int facet_index0 = texelFetch(pair_tex, in_pos0a, 0).r;
-        // int facet_index1 = texelFetch(pair_tex, in_pos0a, 0).g;
-        // float sign0 = get_facet_texel(facet_index0);
-        // float sign1 = get_facet_texel(facet_index1);
-        // uv_deltas = vec4(du0 * sign0, dv0 * sign0, du1 * sign1, dv1 * sign1);
 }"##);
 
 
@@ -190,27 +185,16 @@ void main() {"##,
     if(pick > 1){
         box_in_pos.x = in_pos0c.x;
     }
-            // bool continue_trace = true;
-            // if(current_segment > 1){
-            //     if(uvs.x > 0.9999 || uvs.x < 0.0001 || uvs.y > 0.9999 || uvs.y < 0.0001){ 
-            //         continue_trace = false;
-            //     }
-            //     if(uvs.z > 0.9999 || uvs.z < 0.0001 || uvs.w > 0.9999 || uvs.w < 0.0001){ 
-            //         continue_trace = false;
-            //     }
-            // }
-            // if(continue_trace){
-        int trace_index = in_pos0a.y * pair_size.x + in_pos0a.x;
-        float sign = -1.;
-        if(trace_index < trace_count){
-            sign = 1.;
-        }
-        vec3 cross0 = cross(d0u, d0v);
-        vec3 cross1 = cross(d1u, d1v);
-        vec3 delta = normalize(cross(cross0, cross1));
-        delta = sign * delta * step;
-        uv = get_moved_uv(uv, du, dv, uv_b, du_b, dv_b, delta);
-            // }
+    int trace_index = in_pos0a.y * pair_size.x + in_pos0a.x;
+    float sign = -1.;
+    if(trace_index < trace_count){
+        sign = 1.;
+    }
+    vec3 cross0 = cross(d0u, d0v);
+    vec3 cross1 = cross(d1u, d1v);
+    vec3 delta = normalize(cross(cross0, cross1));
+    delta = sign * delta * step;
+    uv = get_moved_uv(uv, du, dv, uv_b, du_b, dv_b, delta);
     output_arrows(facet_index, uv);
     box = texelFetch(box_tex, box_in_pos, 0);
 }"##);

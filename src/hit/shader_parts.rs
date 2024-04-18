@@ -427,7 +427,7 @@ pub const ARROW_CORE: &str = r##"
 
 vec2 get_arrow_middle_2d(vec2 p0, vec2 delta0, vec2 p1, vec2 delta1, vec2 alt) {
     float dotx = dot(delta0, delta1);
-    if(abs(dotx) > 0.99) {
+    if(abs(dotx) > 0.999) {
         return alt; 
     }
     vec2 delta = p0 - p1;
@@ -443,7 +443,7 @@ vec2 get_arrow_middle_2d(vec2 p0, vec2 delta0, vec2 p1, vec2 delta1, vec2 alt) {
 
 vec3 get_arrow_middle(vec3 p0, vec3 delta0, vec3 p1, vec3 delta1) {
     float dotx = dot(delta0, delta1);
-    if(abs(dotx) > 0.99) {
+    if(abs(dotx) > 0.999) {
         return (p0 + p1) / 2.;
     }
     vec3 delta = p0 - p1;

@@ -104,15 +104,15 @@ impl HitBasis3 {
             //     self.shapes.push(Shape::Point(point));
             // }
         let hit_miss = self.gpu.read(&buff0.uv, 0);
-                //console_log!("hit_miss len {}", hit_miss.len());
-                //console_log!("index_pairs len {}", self.hone_basis.index_pairs.len());
-                for i in 0..self.hone_basis.index_pairs.len() {
-                    if hit_miss[i*4] > -0.5 {
-                        let IndexPair{g0, g1, i0, i1} = self.hone_basis.index_pairs[i];
-                        let point = self.facet_groups[g0][i0].get_point(vec2(hit_miss[i*4], hit_miss[i*4+1]));
-                        self.shapes.push(Shape::Point(point));
-                    }
-                }
+                // //console_log!("hit_miss len {}", hit_miss.len());
+                // //console_log!("index_pairs len {}", self.hone_basis.index_pairs.len());
+                // for i in 0..self.hone_basis.index_pairs.len() {
+                //     if hit_miss[i*4] > -0.5 {
+                //         let IndexPair{g0, g1, i0, i1} = self.hone_basis.index_pairs[i];
+                //         let point = self.facet_groups[g0][i0].get_point(vec2(hit_miss[i*4], hit_miss[i*4+1]));
+                //         self.shapes.push(Shape::Point(point));
+                //     }
+                // }
         let mut trace_basis = TraceBasis::new(&self.hone_basis, hit_miss);
         let (_, pair_buf_size) = self.gpu.texture.make_rg32i(1, &mut trace_basis.pair_texels)?;
         let _ = self.gpu.texture.make_rgba32f(2, &mut trace_basis.uv_texels)?;

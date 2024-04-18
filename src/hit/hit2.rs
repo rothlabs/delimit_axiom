@@ -32,7 +32,7 @@ impl HitTester2 {
         let mut u1 = start_u1;
         let mut p0 = self.curves.0.get_point(u0);
         let mut p1 = self.curves.1.get_point(u1);
-        for _ in 0..10 {
+        for _ in 0..20 {
             if p0.distance(p1) < EPSILON {
                 break;
             }
@@ -90,7 +90,7 @@ impl HitTester2 {
                     log("hit tangent1 NaN!!!");
                     //break;
                 }
-                if tangent0.dot(tangent1).abs() > 0.995 {
+                if tangent0.dot(tangent1).abs() > 0.999 {
                     return Err((
                         // Miss{dot:self.curves.0.nurbs.sign, distance:0.}, // , point: p0 
                         // Miss{dot:self.curves.1.nurbs.sign, distance:0.}, // , point: p1

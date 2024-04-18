@@ -99,7 +99,7 @@ impl UnionBasis3 {
         //     }
         // }
 
-        let mut trim = Trim::new(self.hit_basis.facet_hits[gi][fi][hi].clone(), 0.001); // 0.001
+        let mut trim = Trim::new(self.hit_basis.facet_hits[gi][fi][hi].clone(), 0.0001); // 0.001
         let curves1 = trim.build();
 
         // for curve in &curves1 {
@@ -125,7 +125,7 @@ impl UnionBasis3 {
         // }
 
 
-        let mut union = UnionBasis2::new(facet.boundaries.clone(), curves1.clone(), 0.001, false); // self.facet_hits[g][i].clone()
+        let mut union = UnionBasis2::new(facet.boundaries.clone(), curves1.clone(), 0.0001, false); // self.facet_hits[g][i].clone()
         facet.boundaries = union.build();
 
 

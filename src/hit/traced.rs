@@ -54,16 +54,10 @@ pub fn get_traced_curves(
         let mut rays0a = vec![];
         let mut rays1a = vec![];
         let mut rays2a = vec![];
-        let mut add_last_point = true;
         'trace_loop: for y in 0..buf_size.y as usize{
             let j = (y * buf_size.x as usize + i) * 4; 
             let delta0 = vec3(uv_dirs[j+0], uv_dirs[j+1], 0.).normalize();
             let delta1 = vec3(uv_dirs[j+2], uv_dirs[j+3], 0.).normalize();
-            // for kk in 0..4 {
-            //     if traces[j+kk] > 0.999 || traces[j+kk] < 0.001 { 
-            //         break 'trace_loop;
-            //     }
-            // }
             if       (delta0.x > 0.01 && traces[j+0] > 0.9999) || (delta0.x < -0.01 && traces[j+0] < 0.0001) { 
                 break;
             }else if (delta0.y > 0.01 && traces[j+1] > 0.9999) || (delta0.y < -0.01 && traces[j+1] < 0.0001) { 
@@ -136,14 +130,8 @@ pub fn get_traced_curves(
             let mut rays0b = vec![];
             let mut rays1b = vec![];
             let mut rays2b = vec![];
-            //let mut add_last_point = true;
             'trace_loop: for y in 1..buf_size.y as usize {
                 let j = (y * buf_size.x as usize + half + i) * 4;
-                // for kk in 0..4 {
-                //     if traces[j+kk] > 0.999 || traces[j+kk] < 0.001 { 
-                //         break 'trace_loop;
-                //     }
-                // }
                 let delta0 = -vec3(uv_dirs[j+0], uv_dirs[j+1], 0.).normalize();
                 let delta1 = -vec3(uv_dirs[j+2], uv_dirs[j+3], 0.).normalize();
                 if       (delta0.x > 0.01 && traces[j+0] > 0.9999) || (delta0.x < -0.01 && traces[j+0] < 0.0001) { 
@@ -161,13 +149,13 @@ pub fn get_traced_curves(
                     // prev_point = point;
                 //points0.push(vec3(traces[j+0], traces[j+1], 0.));
                 rays0b.push(Arrow{ 
-                    point:  vec3(traces[j+0],  traces[j+1],  0.),
-                    delta:  delta0 // vec3(uv_dirs[j+0], uv_dirs[j+1], 0.), // was negated
+                    point: vec3(traces[j+0],  traces[j+1],  0.),
+                    delta: -delta0 // vec3(uv_dirs[j+0], uv_dirs[j+1], 0.), // was negated
                 });
                 //curve1.controls.push(vec3(traces[j+2], traces[j+3], 0.));
                 rays1b.push(Arrow{ 
                     point: vec3(traces[j+2],  traces[j+3],  0.),
-                    delta: delta1 // vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
+                    delta: -delta1 // vec3(uv_dirs[j+2], uv_dirs[j+3], 0.),
                 });
                 //centers1.push(vec3(centers0[j+0], centers0[j+1], centers0[j+2]));
                 rays2b.push(Arrow{ 
@@ -178,8 +166,8 @@ pub fn get_traced_curves(
         //if add_last_point {
             let j = ((buf_size.y-1) as usize * buf_size.x as usize + half + i) * 4; 
             rays0b.push(Arrow{ 
-                point:  vec3(traces[j+0],  traces[j+1],  0.),
-                delta:  vec3(uv_dirs[j+0], uv_dirs[j+1], 0.), // was negated
+                point: vec3(traces[j+0],  traces[j+1],  0.),
+                delta: vec3(uv_dirs[j+0], uv_dirs[j+1], 0.), // was negated
             });
             rays1b.push(Arrow{ 
                 point: vec3(traces[j+2],  traces[j+3],  0.),
@@ -251,15 +239,15 @@ pub fn get_traced_curves(
                 // }
         // console_log!("dirs0 {:?}", rays0a.iter().map(|x| x.vector).collect::<Vec<Vec3>>());
         // console_log!("dirs1 {:?}", rays1a.iter().map(|x| x.vector).collect::<Vec<Vec3>>());
-        let mut curve0 = CurveShape::default();
-        let mut curve1 = CurveShape::default();
-        let mut curve2 = CurveShape::default();
-        curve0.controls.extend(rays0a.iter().map(|x| x.point));
-        curve1.controls.extend(rays1a.iter().map(|x| x.point));
-        curve2.controls.extend(rays2a.iter().map(|x| x.point));
-        // let mut curve0 = rays0a.to_curve();//RaysToCurve::new(rays0a);
-        // let mut curve1 = rays1a.to_curve();//RaysToCurve::new(rays1a);
-        // let mut curve2 = rays2a.to_curve();//RaysToCurve::new(rays1a);
+        // let mut curve0 = CurveShape::default();
+        // let mut curve1 = CurveShape::default();
+        // let mut curve2 = CurveShape::default();
+        // curve0.controls.extend(rays0a.iter().map(|x| x.point));
+        // curve1.controls.extend(rays1a.iter().map(|x| x.point));
+        // curve2.controls.extend(rays2a.iter().map(|x| x.point));
+        let mut curve0 = rays0a.to_curve();//RaysToCurve::new(rays0a);
+        let mut curve1 = rays1a.to_curve();//RaysToCurve::new(rays1a);
+        let mut curve2 = rays2a.to_curve();//RaysToCurve::new(rays1a);
         curve0.negate();
         curve1.negate();
         curve0 = curve0.get_valid();

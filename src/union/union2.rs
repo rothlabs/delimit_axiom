@@ -42,7 +42,7 @@ impl UnionBasis2 {
             for i in 0..self.groups[g].len() {
                 if self.hits[g][i].is_empty() {
                     self.miss[g][i] = self.miss[g][i].clone().into_iter().filter(
-                        |a| !a.distance.is_nan() && !a.dot.is_nan() && a.dot.abs() > 0.01
+                        |a| !a.distance.is_nan() && !a.dot.is_nan() // && a.dot.abs() > 0.01
                     ).collect();
                     self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
                     if self.miss[g][i].is_empty() || self.miss[g][i][0].dot < 0.01 || self.same_groups { // * self.groups[g][i].nurbs.sign
@@ -65,29 +65,16 @@ impl UnionBasis2 {
     fn add_bounded_curves(&mut self, g: usize, i: usize) {
         let mut curve = self.groups[g][i].clone();
         let min_basis = curve.min;
-        //let mut start_k = 0;
-        let mut set_min = false;
-        // for k in 0..self.hits[g][i].len() {
-        //     if self.hits[g][i][k].u > 0.01 && self.hits[g][i][k].u < 0.99 {
-        //         start_k = k;
-        //         //use_hits = true;
-        //         break;
-        //     }
-        // }
-        if self.hits[g][i][0].dot > 0. {set_min = true;} //  * curve.nurbs.sign
-        for curve_hit in self.hits[g][i].iter() { // .skip(start_k) { //for curve_hit in &self.hits[g][i] { 
-            //if curve_hit.u < 0.99 {
-                if set_min {
-                    curve.set_min(curve_hit.u);
-                }else{
-                    curve.set_max(min_basis, curve_hit.u);
-                    self.curves.push(curve);
-                    curve = self.groups[g][i].clone();
-                }
-                set_min = !set_min;
-            //}
+        for curve_hit in self.hits[g][i].iter() {
+            if curve_hit.dot > 0. {
+                curve.set_min(curve_hit.u);
+            }else{
+                curve.set_max(min_basis, curve_hit.u);
+                self.curves.push(curve);
+                curve = self.groups[g][i].clone();
+            }
         }
-        if !set_min {
+        if self.hits[g][i].last().expect("There should be one or more hits.").dot > 0. {
             self.curves.push(curve);
         }
     }

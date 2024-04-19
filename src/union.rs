@@ -18,7 +18,6 @@ pub struct Union {
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
         let mut shapes = vec![];
-        let tolerance = 0.005;
         let (_, facets, curve_groups_basis, facet_groups_basis) = get_grouped_curves_and_facets(&self.parts);
         let (_, neg_facets, neg_curve_groups, neg_facet_groups) = get_grouped_curves_and_facets(&self.negated_parts);
         if facets.is_empty() && neg_facets.is_empty() {
@@ -33,7 +32,7 @@ impl Union {
             }
             let mut curves0 = groups.first().unwrap_or(&vec![]).clone();
             for curves1 in groups.iter().skip(1) {
-                let mut basis = UnionBasis2::new(curves0, curves1.clone(), tolerance, false);
+                let mut basis = UnionBasis2::new(curves0, curves1.clone());
                 curves0 = basis.build();
                 shapes.extend(basis.shapes);
             }

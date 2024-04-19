@@ -1,5 +1,4 @@
 
-use std::f32::consts::PI;
 use std::f32::EPSILON;
 use crate::{log, FacetShape};
 use crate::{get_points, get_reshaped_point, get_vector_hash, query::DiscreteQuery, arrow::Arrow, scene::Polyline, Model, Shape};
@@ -206,7 +205,15 @@ impl CurveShape {
             ray.point += self.controls[ci] * basis.0[i];
             ray.delta += self.controls[ci] * basis.1[i];
         }
-        ray.delta = ray.delta * (self.max - self.min);
+        let range = self.max - self.min;
+        if range < 0.0001 {
+            console_log!("range: {}", range);
+            panic!("curve.get_arrow small range!");
+        }
+        ray.delta = ray.delta * range;
+        if ray.delta.is_nan() {
+            panic!("Curve delta is NaN!");
+        }
         ray
     }
 

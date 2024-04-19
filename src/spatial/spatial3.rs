@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use glam::*;
 
+use crate::DUP_TOL;
+
 #[derive(Default)]
 pub struct Spatial3 {
     pub map: HashMap<String, Vec<usize>>,
@@ -8,11 +10,11 @@ pub struct Spatial3 {
 }
 
 impl Spatial3 {
-    pub fn new(cell_size: f32) -> Spatial3 {
+    pub fn new() -> Spatial3 {
         let map: HashMap<String, Vec<usize>> = HashMap::new();
         Spatial3 {
             map,
-            cell_size,
+            cell_size: DUP_TOL,
         }
     }
 

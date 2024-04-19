@@ -15,6 +15,7 @@ macro_rules! console_log {
 }
 
 mod utils;
+mod tolerance;
 mod query;
 mod scene;
 mod gpu;
@@ -34,6 +35,7 @@ mod mirror;
 mod arrow;
 
 use utils::*;
+use tolerance::*;
 use nurbs::{curve::*, facet::*};
 use spatial::spatial3::*;
 use hit::{hit2::*, hit3::*};

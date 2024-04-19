@@ -37,7 +37,7 @@ impl HoneBasis {
                 }
                 let texel_i = facet_texels.len();
                 facet_texels.extend([
-                    facet.nurbs.sign, //10000000.,
+                    10000000., // facet.nurbs.sign, 
                     facet.controls.len() as f32,
                     facet.nurbs.order as f32,
                 ]);
@@ -115,34 +115,26 @@ impl TraceBasis {
         let mut uv_texels   = vec![];
         let mut box_texels  = vec![];
         let mut misses      = vec![];
-        //let mut length = 0;
-        //for k in 0..2 {
-            for i in 0..basis.index_pairs.len() {
-                if hit_miss[i*4] > -0.5 { // it's a hit
-                    //if k < 1 {
-                        index_pairs.push(basis.index_pairs[i].clone());
-                    //}
-                    pair_texels.extend([basis.pair_texels[i*2], basis.pair_texels[i*2+1]]);
-                    uv_texels.extend([hit_miss[i*4+0], hit_miss[i*4+1], hit_miss[i*4+2], hit_miss[i*4+3]]); // use .slice of tex
-                    box_texels.extend([1., 1., 0., 0.]);
-                    //length += 4;
-                }else{
-                    if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() {
-                        log("nan hit_miss in union3!");
-                        continue;
-                    }
-                    // if hit_miss[i*4+1].abs() < 0.01 || hit_miss[i*4+2].abs() < 0.01 || hit_miss[i*4+3].abs() < 0.01 {
-                    //     continue;
-                    // }
-                    misses.push(MissPair { 
-                        index:    basis.index_pairs[i].clone(),
-                        distance: hit_miss[i*4+1],
-                        dot0:     hit_miss[i*4+2], 
-                        dot1:     hit_miss[i*4+3], 
-                    });
+        for i in 0..basis.index_pairs.len() {
+            if hit_miss[i*4] > -0.5 { // it's a hit
+                index_pairs.push(basis.index_pairs[i].clone());
+                pair_texels.extend([basis.pair_texels[i*2], basis.pair_texels[i*2+1]]);
+                uv_texels.extend([hit_miss[i*4+0], hit_miss[i*4+1], hit_miss[i*4+2], hit_miss[i*4+3]]); // use .slice of tex
+                box_texels.extend([1., 1., 0., 0.]);
+            }else{
+                if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() {
+                    log("nan hit_miss in union3!");
+                    continue;
                 }
+                if hit_miss[i*4+1].abs() < 0. {continue}
+                misses.push(MissPair { 
+                    index:    basis.index_pairs[i].clone(),
+                    distance: hit_miss[i*4+1],
+                    dot0:     hit_miss[i*4+2], 
+                    dot1:     hit_miss[i*4+3], 
+                });
             }
-        //}
+        }
         pair_texels.extend(pair_texels.clone());
         uv_texels.extend(uv_texels.clone());
         box_texels.extend(box_texels.clone());
@@ -151,11 +143,14 @@ impl TraceBasis {
             pair_texels,
             uv_texels,
             box_texels,
-            //uv_box_dir_texels: vec![uv_texels, box_texels, vec![0.; length], vec![0.; length]],
             misses,
         }
     }
 }
+
+// if hit_miss[i*4+1].abs() < 0.01 || hit_miss[i*4+2].abs() < 0.01 || hit_miss[i*4+3].abs() < 0.01 {
+                //     continue;
+                // }
 
 // hit_points.push({
 //     ...group_facet_indices0[i],

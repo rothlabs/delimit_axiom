@@ -3,7 +3,7 @@ use super::shader_parts::{
     HEADER, CORE_PARTS,
     FACET_CORE, FACET_PARTS, ARROW_DUAL, 
     ARROW_IN_POS, ARROW_PALETTE, ARROW_IN, ARROW_OUT, HONE,
-    ARROW_CORE, MOVE_UV, MOVE_UV_STICKY, MOVE_UV_STOP,
+    ARROW_CORE, MOVE_UV, MOVE_UV_STOP,
     INTERSECT_FACET, INTERSECT_FACET_EDGE,
 };
 
@@ -49,36 +49,35 @@ void main() {"##,
     vec3 normal0 = normalize(cross(d0u, d0v));
     vec3 normal1 = normalize(cross(d1u, d1v));
     if(length(p0 - p1) < tolerance){
-        if(abs(dot(normal0, normal1)) < 0.99){     
-            hit_miss = uvs;
+        if(abs(dot(normal0, normal1)) > 0.9999){     
+            hit_miss = vec4(-1, -1, 0, 0); 
         }else{
-            hit_miss = vec4(-1, 0, 0, 0); 
+            hit_miss = uvs;
         }
     }else{
-        if(uvs.x < 0.01){
-            p0 = p0 + normalize(d0u) * 0.01;
-        }else if(uvs.x > 0.99){
-            p0 = p0 - normalize(d0u) * 0.01;
+        if(uvs.x < 0.001){
+            p0 = p0 + normalize(d0u) * 0.1;
+        }else if(uvs.x > 0.999){
+            p0 = p0 - normalize(d0u) * 0.1;
         }
-        if(uvs.y < 0.01){
-            p0 = p0 + normalize(d0v) * 0.01;
-        }else if(uvs.y > 0.99){
-            p0 = p0 - normalize(d0v) * 0.01;
+        if(uvs.y < 0.001){
+            p0 = p0 + normalize(d0v) * 0.1;
+        }else if(uvs.y > 0.999){
+            p0 = p0 - normalize(d0v) * 0.1;
         }
-        if(uvs.z < 0.01){
-            p1 = p1 + normalize(d1u) * 0.01;
-        }else if(uvs.z > 0.99){
-            p1 = p1 - normalize(d1u) * 0.01;
+        if(uvs.z < 0.001){
+            p1 = p1 + normalize(d1u) * 0.1;
+        }else if(uvs.z > 0.999){
+            p1 = p1 - normalize(d1u) * 0.1;
         }
-        if(uvs.w < 0.01){
-            p1 = p1 + normalize(d1v) * 0.01;
-        }else if(uvs.w > 0.99){
-            p1 = p1 - normalize(d1v) * 0.01;
+        if(uvs.w < 0.001){
+            p1 = p1 + normalize(d1v) * 0.1;
+        }else if(uvs.w > 0.999){
+            p1 = p1 - normalize(d1v) * 0.1;
         }
-        float dist = length(p0 - p1);
         hit_miss = vec4(
             -1, 
-            dist, 
+            length(p0 - p1), 
             dot(normalize(p1 - p0), normal1), 
             dot(normalize(p0 - p1), normal0)
         );

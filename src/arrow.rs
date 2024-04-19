@@ -1,6 +1,6 @@
-use std::f32::{consts::{FRAC_PI_2, FRAC_PI_4, FRAC_PI_8}, EPSILON};
+use std::f32::consts::FRAC_PI_8;
 use glam::*;
-use crate::{log, CurveShape};
+use crate::{log, DOT_1_TOL, CurveShape};
 
 const TWO_ARROWS: &str = "There should be two arrows or more.";
 
@@ -18,7 +18,7 @@ impl Arrow {
         let delta0 = self.delta.normalize();
         let delta1 = arrow.delta.normalize();
         let dotx = delta0.dot(delta1);
-        if dotx.abs() > 0.999 { 
+        if dotx.abs() > DOT_1_TOL { 
             return (self.point + arrow.point) / 2.;
         }
         let delta = self.point - arrow.point;
@@ -31,7 +31,11 @@ impl Arrow {
         let closest1 = arrow.point + delta1 * u1;
         let point = (closest0 + closest1) / 2.;
         if point.is_nan() {
-            log("arrow.middle -> nan!");
+            //log("arrow.middle -> nan!");
+            console_log!("arrow.middle point distance {}", self.point.distance(arrow.point));
+            console_log!("self.delta, arrow.delta {}, {}", self.delta, arrow.delta);
+            console_log!("delta0, delta1 {}, {}", delta0, delta1);
+            panic!("arrow.middle -> nan!");
         }
         point
     }
@@ -72,7 +76,7 @@ impl ArrowsToCurve {
             }else{
                 base_angle = angle;
             }
-            self.knot += 1.; //arrow[0].point.distance(arrow[1].point);
+            self.knot += 1.; 
         }
         self.add_arc(&arrows.last().expect(TWO_ARROWS));
         self.curve.nurbs.knots.push(self.knot);

@@ -1,17 +1,13 @@
-use std::f32::{EPSILON, INFINITY};
+use std::f32::EPSILON;
 use glam::*;
-use crate::arrow::*;
-use crate::{log, CurveShape, Spatial3};
+use crate::{log, CurveShape, Spatial3, AT_0_TOL, AT_1_TOL, UV_MISS_BUMP, DOT_1_TOL, DUP_TOL, HIT_TOL};
 
 use super::Miss;
 
-//#[derive(Clone)]
 pub struct HitTester2 {
     pub curves: (CurveShape, CurveShape),
     pub spatial:      Spatial3,
     pub points:       Vec<Vec3>,
-    pub tolerance:    f32,
-    pub duplication_tolerance: f32,
 }
 
 #[derive(Clone)]
@@ -26,17 +22,22 @@ pub struct CurveHit {
     pub dot: f32,
 }
 
+pub enum HitMiss2 {
+    Hit(Hit2),
+    Miss((Miss, Miss)),
+}
+
 impl HitTester2 { 
-    pub fn test(&mut self, start_u0: f32, start_u1: f32) -> Result<Hit2, (Miss, Miss)> { 
+    pub fn test(&mut self, start_u0: f32, start_u1: f32) -> Option<HitMiss2> { 
         let mut u0 = start_u0;
         let mut u1 = start_u1;
         let mut p0 = self.curves.0.get_point(u0);
         let mut p1 = self.curves.1.get_point(u1);
-        for _ in 0..20 {
+        for _ in 0..8 {
             if p0.distance(p1) < EPSILON {
                 break;
             }
-            let target = self.get_tangent_intersection(u0, u1, p0, p1);
+            let target = self.get_tangent_intersection(u0, u1);
             let (u0_t0, p0_t0) = self.curves.0.get_u_and_point_from_target(u0, target - p0);
             let (u1_t0, p1_t0) = self.curves.1.get_u_and_point_from_target(u1, target - p1);
             let (u0_c, p0_c) = self.curves.0.get_u_and_point_from_target(u0, p1 - p0);
@@ -63,130 +64,69 @@ impl HitTester2 {
                 u1 = u1_c;
             }
         }
-        //let distance = p0.distance(p1);
-        if p0.distance(p1) < self.tolerance  {
+        if p0.distance(p1) < HIT_TOL  {
             let center = (p0 + p1) / 2.;
             (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
             (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
             let center = (p0 + p1) / 2.;
             let mut duplicate = false;
                 for i in self.spatial.get(&center) {
-                    if self.points[i].distance(center) < self.duplication_tolerance {
+                    if self.points[i].distance(center) < DUP_TOL {
                         duplicate = true;
-                        //log("duplicate 2D");
                         break;
                     }
                 }
             if !duplicate {
-                // let tangent0 = -self.curves.0.get_tangent_at_u(u0);
-                // let tangent1 = -self.curves.1.get_tangent_at_u(u1);
-                let tangent0 = self.curves.0.get_arrow(u0).delta.normalize();
-                let tangent1 = self.curves.1.get_arrow(u1).delta.normalize();
-                if tangent0.is_nan() {
-                    log("hit tangent0 NaN!!!");
-                    //break;
+                // let delta0 = self.curves.0.get_arrow(u0).delta.normalize();
+                // let delta1 = self.curves.1.get_arrow(u1).delta.normalize();
+                
+                if (u0 > AT_1_TOL && u1 < AT_0_TOL) || (u0 < AT_0_TOL && u1 > AT_1_TOL) {
+                    //if delta0.dot(delta1).abs() > 0.999 {
+                        return None;
+                    //}
                 }
-                if tangent1.is_nan() {
-                    log("hit tangent1 NaN!!!");
-                    //break;
-                }
-                if tangent0.dot(tangent1).abs() > 0.999 {
-                    return Err((
-                        // Miss{dot:self.curves.0.nurbs.sign, distance:0.}, // , point: p0 
-                        // Miss{dot:self.curves.1.nurbs.sign, distance:0.}, // , point: p1
-                        Miss{dot:0., distance:0.}, // , point: p0 
-                        Miss{dot:0., distance:0.}, // , point: p1
-                    ))
-                }
-                let cross0 = Vec3::Z.cross(tangent0).normalize() * self.curves.0.nurbs.sign;
-                let cross1 = Vec3::Z.cross(tangent1).normalize() * self.curves.1.nurbs.sign;
+                let delta0 = self.curves.0.get_arrow(u0).delta;
+                let delta1 = self.curves.1.get_arrow(u1).delta;
+                let cross0 = Vec3::Z.cross(delta0).normalize();
+                let cross1 = Vec3::Z.cross(delta1).normalize();
                 self.spatial.insert(&center, self.points.len());
                 self.points.push(center);
-                return Ok(Hit2{
-                    hit: (CurveHit {u:u0, dot:cross0.dot(tangent1)}, 
-                            CurveHit {u:u1, dot:cross1.dot(tangent0)}),
+                return Some(HitMiss2::Hit(Hit2{
                     center,
-                })
+                    hit: (CurveHit {u:u0, dot:cross0.dot(delta1)}, 
+                          CurveHit {u:u1, dot:cross1.dot(delta0)}),
+                }))
             }
             
         } 
-        // let tangent0 = self.curves.0.get_tangent_at_u(u0);
-        // let tangent1 = self.curves.1.get_tangent_at_u(u1);
-        let tangent0 = self.curves.0.get_arrow(u0).delta.normalize();
-        let tangent1 = self.curves.1.get_arrow(u1).delta.normalize();
-        let cross0 = Vec3::Z.cross((p1 - p0).normalize()).normalize() * self.curves.0.nurbs.sign;
-        let cross1 = Vec3::Z.cross((p0 - p1).normalize()).normalize() * self.curves.1.nurbs.sign;
-        if tangent0.is_nan() {
-            log("miss tangent0 NaN!");
+        let delta0 = self.curves.0.get_arrow(u0).delta.normalize();
+        let delta1 = self.curves.1.get_arrow(u1).delta.normalize();
+        let cross0 = Vec3::Z.cross(p1 - p0).normalize();
+        let cross1 = Vec3::Z.cross(p0 - p1).normalize();
+        if u0 < AT_0_TOL {
+            p0 += delta0 * UV_MISS_BUMP;
+        } else if u0 > AT_1_TOL {
+            p0 -= delta0 * UV_MISS_BUMP;
         }
-        if tangent1.is_nan() {
-            log("miss tangent1 NaN!");
-        }
-
-        // if tangent0.length() < EPSILON {
-        //     log("tangent0 is 0!");
-        // }
-        // if tangent1.length() < EPSILON {
-        //     log("tangent1 is 0!");
-        // }
-
-        if u0 < EPSILON {
-            p0 += tangent0 * self.tolerance * 2.;
-        } else if u0 > 1.-EPSILON {
-            p0 -= tangent0 * self.tolerance * 2.;
-        }
-        if u1 < EPSILON {
-            p1 += tangent1 * self.tolerance * 2.;
-        } else if u1 > 1.-EPSILON {
-            p1 -= tangent1 * self.tolerance * 2.;
+        if u1 < AT_0_TOL {
+            p1 += delta1 * UV_MISS_BUMP;
+        } else if u1 > AT_1_TOL {
+            p1 -= delta1 * UV_MISS_BUMP;
         }
         let distance = p0.distance(p1);
-
-
-        Err((
-            Miss{dot:cross0.dot(tangent1), distance}, // , point: p0 
-            Miss{dot:cross1.dot(tangent0), distance}, // , point: p1
-        ))
+        Some(HitMiss2::Miss((
+            Miss{distance, dot:cross0.dot(delta1)},
+            Miss{distance, dot:cross1.dot(delta0)}, 
+        )))
     }
 
-    pub fn get_tangent_intersection(&self, u0: f32, u1: f32, p0: Vec3, p1: Vec3) -> Vec3 {
-        // let ray0 = Ray::new(p0, self.curves.0.get_tangent_at_u(u0));
-        // let ray1 = Ray::new(p1, self.curves.1.get_tangent_at_u(u1));
-        let ray0 = self.curves.0.get_arrow(u0);
-        let ray1 = self.curves.1.get_arrow(u1);
-        ray0.middle(&ray1)
+    pub fn get_tangent_intersection(&self, u0: f32, u1: f32) -> Vec3 {
+        let arrow0 = self.curves.0.get_arrow(u0);
+        let arrow1 = self.curves.1.get_arrow(u1);
+        if arrow1.delta.length() < 0.00001 {
+            console_log!("u1 {}", u1);
+            panic!("hi2.get_tengent_intersection arrow1.delta is 0!");
+        }
+        arrow0.middle(&arrow1)
     }
 }
-
-
-// if p0.distance(p1) < self.tolerance {
-//     let delta = 0.0001;
-//     let d0 = u0 + delta;
-//     let pd0 = curve0.get_vec2_at_u(d0);
-//     let pd1 = curve1.get_vec2_at_u(u1 + delta);
-//     if let Some(ip) = get_line_intersection(p0, pd0, p1, pd1) {
-//         let ratio = p0.distance(ip) / p0.distance(pd0);
-//         let mut u = u0 + (d0-u0)*ratio;
-//         let mut point = curve0.get_vec2_at_u(u);
-//         let alt_u = u0 + (u0-d0)*ratio;
-//         let alt_point = curve0.get_vec2_at_u(alt_u);
-//         if alt_point.distance(ip) < point.distance(ip) {
-//             u = alt_u;
-//             point = alt_point;
-//         }
-//         let angle = (pd0-p0).angle_between(pd1-p1);
-//         Some(Hit2 {
-//             u,
-//             point,
-//             angle,
-//         })
-//     }else{
-//         None
-//     }
-// }else{
-//     None
-// }
-
-
-        // let mut dir0 = curve0.get_param_step(4, self.cell_size/10.);
-        // let mut dir1 = curve1.get_param_step(4, self.cell_size/10.);

@@ -30,8 +30,8 @@ pub struct HitBasis3 {
     pub tolerance: f32,
     pub step:      f32,
     pub length:    usize,
-    pub facet_hits: Vec<Vec<Vec<Vec<CurveShape>>>>, 
-    pub facet_miss: Vec<Vec<Vec<Vec<Miss>>>>, 
+    pub facet_hits: Vec<Vec<Vec<Vec<CurveShape>>>>, // Vec<TracedCurve>, // 
+    pub facet_miss: Vec<Vec<Vec<Vec<Miss>>>>, // Vec<Miss>, // 
     pub shapes: Vec<Shape>,
     hone_basis: HoneBasis,
     trace_count: i32,
@@ -52,9 +52,13 @@ impl HitBasis3 {
     pub fn new(facet_groups: Vec<Vec<FacetShape>>) -> Self {
         let mut facet_hits = vec![];
         let mut facet_miss = vec![];
-        for (gi, facet_group) in facet_groups.iter().enumerate() {
-            facet_hits.push(facet_group.iter().map(|_| vec![vec![]; facet_groups.len()-gi+1]).collect());
-            facet_miss.push(facet_group.iter().map(|_| vec![vec![]; facet_groups.len()-gi+1]).collect());
+        // for (gi, facet_group) in facet_groups.iter().enumerate() {
+        //     facet_hits.push(facet_group.iter().map(|_| vec![vec![]; facet_groups.len()-gi+1]).collect());
+        //     facet_miss.push(facet_group.iter().map(|_| vec![vec![]; facet_groups.len()-gi+1]).collect());
+        // }
+        for _ in 0..facet_groups.len()-1 {
+            facet_hits.push(facet_groups.iter().map(|fg| vec![vec![]; fg.len()]).collect());
+            facet_miss.push(facet_groups.iter().map(|fg| vec![vec![]; fg.len()]).collect());
         }
         let gpu = GPU::new().unwrap();
         HitBasis3 {
@@ -62,8 +66,8 @@ impl HitBasis3 {
             tolerance: 0.05,
             step:      0.8,
             length:    300,
-            facet_hits,
-            facet_miss,
+            facet_hits,//: vec![],
+            facet_miss,//: vec![],
             shapes: vec![],
             hone_basis: HoneBasis::default(),
             trace_count: 0,
@@ -133,23 +137,27 @@ impl HitBasis3 {
             trace:   self.gpu.framebuffer.make_multi_empty_rgba32f(12, trace_buf_size,   4)?, // origins, vectors, uvs, uv_vectors
         });
         self.trace(trace_length);
-        let buff1   = &self.trace_buffer.as_ref().unwrap();
+        let buff1      = &self.trace_buffer.as_ref().unwrap();
         let boxes      = self.gpu.read(&buff1.boxes, 0);
         let origins    = self.gpu.read(&buff1.trace, 0);
         let vectors    = self.gpu.read(&buff1.trace, 1);
         let uvs        = self.gpu.read(&buff1.trace, 2);
         let uv_vectors = self.gpu.read(&buff1.trace, 3);
         let traced_curves = get_traced_curves(&self.facet_groups, trace_basis.index_pairs, trace_buf_size, uvs, boxes, origins, uv_vectors, vectors);
+        // self.facet_hits = traced_curves;
+        // for traced in traced_curves{
+        //     self.shapes.push(Shape::Curve(traced.center));
+        // }
         for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
             let IndexPair{g0, g1, i0, i1} = index_pair;
-            self.facet_hits[g0][i0][g1-g0-1].push(curve0);
-            self.facet_hits[g1][i1][0].push(curve1);
+            self.facet_hits[g1-1][g0][i0].push(curve0); // [g1-g0-1]
+            self.facet_hits[g1-1][g1][i1].push(curve1); // [0]
             self.shapes.push(Shape::Curve(center));
         }  
         for MissPair{index, distance, dot0, dot1} in trace_basis.misses {
             let IndexPair{g0, g1, i0, i1} = index;
-            self.facet_miss[g0][i0][g1-g0-1].push(Miss{distance, dot:dot0});
-            self.facet_miss[g1][i1][0].push(Miss{distance, dot:dot1});
+            self.facet_miss[g1-1][g0][i0].push(Miss{distance, dot:dot0});
+            self.facet_miss[g1-1][g1][i1].push(Miss{distance, dot:dot1});
         }  
         Ok(())     
     }
@@ -194,7 +202,7 @@ impl HitBasis3 {
 
     fn draw_hit_miss(&self){
         self.gpu.gl.use_program(Some(&self.hit_miss_program));
-        self.gpu.set_uniform_1i(&self.hit_miss_program, "pair_tex",  1);
+        self.gpu.set_uniform_1i(&self.hit_miss_program, "pair_tex", 1);
         self.set_facet_uniforms(&self.hit_miss_program);
         self.set_arrow_uniforms(&self.hit_miss_program, 3);
         self.gpu.draw(&self.hone_buffer.as_ref().unwrap().uv);

@@ -129,7 +129,7 @@ impl Shape {
         match self {
             Shape::Point(s) => Shape::Point(*s),
             Shape::Curve(s) => Shape::Curve(s.get_reverse()),
-            Shape::Facet(s) => Shape::Facet(s.get_reverse()),
+            Shape::Facet(s) => Shape::Facet(s.get_inverted()),
         }
     }
 }

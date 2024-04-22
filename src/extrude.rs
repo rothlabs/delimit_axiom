@@ -33,7 +33,7 @@ impl Extrude {
         for shape in get_shapes(&self.parts) {
             if let Shape::Facet(facet) = &shape { 
                 if self.length > 0. {
-                    shapes.push(Shape::Facet(facet.get_reverse())); 
+                    shapes.push(Shape::Facet(facet.get_inverted())); 
                 }else{
                     shapes.push(shape.clone());
                 }

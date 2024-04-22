@@ -1,7 +1,28 @@
 use crate::{log, hit::Miss, CurveHit, CurveShape, HitMiss2, HitTester2, Shape, Spatial3};
 use glam::*;
 
-pub struct Trim {
+pub trait Trim {
+    fn trim(self) -> Vec<CurveShape>;
+}
+
+impl Trim for Vec<CurveShape> {
+    fn trim(self) -> Vec<CurveShape> {
+        CurveTrimmer {
+            tester: HitTester2 {
+                curves: (CurveShape::default(), CurveShape::default()),
+                spatial: Spatial3::new(), 
+                points:  vec![],
+            },
+            hits: vec![vec![]; self.len()],
+            miss: vec![vec![]; self.len()],
+            group: self,
+            curves: vec![],
+            shapes: vec![],
+        }.make()
+    }
+}
+
+pub struct CurveTrimmer {
     pub tester: HitTester2,
     pub group:  Vec<CurveShape>,
     pub hits:   Vec<Vec<CurveHit>>, 
@@ -10,23 +31,8 @@ pub struct Trim {
     pub shapes: Vec<Shape>,
 }
 
-impl Trim { 
-    pub fn new(curves0: Vec<CurveShape>) -> Self {
-        Trim {
-            tester: HitTester2 {
-                curves: (CurveShape::default(), CurveShape::default()),
-                spatial: Spatial3::new(), 
-                points:  vec![],
-            },
-            hits: vec![vec![]; curves0.len()],
-            miss: vec![vec![]; curves0.len()],
-            group: curves0,
-            curves: vec![],
-            shapes: vec![],
-        }
-    }
-
-    pub fn build(&mut self) -> Vec<CurveShape> {
+impl CurveTrimmer { 
+    pub fn make(&mut self) -> Vec<CurveShape> {
         self.test_groups();
         for i in 0..self.group.len() {
             if self.hits[i].is_empty() {

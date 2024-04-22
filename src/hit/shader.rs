@@ -50,11 +50,12 @@ void main() {"##,
     vec3 normal1 = normalize(cross(d1u, d1v));
     if(length(p0 - p1) < tolerance){
         if(abs(dot(normal0, normal1)) > 0.9999){     
-            hit_miss = vec4(-1, -1, 0, 0); 
+            hit_miss = vec4(-10, -10, -10, -10); 
         }else{
             hit_miss = uvs;
         }
     }else{
+        //hit_miss = -uvs;
         if(uvs.x < 0.001){
             p0 = p0 + normalize(d0u) * 0.1;
         }else if(uvs.x > 0.999){
@@ -242,6 +243,28 @@ void main() {"##,
 
 
 ////////////////////////////////////////////////////
+
+
+// if(uvs.x < 0.001){
+//     p0 = p0 + normalize(d0u) * 0.1;
+// }else if(uvs.x > 0.999){
+//     p0 = p0 - normalize(d0u) * 0.1;
+// }
+// if(uvs.y < 0.001){
+//     p0 = p0 + normalize(d0v) * 0.1;
+// }else if(uvs.y > 0.999){
+//     p0 = p0 - normalize(d0v) * 0.1;
+// }
+// if(uvs.z < 0.001){
+//     p1 = p1 + normalize(d1u) * 0.1;
+// }else if(uvs.z > 0.999){
+//     p1 = p1 - normalize(d1u) * 0.1;
+// }
+// if(uvs.w < 0.001){
+//     p1 = p1 + normalize(d1v) * 0.1;
+// }else if(uvs.w > 0.999){
+//     p1 = p1 - normalize(d1v) * 0.1;
+// }
 
 
 // pub const HONE_TRACE_SOURCE: &str = concatcp!(r##"#version 300 es

@@ -52,11 +52,13 @@ impl Default for FacetShape {
 impl FacetShape { 
     pub fn negate(&mut self) -> &mut Self {
         self.nurbs.sign = -self.nurbs.sign;
+        // for curve in &mut self.boundaries {
+        //     curve.negate();
+        // }
         self
     }
 
-    pub fn reverse(&mut self) -> &mut Self {
-        //let max_knot = *self.nurbs.knots.last().unwrap(); 
+    pub fn invert(&mut self) -> &mut Self {
         self.nurbs.knots.reverse();
         for i in 0..self.nurbs.knots.len() {
             self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
@@ -70,19 +72,18 @@ impl FacetShape {
         self
     }
 
-    // pub fn reverse_normal(&mut self) -> &mut Self {
-    //     //let max_knot = *self.nurbs.knots.last().unwrap(); 
-    //     self.nurbs.knots.reverse();
-    //     for i in 0..self.nurbs.knots.len() {
-    //         self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
-    //     }
-    //     self.nurbs.weights.reverse();
-    //     self.controls.reverse();
-    //     for bndry in &mut self.boundaries {
-    //         bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
-    //     }
-    //     self
-    // }
+    pub fn reverse(&mut self) -> &mut Self {
+        self.nurbs.knots.reverse();
+        for i in 0..self.nurbs.knots.len() {
+            self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
+        }
+        self.nurbs.weights.reverse();
+        self.controls.reverse();
+        for bndry in &mut self.boundaries {
+            bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
+        }
+        self
+    }
 
     pub fn reshape(&mut self, mat4: Mat4) -> &mut Self {
         for control in &mut self.controls {
@@ -91,9 +92,9 @@ impl FacetShape {
         self
     }
 
-    pub fn get_reverse(&self) -> Self {
+    pub fn get_inverted(&self) -> Self {
         let mut facet = self.clone();
-        facet.reverse();
+        facet.invert();
         facet
     }
 
@@ -105,7 +106,7 @@ impl FacetShape {
 
     pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
         let mut facet = self.clone();
-        facet.reverse();
+        facet.invert();
         facet.reshape(mat4);
         facet
     }

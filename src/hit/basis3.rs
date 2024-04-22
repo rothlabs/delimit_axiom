@@ -126,7 +126,7 @@ impl TraceBasis {
                     log("nan hit_miss in union3!");
                     continue;
                 }
-                if hit_miss[i*4+1].abs() < 0. {continue}
+                if hit_miss[i*4].abs() < -5. {continue}
                 misses.push(MissPair { 
                     index:    basis.index_pairs[i].clone(),
                     distance: hit_miss[i*4+1],

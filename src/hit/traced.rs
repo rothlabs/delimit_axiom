@@ -4,6 +4,7 @@ use crate::{log, CurveShape};
 use super::IndexPair;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct TracedCurve {
     pub index_pair: IndexPair,
     pub curve0: CurveShape,
@@ -87,7 +88,6 @@ pub fn get_traced_curves(
             if starts.2.point.distance(point) < TRACE_STEP {
                 if can_loop {
                     if starts.2.delta.normalize().dot((point - starts.2.point).normalize()) > 0.5 {
-                        log("looped!!!!");
                         add_last_arrow_and_add_reverse = false;
                         rays0a.push(starts.0.clone());
                         rays1a.push(starts.1.clone());
@@ -200,6 +200,12 @@ pub fn get_traced_curves(
                 rays2b.reverse();
                 rays2a.splice(0..0, rays2b);
             }
+        }
+
+        let IndexPair{g0, i0, g1, i1} = index_pairs[i];
+        if facet_groups[g0][i0].nurbs.sign < 0. {
+            rays0a.reverse();
+            rays1a.reverse();
         }
         
 

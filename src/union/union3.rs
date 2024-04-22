@@ -58,7 +58,7 @@ impl UnionBasis3 {
         for gi in 0..self.facet_groups.len() {
             for fi in 0..self.facet_groups[gi].len() {
                 if collect_facet[gi][fi] {
-                    let mut facet = self.facet_groups[gi][fi].clone();
+                    let facet = self.facet_groups[gi][fi].clone();
                     //if facet.nurbs.sign < 0. {facet.reverse().negate();}
                     self.shapes.push(Shape::Facet(facet));
                 }

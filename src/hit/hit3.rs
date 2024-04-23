@@ -4,11 +4,12 @@ use glam::*;
 use web_sys::WebGlProgram;
 use super::basis3::{HoneBasis, TraceBasis};
 use super::traced::{get_traced_curves, TracedCurve};
-use super::{IndexPair, Miss, MissPair};
+use super::{TestPair3, Hit3, Miss3, MissPair};
 use super::shader::{
     INIT_HONE_PALETTE_SOURCE, HONE_PALETTE_SOURCE, HIT_MISS_SOURCE, 
     INIT_TRACE_PALETTE_SOURCE, TRACE_SEGMENT_SOURCE, TRACE_DUAL_SOURCE, TRACE_PALETTE_SOURCE, BOXES_DUAL,
 };
+
 
 
 struct HoneBuffer {
@@ -26,12 +27,13 @@ struct TraceBuffer {
 
 //#[derive(Clone)]
 pub struct HitBasis3 {
-    pub facet_groups: Vec<Vec<FacetShape>>,
-    pub tolerance: f32,
-    pub step:      f32,
+    pub facets: Vec<FacetShape>,
+    pub pairs: Vec<TestPair3>,
+    //pub tolerance: f32,
+    //pub step:      f32,
     pub length:    usize,
-    pub facet_hits: Vec<Vec<Vec<Vec<CurveShape>>>>, // Vec<TracedCurve>, // 
-    pub facet_miss: Vec<Vec<Vec<Vec<Miss>>>>, // Vec<Miss>, // 
+    pub facet_hits: Vec<Hit3>, // Vec<TracedCurve>, // 
+    pub facet_miss: Vec<Miss3>, // Vec<Miss>, // 
     pub shapes: Vec<Shape>,
     hone_basis: HoneBasis,
     trace_count: i32,
@@ -49,25 +51,18 @@ pub struct HitBasis3 {
 }
 
 impl HitBasis3 { 
-    pub fn new(facet_groups: Vec<Vec<FacetShape>>) -> Self {
-        let mut facet_hits = vec![];
-        let mut facet_miss = vec![];
-        // for (gi, facet_group) in facet_groups.iter().enumerate() {
-        //     facet_hits.push(facet_group.iter().map(|_| vec![vec![]; facet_groups.len()-gi+1]).collect());
-        //     facet_miss.push(facet_group.iter().map(|_| vec![vec![]; facet_groups.len()-gi+1]).collect());
-        // }
-        for _ in 0..facet_groups.len()-1 {
-            facet_hits.push(facet_groups.iter().map(|fg| vec![vec![]; fg.len()]).collect());
-            facet_miss.push(facet_groups.iter().map(|fg| vec![vec![]; fg.len()]).collect());
-        }
+    pub fn new(facets: Vec<FacetShape>, pairs: Vec<TestPair3>) -> Self { // , group_len: usize
+        // let facet_hits = vec![vec![]; group_len];
+        // let facet_miss = vec![vec![]; group_len];
         let gpu = GPU::new().unwrap();
         HitBasis3 {
-            facet_groups,
-            tolerance: 0.05,
-            step:      0.8,
+            facets,
+            pairs,
+            //tolerance: 0.05,
+            //step:      0.8,
             length:    300,
-            facet_hits,//: vec![],
-            facet_miss,//: vec![],
+            facet_hits: vec![],
+            facet_miss: vec![],
             shapes: vec![],
             hone_basis: HoneBasis::default(),
             trace_count: 0,
@@ -85,7 +80,7 @@ impl HitBasis3 {
         }
     }
     pub fn make(&mut self) -> Result<(), String> { 
-        let mut hone_basis = HoneBasis::new(&self.facet_groups);
+        let mut hone_basis = HoneBasis::new(&self.facets, &self.pairs);
         self.gpu.texture.make_r32f(0, &mut hone_basis.facet_texels)?;
         let (_, pair_buf_size) = self.gpu.texture.make_rg32i(1, &mut hone_basis.pair_texels)?;
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
@@ -103,7 +98,7 @@ impl HitBasis3 {
             // let len = tex_data.len() / 2;
             // for i in 0..self.hone_basis.index_pairs.len() {
             //     //let IndexPair{g0, g1, i0, i1} = self.hone_basis.index_pairs[i];
-            //     //let point = self.facet_groups[g1][i1].get_point(vec2(hit_miss[i*4], hit_miss[i*4+1]));
+            //     //let point = self.facets[g1][i1].get_point(vec2(hit_miss[i*4], hit_miss[i*4+1]));
             //     let point = vec3(tex_data[len+ i*4], tex_data[len+ i*4 +1], tex_data[len+ i*4 +2]);
             //     self.shapes.push(Shape::Point(point));
             // }
@@ -113,7 +108,7 @@ impl HitBasis3 {
                 // for i in 0..self.hone_basis.index_pairs.len() {
                 //     if hit_miss[i*4] > -0.5 {
                 //         let IndexPair{g0, g1, i0, i1} = self.hone_basis.index_pairs[i];
-                //         let point = self.facet_groups[g0][i0].get_point(vec2(hit_miss[i*4], hit_miss[i*4+1]));
+                //         let point = self.facets[g0][i0].get_point(vec2(hit_miss[i*4], hit_miss[i*4+1]));
                 //         self.shapes.push(Shape::Point(point));
                 //     }
                 // }
@@ -143,22 +138,25 @@ impl HitBasis3 {
         let vectors    = self.gpu.read(&buff1.trace, 1);
         let uvs        = self.gpu.read(&buff1.trace, 2);
         let uv_vectors = self.gpu.read(&buff1.trace, 3);
-        let traced_curves = get_traced_curves(&self.facet_groups, trace_basis.index_pairs, trace_buf_size, uvs, boxes, origins, uv_vectors, vectors);
+        self.facet_hits = get_traced_curves(trace_basis.index_pairs, trace_buf_size, uvs, boxes, origins, uv_vectors, vectors);
+        self.facet_miss = trace_basis.misses;
         // self.facet_hits = traced_curves;
         // for traced in traced_curves{
         //     self.shapes.push(Shape::Curve(traced.center));
         // }
-        for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
-            let IndexPair{g0, g1, i0, i1} = index_pair;
-            self.facet_hits[g1-1][g0][i0].push(curve0); // [g1-g0-1]
-            self.facet_hits[g1-1][g1][i1].push(curve1); // [0]
-            self.shapes.push(Shape::Curve(center));
-        }  
-        for MissPair{index, distance, dot0, dot1} in trace_basis.misses {
-            let IndexPair{g0, g1, i0, i1} = index;
-            self.facet_miss[g1-1][g0][i0].push(Miss{distance, dot:dot0});
-            self.facet_miss[g1-1][g1][i1].push(Miss{distance, dot:dot1});
-        }  
+        // for TracedCurve{index_pair, curve0, curve1, center} in traced_curves {
+        //     let TestPair3{group, i0, i1, reverse} = index_pair;
+        //     self.facet_hits[group].push(Hit3{i0, i1, curve0, curve1});
+        //     // self.facet_hits[index][i0].push(curve0); // [g1-g0-1]
+        //     // self.facet_hits[index][i1].push(curve1); // [0]
+        //     self.shapes.push(Shape::Curve(center));
+        // }  
+        // for MissPair{index, distance, dot0, dot1} in trace_basis.misses {
+        //     let TestPair3{group, i0, i1, reverse} = index;
+        //     self.facet_miss[group].push(Miss3{i0, i1, distance, dot0, dot1});
+        //     // self.facet_miss[index][i0].push(Miss{distance, dot:dot0});
+        //     // self.facet_miss[index][i1].push(Miss{distance, dot:dot1});
+        // }  
         Ok(())     
     }
 

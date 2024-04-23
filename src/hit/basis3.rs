@@ -1,18 +1,17 @@
 use glam::*;
 use crate::{log, FacetShape};
-use super::{IndexPair, MissPair};
+use super::{Miss3, MissPair, TestPair3};
 
 struct IndexedUV {
-    facet_i: usize,
+    //facet_i: usize,
     texel_i: usize,
     uv:      Vec2
 }
 
 
-
 #[derive(Default)]
 pub struct HoneBasis{
-    pub index_pairs: Vec<IndexPair>,
+    pub index_pairs: Vec<TestPair3>,
     pub pair_texels: Vec<i32>,
     pub facet_texels: Vec<f32>,
     pub uv_texels: Vec<f32>,
@@ -21,17 +20,17 @@ pub struct HoneBasis{
 }
 
 impl HoneBasis {
-    pub fn new(groups: &Vec<Vec<FacetShape>>) -> Self{
+    pub fn new(facets: &Vec<FacetShape>, pairs: &Vec<TestPair3>) -> Self{
         let mut max_facet_length = 0;
         let mut max_knot_count = 0;
-        let mut index_pairs: Vec<IndexPair> = vec![];
+        let mut index_pairs: Vec<TestPair3> = vec![];
         let mut indexed_uv_groups: Vec<Vec<IndexedUV>> = vec![];
         let mut facet_texels: Vec<f32> = vec![];
         let mut pair_texels: Vec<i32> = vec![];
         let mut uv_texels: Vec<f32> = vec![];
-        for group in groups {
-            let mut indexed_uvs: Vec<IndexedUV> = vec![];
-            for (facet_i, facet) in group.iter().enumerate() {
+        //for group in groups {
+            for (facet_i, facet) in facets.iter().enumerate() {
+                let mut indexed_uvs: Vec<IndexedUV> = vec![];
                 if facet.nurbs.knots.len() > max_knot_count {
                     max_knot_count = facet.nurbs.knots.len();
                 }
@@ -57,7 +56,10 @@ impl HoneBasis {
                     for i in 0..curve.nurbs.knots.len()-1 {
                         if curve.nurbs.knots[i] < curve.nurbs.knots[i+1] || i == curve.nurbs.knots.len() - curve.nurbs.order {
                             indexed_uvs.push(IndexedUV{
-                                facet_i, texel_i, uv:vec2(curve.nurbs.knots[i], ci as f32 / (facet.controls.len()-1) as f32)}); 
+                                //facet_i,
+                                texel_i, 
+                                uv:vec2(curve.nurbs.knots[i], ci as f32 / (facet.controls.len()-1) as f32)
+                            }); 
                         }
                         facet_texels.push(curve.nurbs.knots[i]);
                     }  
@@ -71,22 +73,35 @@ impl HoneBasis {
                 if facet_length > max_facet_length{
                     max_facet_length = facet_length;
                 } 
+                indexed_uv_groups.push(indexed_uvs);
             }
-            indexed_uv_groups.push(indexed_uvs);
-        }
-        for g1 in 1..indexed_uv_groups.len(){
-            for g0 in 0..g1{
-                for IndexedUV{facet_i:f0, texel_i:t0, uv:uv0} in &indexed_uv_groups[g0]{
-                    for IndexedUV{facet_i:f1, texel_i:t1, uv:uv1} in &indexed_uv_groups[g1]{
-                        index_pairs.push(IndexPair{g0, g1, i0:*f0, i1:*f1});
+        //}
+        //for (gi, pairs) in pair_groups.iter().enumerate() {
+            for pair in pairs {
+                for IndexedUV{texel_i:t0, uv:uv0} in &indexed_uv_groups[pair.i0]{
+                    for IndexedUV{texel_i:t1, uv:uv1} in &indexed_uv_groups[pair.i1]{
+                        index_pairs.push(pair.clone());
                         pair_texels.push(*t0 as i32);
                         pair_texels.push(*t1 as i32);
                         uv_texels.extend(uv0.to_array());
                         uv_texels.extend(uv1.to_array());
                     }  
-                }   
+                }  
             }
-        }
+        //}
+        // for g1 in 1..indexed_uv_groups.len(){
+        //     for g0 in 0..g1{
+        //         for IndexedUV{facet_i:f0, texel_i:t0, uv:uv0} in &indexed_uv_groups[g0]{
+        //             for IndexedUV{facet_i:f1, texel_i:t1, uv:uv1} in &indexed_uv_groups[g1]{
+        //                 index_pairs.push(IndexPair{g0, g1, i0:*f0, i1:*f1});
+        //                 pair_texels.push(*t0 as i32);
+        //                 pair_texels.push(*t1 as i32);
+        //                 uv_texels.extend(uv0.to_array());
+        //                 uv_texels.extend(uv1.to_array());
+        //             }  
+        //         }   
+        //     }
+        // }
         HoneBasis {
             index_pairs,
             pair_texels,
@@ -100,12 +115,12 @@ impl HoneBasis {
 
 #[derive(Default)]
 pub struct TraceBasis{
-    pub index_pairs:   Vec<IndexPair>,
+    pub index_pairs:   Vec<TestPair3>,
     pub pair_texels:   Vec<i32>,
     pub uv_texels:     Vec<f32>,
     pub box_texels:    Vec<f32>,
     //pub uv_box_dir_texels: Vec<Vec<f32>>,
-    pub misses: Vec<MissPair>
+    pub misses: Vec<Miss3>
 }
 
 impl TraceBasis {
@@ -127,8 +142,11 @@ impl TraceBasis {
                     continue;
                 }
                 if hit_miss[i*4].abs() < -5. {continue}
-                misses.push(MissPair { 
-                    index:    basis.index_pairs[i].clone(),
+                misses.push(Miss3 { 
+                    //index:    basis.index_pairs[i].clone(),
+                    group: basis.index_pairs[i].group,
+                    i0: basis.index_pairs[i].i0,
+                    i1: basis.index_pairs[i].i1,
                     distance: hit_miss[i*4+1],
                     dot0:     hit_miss[i*4+2], 
                     dot1:     hit_miss[i*4+3], 

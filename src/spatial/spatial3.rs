@@ -18,31 +18,6 @@ impl Spatial3 {
         }
     }
 
-    pub fn for_pairs<F>(&self, func: &mut F) where F: FnMut(usize, usize) {
-        let mut point = [0; 3];
-        for (key0, indices0) in &self.map {
-            for (i, string_int) in key0.split(",").enumerate() {
-                point[i] = string_int.parse().expect("failed to parse key in spatial3");
-            }
-            for x in -1..2 {
-                for y in -1..2 {
-                    for z in -1..2 {
-                        let key1 = (point[0] + x).to_string() + "," 
-                            + &(point[1] + y).to_string() + ","
-                            + &(point[2]+  z).to_string();
-                        if let Some(indices1) = self.map.get(&key1) {
-                            for i in indices0 {
-                                for k in indices1 {
-                                    func(*i, *k);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     pub fn insert(&mut self, point: &Vec3, i: usize) {
         if let Some(vec) = self.get_mut(point) {
             vec.push(i);
@@ -82,6 +57,34 @@ impl Spatial3 {
         + &(point.z / self.cell_size).floor().to_string() 
     }
 }
+
+
+// pub fn for_pairs<F>(&self, func: &mut F) where F: FnMut(usize, usize) {
+//     let mut point = [0; 3];
+//     for (key0, indices0) in &self.map {
+//         for (i, string_int) in key0.split(",").enumerate() {
+//             point[i] = string_int.parse().expect("failed to parse key in spatial3");
+//         }
+//         for x in -1..2 {
+//             for y in -1..2 {
+//                 for z in -1..2 {
+//                     let key1 = (point[0] + x).to_string() + "," 
+//                         + &(point[1] + y).to_string() + ","
+//                         + &(point[2]+  z).to_string();
+//                     if let Some(indices1) = self.map.get(&key1) {
+//                         for i in indices0 {
+//                             for k in indices1 {
+//                                 func(*i, *k);
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
+
+
 
 
 // pub fn contains_key(&self, point: &Vec3) -> bool {

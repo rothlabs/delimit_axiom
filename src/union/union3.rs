@@ -1,10 +1,10 @@
 use glam::*;
-use crate::{hit::{Hit3, Miss, Miss3, TestPair3}, log, CurveShape, FacetShape, HitBasis3, HitTest3, Shape, Trim};
+use crate::{hit::{Hit3, Miss, MissPair, TestPair3}, log, CurveShape, FacetShape, HitBasis3, HitTest3, Shape, Trim};
 use super::union2::UnionBasis2;
 
 pub struct UnionBasis3 {
     hits3: Vec<Hit3>,
-    misses3: Vec<Miss3>,
+    misses3: Vec<MissPair>,
     pub curve_groups: Vec<Vec<CurveShape>>,
     pub facet_groups: Vec<Vec<FacetShape>>,
     hit_groups: Vec<Vec<Vec<CurveShape>>>,
@@ -31,7 +31,7 @@ impl UnionBasis3 {
             for g0 in 0..g1{
                 for f0 in 0..facet_groups[g0].len(){
                     for f1 in 0..facet_groups[g1].len(){
-                        pairs.push(TestPair3{group:g1, i0:group_starts[g0]+f0, i1:group_starts[g1]+f1, reverse:false});
+                        pairs.push(TestPair3{i0:group_starts[g0]+f0, i1:group_starts[g1]+f1, reverse:false});
                     }  
                 }   
             }
@@ -77,7 +77,7 @@ impl UnionBasis3 {
             self.hit_groups[g0][f0].push(hit.curve0.clone());
             self.hit_groups[g1][f1].push(hit.curve1.clone());
         }
-        for Miss3{group, i0, i1, dot0, dot1, distance} in &self.misses3 {
+        for MissPair{i0, i1, dot0, dot1, distance} in &self.misses3 {
             let (g0, f0, g1, f1) = self.get_indexes(*i0, *i1);
             miss_groups[g0][f0].push(Miss{distance:*distance, dot:*dot0});
             miss_groups[g1][f1].push(Miss{distance:*distance, dot:*dot1});

@@ -31,6 +31,14 @@ impl FramebufferContext {
         } 
         self.make(textures, size)
     }
+    pub fn make_rgba32f_with_empties(&self, tex_i: u32, texels: &mut Vec<f32>, count: usize) -> Result<Framebuffer, String> {
+        let (texture, size) = self.texture.make_rgba32f(tex_i, texels)?;
+        let mut textures = vec![texture];
+        for i in 1..count as u32{
+            textures.push(self.texture.make_empty_rgba32f(tex_i + i, size)?);
+        } 
+        self.make(textures, size)
+    }
     pub fn make_empty_rgba32f(&self, tex_i: u32, size: IVec2) -> Result<Framebuffer, String> {
         let texture = self.texture.make_empty_rgba32f(tex_i, size)?;
         self.make(vec![texture], size)

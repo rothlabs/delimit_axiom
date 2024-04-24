@@ -1,17 +1,20 @@
 use const_format::concatcp;
 use super::shader_parts::{
-    HEADER, CORE_PARTS,
-    FACET_CORE, FACET_PARTS, ARROW_DUAL, 
-    ARROW_IN_POS, ARROW_PALETTE, ARROW_IN, ARROW_OUT, HONE,
-    ARROW_CORE, MOVE_UV, MOVE_UV_STOP,
-    INTERSECT_FACET, INTERSECT_FACET_EDGE,
+    HEADER, CORE_PARTS, GEOM_CORE, GEOM_PARTS,
+    PALETTE_IN_POS,
+};
+use super::shader_parts3::{
+    FACET_CORE, ARROW_DUAL, 
+    ARROW_PALETTE, ARROW_IN, ARROW_OUT, HONE,
+    MOVE_UV, MOVE_UV_STOP,
+    FACET_HIT, FACET_EDGE_HIT,
 };
 
 pub const INIT_HONE_PALETTE_SOURCE: &str = concatcp!(
-HEADER, FACET_CORE, ARROW_OUT, r##"
-uniform sampler2D uv_tex;
+HEADER, GEOM_CORE, FACET_CORE, ARROW_OUT, r##"
+uniform sampler2D io_tex;
 void main() {"##,
-    CORE_PARTS, FACET_PARTS, 
+    CORE_PARTS, GEOM_PARTS, 
     r##"
     int facet_index = 0;
     vec2 uv = vec2(0., 0.);
@@ -24,28 +27,28 @@ void main() {"##,
     }
     if(in_pos.y < pair_size.y){
         facet_index = texelFetch(pair_tex, in_pos, 0).r;
-        uv = texelFetch(uv_tex, in_pos, 0).rg;
+        uv = texelFetch(io_tex, in_pos, 0).rg;
     }else{
         in_pos.y = in_pos.y - pair_size.y;
         facet_index = texelFetch(pair_tex, in_pos, 0).g;
-        uv = texelFetch(uv_tex, in_pos, 0).ba;
+        uv = texelFetch(io_tex, in_pos, 0).ba;
     }
     output_arrows(facet_index, uv);
 }
 "##);
 
 pub const HONE_PALETTE_SOURCE: &str = concatcp!(
-HEADER, FACET_CORE, ARROW_CORE, MOVE_UV, INTERSECT_FACET, ARROW_IN, ARROW_OUT,
+HEADER, GEOM_CORE, FACET_CORE, MOVE_UV, FACET_HIT, ARROW_IN, ARROW_OUT,
 "void main() {",
-    CORE_PARTS, FACET_PARTS, ARROW_IN_POS, ARROW_PALETTE, HONE, r##"
+    CORE_PARTS, GEOM_PARTS, PALETTE_IN_POS, ARROW_PALETTE, HONE, r##"
 }"##);
 
 pub const HIT_MISS_SOURCE: &str = concatcp!(
-HEADER, ARROW_IN, FACET_CORE, r##"
+HEADER, GEOM_CORE, FACET_CORE, ARROW_IN, r##"
 float tolerance = 0.005;
 out vec4 hit_miss;
 void main() {"##,
-    CORE_PARTS, FACET_PARTS, ARROW_IN_POS, ARROW_PALETTE, r##"
+    CORE_PARTS, GEOM_PARTS, PALETTE_IN_POS, ARROW_PALETTE, r##"
     vec3 normal0 = normalize(cross(d0u, d0v));
     vec3 normal1 = normalize(cross(d1u, d1v));
     if(length(p0 - p1) < tolerance){
@@ -55,7 +58,6 @@ void main() {"##,
             hit_miss = uvs;
         }
     }else{
-        //hit_miss = -uvs;
         if(uvs.x < 0.001){
             p0 = p0 + normalize(d0u) * 0.1;
         }else if(uvs.x > 0.999){
@@ -78,9 +80,9 @@ void main() {"##,
         }
         hit_miss = vec4(
             -1, 
-            length(p0 - p1), 
             dot(normalize(p1 - p0), normal1), 
-            dot(normalize(p0 - p1), normal0)
+            dot(normalize(p0 - p1), normal0),
+            length(p0 - p1)
         );
     }
 }"##);
@@ -88,11 +90,11 @@ void main() {"##,
 
 
 pub const INIT_TRACE_PALETTE_SOURCE: &str = concatcp!(
-HEADER, FACET_CORE, ARROW_OUT, r##"
-uniform sampler2D uv_tex;
+HEADER, GEOM_CORE, FACET_CORE, ARROW_OUT, r##"
+uniform sampler2D io_tex;
 layout(location=3) out vec4 box;
 void main() {"##,
-    CORE_PARTS, FACET_PARTS, r##"
+    CORE_PARTS, GEOM_PARTS, r##"
     int facet_index = 0;
     vec2 uv = vec2(0., 0.);
     ivec2 in_pos = out_pos;
@@ -104,11 +106,11 @@ void main() {"##,
     }
     if(in_pos.y < pair_size.y){
         facet_index = texelFetch(pair_tex, in_pos, 0).r;
-        uv = texelFetch(uv_tex, in_pos, 0).rg;
+        uv = texelFetch(io_tex, in_pos, 0).rg;
     }else{
         in_pos.y = in_pos.y - pair_size.y;
         facet_index = texelFetch(pair_tex, in_pos, 0).g;
-        uv = texelFetch(uv_tex, in_pos, 0).ba;
+        uv = texelFetch(io_tex, in_pos, 0).ba;
     }
     output_arrows(facet_index, uv);
     box = vec4(1., 1., 0., 0.);
@@ -120,14 +122,14 @@ void main() {"##,
 "##);
 
 pub const TRACE_SEGMENT_SOURCE: &str = concatcp!( // TODO: does not need pair_tex, only size!
-HEADER, ARROW_IN, FACET_CORE, r##"
+HEADER, GEOM_CORE, FACET_CORE, ARROW_IN, r##"
 layout(location=0) out vec3 point;
 layout(location=1) out vec3 delta;
 layout(location=2) out vec4 uvs_out;
 layout(location=3) out vec4 uv_deltas;
 layout(location=4) out vec4 uv_deltas_local;
 void main() {"##,
-    CORE_PARTS, FACET_PARTS, r##"
+    CORE_PARTS, GEOM_PARTS, r##"
     int y = out_pos.x / pair_size.x;
     ivec2 in_pos0a = ivec2(out_pos.x % pair_size.x,  y);
     ivec2 in_pos0b = ivec2(in_pos0a.x + pair_size.x, y);
@@ -151,14 +153,14 @@ void main() {"##,
 
 
 pub const TRACE_DUAL_SOURCE: &str = concatcp!(
-HEADER, FACET_CORE, ARROW_CORE, MOVE_UV_STOP, ARROW_IN, ARROW_OUT, r##"
+HEADER, GEOM_CORE, FACET_CORE, MOVE_UV_STOP, ARROW_IN, ARROW_OUT, r##"
 float step = 0.7;
 uniform int current_segment;
 uniform int trace_count;
 uniform sampler2D box_tex;
 layout(location=3) out vec4 box;
 void main() {"##,
-    CORE_PARTS, FACET_PARTS, ARROW_IN_POS, ARROW_PALETTE, r##"
+    CORE_PARTS, GEOM_PARTS, PALETTE_IN_POS, ARROW_PALETTE, r##"
     int facet_index = 0;
     vec2 uv = vec2(0., 0.);
     vec3 du = vec3(0., 0., 0.);
@@ -200,11 +202,11 @@ void main() {"##,
 }"##);
 
 pub const TRACE_PALETTE_SOURCE: &str = concatcp!(
-HEADER, FACET_CORE, ARROW_CORE, MOVE_UV, INTERSECT_FACET_EDGE, ARROW_IN, ARROW_OUT, r##"
+HEADER, GEOM_CORE, FACET_CORE, MOVE_UV, FACET_EDGE_HIT, ARROW_IN, ARROW_OUT, r##"
 uniform sampler2D box_tex;
 layout(location=3) out vec4 box;
 void main() {"##,
-    CORE_PARTS, FACET_PARTS, ARROW_DUAL, HONE, r##"
+    CORE_PARTS, GEOM_PARTS, ARROW_DUAL, HONE, r##"
     if(out_pos.y < pair_size.y){
         box = texelFetch(box_tex, in_pos0a, 0);
     }else{
@@ -273,7 +275,7 @@ void main() {"##,
 // precision highp isampler2D;
 // uniform isampler2D pair_tex;
 // uniform sampler2D origin_tex;
-// uniform sampler2D uv_tex;
+// uniform sampler2D io_tex;
 // uniform sampler2D box_tex;
 // layout(location=0) out vec4 uvs;
 // layout(location=1) out vec4 box;
@@ -319,7 +321,7 @@ void main() {"##,
 // float tolerance = 0.005;
 // uniform isampler2D pair_tex;
 // uniform sampler2D origin_tex;
-// uniform sampler2D uv_tex;
+// uniform sampler2D io_tex;
 // uniform sampler2D box_tex;
 // layout(location=0) out vec4 uvs;
 // layout(location=1) out vec4 box;
@@ -407,7 +409,7 @@ void main() {"##,
 // precision highp sampler2D;
 // precision highp isampler2D;
 // uniform isampler2D pair_tex;
-// uniform sampler2D uv_tex;
+// uniform sampler2D io_tex;
 // uniform sampler2D origin_tex;
 // out vec4 uvs;
 // "##,
@@ -434,7 +436,7 @@ void main() {"##,
 // precision highp sampler2D;
 // precision highp isampler2D;
 // uniform isampler2D pair_tex;
-// uniform sampler2D uv_tex;
+// uniform sampler2D io_tex;
 // out vec3 point;
 // "##,
 // FACET_CORE,
@@ -454,11 +456,11 @@ void main() {"##,
 //     vec2 uv = vec2(0., 0.);
 //     if(pair_coord.y < pair_size.y){
 //         facet_i = texelFetch(pair_tex, pair_coord, 0).r;
-//         uv = texelFetch(uv_tex, pair_coord, 0).rg;
+//         uv = texelFetch(io_tex, pair_coord, 0).rg;
 //     }else{
 //         pair_coord.y = pair_coord.y - pair_size.y;
 //         facet_i = texelFetch(pair_tex, pair_coord, 0).g;
-//         uv = texelFetch(uv_tex, pair_coord, 0).ba;
+//         uv = texelFetch(io_tex, pair_coord, 0).ba;
 //     }
 //     if(tile_x == 0){
 //         point = get_point_on_facet(facet_i, uv);
@@ -505,7 +507,7 @@ void main() {"##,
 // pub const BOX_SOURCE: &str = r##"#version 300 es
 // precision highp float;
 // precision highp sampler2D;
-// uniform sampler2D uv_tex;
+// uniform sampler2D io_tex;
 // uniform sampler2D box_tex;
 // out vec4 output0;
 // void main() {
@@ -513,14 +515,14 @@ void main() {"##,
 //     ivec2 box_coord = ivec2(gl_FragCoord.x, gl_FragCoord.y);
 //     vec4 box = texelFetch(box_tex, box_coord, 0);
 
-//     vec2 uv_f  = texelFetch(uv_tex, box_coord, 0).rg;
+//     vec2 uv_f  = texelFetch(io_tex, box_coord, 0).rg;
 //     box.x = min(box.x, uv_f.x);
 //     box.y = min(box.y, uv_f.y);
 //     box.z = max(box.z, uv_f.x);
 //     box.w = max(box.w, uv_f.y);
 
 //     ivec2 box_coord_r = ivec2(int(gl_FragCoord.x) + box_tex_size.x, gl_FragCoord.y);
-//     vec2 uv_r  = texelFetch(uv_tex, box_coord_r, 0).rg;
+//     vec2 uv_r  = texelFetch(io_tex, box_coord_r, 0).rg;
 //     output0.x = min(box.x, uv_r.x);
 //     output0.y = min(box.y, uv_r.y);
 //     output0.z = max(box.z, uv_r.x);

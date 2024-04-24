@@ -77,11 +77,11 @@ impl HitTester2 {
                     }
                 }
             if !duplicate {
-                let delta0 = self.curves.0.get_arrow(u0).delta.normalize();
-                let delta1 = self.curves.1.get_arrow(u1).delta.normalize();
                 if (u0 > AT_1_TOL && u1 < AT_0_TOL) || (u0 < AT_0_TOL && u1 > AT_1_TOL) {
                     return None;
                 }
+                let delta0 = self.curves.0.get_arrow(u0).delta.normalize();
+                let delta1 = self.curves.1.get_arrow(u1).delta.normalize();
                 if delta0.dot(delta1).abs() > 0.9999 {
                     return None;
                 }

@@ -228,8 +228,8 @@ pub fn get_traced_curves(
         curve1 = curve1.get_valid();
         curve2 = curve2.get_valid();
         traced_curves.push(Hit3{
-            //index_pair: index_pairs[i].clone(),
-            group: test_pairs[i].group,
+            // index_pair: index_pairs[i].clone(),
+            // group: test_pairs[i].group,
             i0: test_pairs[i].i0,
             i1: test_pairs[i].i1,
             curve0,

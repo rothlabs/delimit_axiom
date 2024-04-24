@@ -1,6 +1,6 @@
 use glam::*;
 use crate::{log, FacetShape};
-use super::{Miss3, MissPair, TestPair3};
+use super::{MissPair, TestPair3};
 
 struct IndexedUV {
     //facet_i: usize,
@@ -119,8 +119,7 @@ pub struct TraceBasis{
     pub pair_texels:   Vec<i32>,
     pub uv_texels:     Vec<f32>,
     pub box_texels:    Vec<f32>,
-    //pub uv_box_dir_texels: Vec<Vec<f32>>,
-    pub misses: Vec<Miss3>
+    pub misses: Vec<MissPair>
 }
 
 impl TraceBasis {
@@ -137,19 +136,17 @@ impl TraceBasis {
                 uv_texels.extend([hit_miss[i*4+0], hit_miss[i*4+1], hit_miss[i*4+2], hit_miss[i*4+3]]); // use .slice of tex
                 box_texels.extend([1., 1., 0., 0.]);
             }else{
-                if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() {
-                    log("nan hit_miss in union3!");
-                    continue;
-                }
-                if hit_miss[i*4].abs() < -5. {continue}
-                misses.push(Miss3 { 
-                    //index:    basis.index_pairs[i].clone(),
-                    group: basis.index_pairs[i].group,
+                // if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() {
+                //     log("nan hit_miss in union3!");
+                //     continue;
+                // }
+                if hit_miss[i*4] < -5. {continue}
+                misses.push(MissPair { 
                     i0: basis.index_pairs[i].i0,
                     i1: basis.index_pairs[i].i1,
-                    distance: hit_miss[i*4+1],
-                    dot0:     hit_miss[i*4+2], 
-                    dot1:     hit_miss[i*4+3], 
+                    dot0:     hit_miss[i*4+1], 
+                    dot1:     hit_miss[i*4+2], 
+                    distance: hit_miss[i*4+3],
                 });
             }
         }

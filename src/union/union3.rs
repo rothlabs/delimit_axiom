@@ -1,16 +1,14 @@
 use glam::*;
-use crate::{hit::{Hit3, Miss, Miss3, TestPair3}, log, CurveShape, FacetShape, HitBasis3, Shape, Trim};
+use crate::{hit::{Hit3, Miss, Miss3, TestPair3}, log, CurveShape, FacetShape, HitBasis3, HitTest3, Shape, Trim};
 use super::union2::UnionBasis2;
 
 pub struct UnionBasis3 {
-    pub basis: HitBasis3,
+    hits3: Vec<Hit3>,
+    misses3: Vec<Miss3>,
     pub curve_groups: Vec<Vec<CurveShape>>,
     pub facet_groups: Vec<Vec<FacetShape>>,
     hit_groups: Vec<Vec<Vec<CurveShape>>>,
-    //group_starts: Vec<usize>,
     facet_indexes: Vec<(usize, usize)>,
-    //pub facets: Vec<FacetShape>,
-    //pub facet_group_lens: Vec<usize>,
     pub shapes: Vec<Shape>,
 }
 
@@ -39,15 +37,14 @@ impl UnionBasis3 {
             }
         }
         let facets: Vec<FacetShape> = facet_groups.clone().into_iter().flatten().collect();
+        let (hits3, misses3) = facets.hit(pairs); 
         UnionBasis3 {
-            basis: HitBasis3::new(facets, pairs), // , facet_groups.len()-1
+            hits3,
+            misses3,
             curve_groups,
             facet_groups,
             hit_groups: vec![],
-            //group_starts,
             facet_indexes,
-            //facets,
-            //facet_group_lens: facet_groups.iter().map(|fg| fg.len()).collect(),
             shapes: vec![],
         }.make_shapes()
     }
@@ -59,9 +56,8 @@ impl UnionBasis3 {
     }
 
     pub fn make_shapes(&mut self) -> Vec<Shape> {
-        self.basis.make().expect("Facet intersection should succeed for union3 to work.");
         //let hits = self.hit_basis.facet_hits.clone();
-        //let mut misses = self.basis.facet_miss.clone();
+        //let mut misses = self.misses3.clone();
                 //self.shapes = self.basis.shapes.clone();
         //let mut collect_facet: Vec<bool> = vec![true; self.facets.len()];
         //let mut hits_len: Vec<usize> = vec![0; self.facets.len()];
@@ -75,13 +71,13 @@ impl UnionBasis3 {
             collect_groups.push(vec![true; group.len()]);
         }
         //}
-        for hit in &self.basis.facet_hits {
+        for hit in &self.hits3 {
             self.shapes.push(Shape::Curve(hit.curve2.clone()));
             let (g0, f0, g1, f1) = self.get_indexes(hit.i0, hit.i1);
             self.hit_groups[g0][f0].push(hit.curve0.clone());
             self.hit_groups[g1][f1].push(hit.curve1.clone());
         }
-        for Miss3{group, i0, i1, dot0, dot1, distance} in &self.basis.facet_miss {
+        for Miss3{group, i0, i1, dot0, dot1, distance} in &self.misses3 {
             let (g0, f0, g1, f1) = self.get_indexes(*i0, *i1);
             miss_groups[g0][f0].push(Miss{distance:*distance, dot:*dot0});
             miss_groups[g1][f1].push(Miss{distance:*distance, dot:*dot1});
@@ -201,7 +197,7 @@ impl UnionBasis3 {
 // pub fn make_shapes(&mut self) -> Vec<Shape> {
 //     self.hit_basis.make().expect("Facet intersection should succeed for union3 to work.");
 //     let hits = self.hit_basis.facet_hits.clone();
-//     let mut misses = self.hit_basis.facet_miss.clone();
+//     let mut misses = self.hit_misses3.clone();
 //     self.shapes = self.hit_basis.shapes.clone();
 //     for gi in 0..self.facet_groups.len() {
 //         for fi in 0..self.facet_groups[gi].len() {

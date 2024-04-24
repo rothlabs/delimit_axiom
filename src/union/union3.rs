@@ -66,13 +66,15 @@ impl UnionBasis3 {
         //let mut collect_facet: Vec<bool> = vec![true; self.facets.len()];
         //let mut hits_len: Vec<usize> = vec![0; self.facets.len()];
         //let mut hit_groups = vec![];// facet_groups_len vec![vec![]; facet_groups_len];
-        let mut miss_groups = vec![];
+        let mut miss_groups: Vec<Vec<Vec<Miss>>> = vec![]; // vec![vec![]; self.facet_groups.len()-1];
         let mut collect_groups = vec![];
-        for group in &self.facet_groups {
+        //for hi in 0..self.facet_groups.len()-1 {
+        for (gi, group) in self.facet_groups.iter().enumerate() {
             self.hit_groups.push(vec![vec![]; group.len()]);
             miss_groups.push(vec![vec![]; group.len()]);
             collect_groups.push(vec![true; group.len()]);
         }
+        //}
         for hit in &self.basis.facet_hits {
             self.shapes.push(Shape::Curve(hit.curve2.clone()));
             let (g0, f0, g1, f1) = self.get_indexes(hit.i0, hit.i1);

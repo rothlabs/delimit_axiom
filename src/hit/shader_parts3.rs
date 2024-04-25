@@ -175,30 +175,30 @@ vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1
 
 pub const FACET_EDGE_HIT: &str = concatcp!(ARROW_HIT, r##"
 vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1, vec3 p1, vec3 d1u, vec3 d1v){
-    vec3 normal0 = cross(d0u, d0v);
-    vec3 normal1 = cross(d1u, d1v);
+    vec3 normal0 = d0u;
     if(uv0.x < 0.0001 || uv0.x > 0.9999){
         normal0 = d0v;
-    }else if(uv0.y < 0.0001 || uv0.y > 0.9999){
-        normal0 = d0u;
+    }else if(uv0.y > 0.0001 && uv0.y < 0.9999){
+        normal0 = cross(d0u, d0v);
     }
+    vec3 normal1 = d1u; // cross(d1u, d1v);
     if(uv1.x < 0.0001 || uv1.x > 0.9999){
         normal1 = d1v;
-    }else if(uv1.y < 0.0001 || uv1.y > 0.9999){
-        normal1 = d1u;
+    }else if(uv1.y > 0.0001 && uv1.y < 0.9999){
+        normal1 = cross(d1u, d1v);
     }
     vec3 normal_cross = cross(normal0, normal1);
-    vec3 cross0 = normalize(cross(normal0, normal_cross));
-    vec3 cross1 = normalize(cross(normal1, normal_cross));
+    vec3 cross0 = d0u;
     if(uv0.x < 0.0001 || uv0.x > 0.9999){
         cross0 = d0v;
-    }else if(uv0.y < 0.0001 || uv0.y > 0.9999){
-        cross0 = d0u;
+    }else if(uv0.y > 0.0001 && uv0.y < 0.9999){
+        cross0 = normalize(cross(normal0, normal_cross));
     }
+    vec3 cross1 = d1u;
     if(uv1.x < 0.0001 || uv1.x > 0.9999){
         cross1 = d1v;
-    }else if(uv1.y < 0.0001 || uv1.y > 0.9999){
-        cross1 = d1u;
+    }else if(uv1.y > 0.0001 && uv1.y < 0.9999){
+        cross1 = normalize(cross(normal1, normal_cross));
     }
     return get_arrow_hit(p0, cross0, p1, cross1);
 }
@@ -258,6 +258,49 @@ vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, ve
     return uv;
 }
 "##;
+
+
+
+
+// pub const FACET_EDGE_HIT: &str = concatcp!(ARROW_HIT, r##"
+//     // vec3 vec_zero = vec3(0., 0., 0.);
+// vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1, vec3 p1, vec3 d1u, vec3 d1v){
+//     vec3 normal0 = d0u; // cross(d0u, d0v);
+//     vec3 normal1 = d1u; // cross(d1u, d1v);
+//     if(uv0.x < 0.0001 || uv0.x > 0.9999){
+//         normal0 = d0v;
+//             // }else if(uv0.y < 0.0001 || uv0.y > 0.9999){
+//             //     normal0 = d0u;
+//     }else if(uv0.y > 0.0001 && uv0.y < 0.9999){
+//         normal0 = cross(d0u, d0v);
+//     }
+//     if(uv1.x < 0.0001 || uv1.x > 0.9999){
+//         normal1 = d1v;
+//             // }else if(uv1.y < 0.0001 || uv1.y > 0.9999){
+//             //     normal1 = d1u;
+//     }else if(uv1.y > 0.0001 && uv1.y < 0.9999){
+//         normal1 = cross(d1u, d1v);
+//     }
+//     vec3 normal_cross = cross(normal0, normal1);
+//     vec3 cross0 = d0u;          // normalize(cross(normal0, normal_cross));
+//     vec3 cross1 = d1u;          // normalize(cross(normal1, normal_cross));
+//     if(uv0.x < 0.0001 || uv0.x > 0.9999){
+//         cross0 = d0v;
+//         // }else if(uv0.y < 0.0001 || uv0.y > 0.9999){
+//         //     cross0 = d0u;
+//     }else if(uv0.y > 0.0001 && uv0.y < 0.9999){
+//         cross0 = normalize(cross(normal0, normal_cross));
+//     }
+//     if(uv1.x < 0.0001 || uv1.x > 0.9999){
+//         cross1 = d1v;
+//     }else if(uv1.y < 0.0001 || uv1.y > 0.9999){
+//         cross1 = d1u;
+//     }else{
+//         cross1 = normalize(cross(normal1, normal_cross));
+//     }
+//     return get_arrow_hit(p0, cross0, p1, cross1);
+// }
+// "##);
 
 
 // vec2 get_arrow_middle_2d(vec2 p0, vec2 delta0, vec2 p1, vec2 delta1, vec2 alt) {

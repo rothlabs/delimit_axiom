@@ -1,37 +1,37 @@
 use glam::*;
 use crate::{hit::{Hit3, Miss, MissPair, TestPair3}, log, CurveShape, FacetShape, HitBasis3, HitTest3, Shape, Trim};
 use super::union2::UnionBasis2;
+use super::get_job_breakdown;
+
+pub trait Union3 {
+    fn union(self) -> Vec<Shape>;
+}
+
+impl Union3 for Vec<Vec<FacetShape>> {
+    fn union(self) -> Vec<Shape> {
+        UnionBasis3::get_shapes(vec![self])
+    }
+}
 
 pub struct UnionBasis3 {
     hits3: Vec<Hit3>,
     misses3: Vec<MissPair>,
-    pub curve_groups: Vec<Vec<CurveShape>>,
     pub facet_groups: Vec<Vec<FacetShape>>,
     hit_groups: Vec<Vec<Vec<CurveShape>>>,
-    facet_indexes: Vec<(usize, usize)>,
+    indexes: Vec<(usize, usize, usize)>,
     pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis3 { 
-    pub fn get_shapes(
-        curve_groups: Vec<Vec<CurveShape>>, facet_groups: Vec<Vec<FacetShape>>,
-    ) -> Vec<Shape> {
-        let mut group_starts = vec![];
-        let mut facet_indexes = vec![];
-        let mut group_start = 0;
-        for (gi, group) in facet_groups.iter().enumerate() {
-            for fi in 0..group.len(){
-                facet_indexes.push((gi, fi));
-            }
-            group_starts.push(group_start);
-            group_start += group.len();
-        }
+    pub fn get_shapes(facet_groups: Vec<Vec<Vec<FacetShape>>>) -> Vec<Shape> {
+        let (jobs, groups, indexes) = get_job_breakdown(&facet_groups);
+        let facet_groups = facet_groups[0].clone();
         let mut pairs = vec![];
         for g1 in 1..facet_groups.len(){
             for g0 in 0..g1{
                 for f0 in 0..facet_groups[g0].len(){
                     for f1 in 0..facet_groups[g1].len(){
-                        pairs.push(TestPair3{i0:group_starts[g0]+f0, i1:group_starts[g1]+f1, reverse:false});
+                        pairs.push(TestPair3{i0:groups[g0]+f0, i1:groups[g1]+f1, reverse:false});
                     }  
                 }   
             }
@@ -41,17 +41,17 @@ impl UnionBasis3 {
         UnionBasis3 {
             hits3,
             misses3,
-            curve_groups,
+            //curve_groups,
             facet_groups,
             hit_groups: vec![],
-            facet_indexes,
+            indexes,
             shapes: vec![],
         }.make_shapes()
     }
 
     fn get_indexes(&self, i0: usize, i1: usize) -> (usize, usize, usize, usize) {
-        let (g0, f0) = self.facet_indexes[i0];
-        let (g1, f1) = self.facet_indexes[i1];
+        let (_, g0, f0) = self.indexes[i0];
+        let (_, g1, f1) = self.indexes[i1];
         (g0, f0, g1, f1)
     }
 
@@ -115,11 +115,6 @@ impl UnionBasis3 {
                     if facet.nurbs.sign < 0. {facet.reverse().negate();}
                     self.shapes.push(Shape::Facet(facet));
                 }
-            }
-        }
-        for curve_group in &self.curve_groups {
-            for curve in curve_group {
-                self.shapes.push(Shape::Curve(curve.clone()));
             }
         }
         self.shapes.clone()

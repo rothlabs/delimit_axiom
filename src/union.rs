@@ -1,11 +1,12 @@
 mod union2;
+mod union2_gpu;
 mod union3;
 
 use crate::{get_grouped_curves_and_facets, Model, Reshape, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
-use self::{union2::UnionBasis2, union3::UnionBasis3};
+use self::{union2::UnionBasis2, union3::{Union3, UnionBasis3}};
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -14,6 +15,7 @@ pub struct Union {
     pub negated_parts: Vec<Model>,
     pub reshape:       Reshape,
 }
+
 
 impl Union {
     pub fn get_shapes(&self) -> Vec<Shape> {
@@ -55,10 +57,45 @@ impl Union {
                 curve_groups.push(curve_group);
                 facet_groups.push(facet_group);
             }
-            UnionBasis3::get_shapes(curve_groups, facet_groups)
+            //UnionBasis3::get_shapes(curve_groups, facet_groups)
+            let mut shapes = facet_groups.union();
+            for curve_group in &curve_groups {
+                for curve in curve_group {
+                    shapes.push(Shape::Curve(curve.clone()));
+                }
+            }
+            shapes
         }
     }
 }
+
+pub fn get_job_breakdown<T>(job_group_item: &Vec<Vec<Vec<T>>>) -> (Vec<usize>, Vec<usize>, Vec<(usize, usize, usize)>) {
+    let mut jobs = vec![];
+    let mut groups = vec![];
+    let mut indexes = vec![];
+    let mut job_start = 0;
+    for (ji, job) in job_group_item.iter().enumerate() {
+        jobs.push(job_start);
+        job_start += job.len();
+        let mut group_start = 0;
+        for (gi, group) in job.iter().enumerate() {
+            groups.push(group_start);
+            group_start += group.len();
+            for ci in 0..group.len(){
+                indexes.push((ji, gi, ci));
+            }
+        }
+    }
+    (jobs, groups, indexes)
+}
+
+
+
+
+
+
+
+
 
 
 //let seed: [u8; 32] = *b"01234567891234560123456789123456";

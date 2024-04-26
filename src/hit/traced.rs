@@ -1,12 +1,12 @@
 use glam::*;
 use crate::{arrow::*, AT_0_TOL, AT_1_TOL, DELTA_0_TOL, TRACE_STEP};
 use crate::{log, CurveShape};
-use super::{TestPair3, Hit3};
+use super::{TestPair, HitPair3};
 use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct TracedCurve {
-    pub index_pair: TestPair3,
+    pub index_pair: TestPair,
     pub curve0: CurveShape,
     pub curve1: CurveShape,
     pub center: CurveShape,
@@ -14,20 +14,20 @@ pub struct TracedCurve {
 
 //impl TracedCurve {
 pub fn get_traced_curves(
-    test_pairs: Vec<TestPair3>, buf_size: IVec2, traces: Vec<f32>, boxes: Vec<f32>, 
+    hit_pairs: Vec<TestPair>, buf_size: IVec2, traces: Vec<f32>, boxes: Vec<f32>, 
     centers0: Vec<f32>, uv_dirs: Vec<f32>, dirs: Vec<f32>, 
-) -> Vec<Hit3> {
+) -> Vec<HitPair3> {
     let mut traced_curves = vec![];
     let mut box_map: HashMap<String, Vec<(Vec2, Vec2)>> = HashMap::new();
     let half = buf_size.x as usize / 2;
     //let half_dial = (dual_buf_size.x * dual_buf_size.y) as usize * 2;
     // let index_len = index_pairs.len();
     //console_log!("buf_size.x, index_pairs.len(), {}, {}", buf_size.x, index_pairs.len());
-    for i in 0..test_pairs.len() {
+    for i in 0..hit_pairs.len() {
         let min = vec2(boxes[i*4], boxes[i*4+1]).min(vec2(boxes[(half+i)*4], boxes[(half+i)*4+1]));
         let max = vec2(boxes[i*4+2], boxes[i*4+3]).max(vec2(boxes[(half+i)*4+2], boxes[(half+i)*4+3]));
         //let key = index_pairs[i].g0.to_string() + ":" + &index_pairs[i].i0.to_string();
-        let key = test_pairs[i].i0.to_string();
+        let key = hit_pairs[i].i0.to_string();
         let mut duplicate = false;
         if box_map.contains_key(&key) {
             for (min1, max1) in box_map.get(&key).unwrap() {
@@ -207,7 +207,7 @@ pub fn get_traced_curves(
         //     rays0a.reverse();
         //     rays1a.reverse();
         // }
-        if test_pairs[i].reverse {
+        if hit_pairs[i].reverse {
             rays0a.reverse();
             rays1a.reverse();
         }
@@ -227,11 +227,8 @@ pub fn get_traced_curves(
         curve0 = curve0.get_valid();
         curve1 = curve1.get_valid();
         curve2 = curve2.get_valid();
-        traced_curves.push(Hit3{
-            // index_pair: index_pairs[i].clone(),
-            // group: test_pairs[i].group,
-            i0: test_pairs[i].i0,
-            i1: test_pairs[i].i1,
+        traced_curves.push(HitPair3{
+            pair: hit_pairs[i].clone(),
             curve0,
             curve1,
             curve2, 

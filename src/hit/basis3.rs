@@ -1,6 +1,6 @@
 use glam::*;
 use crate::{log, FacetShape};
-use super::{MissPair, TestPair3};
+use super::{MissPair, TestPair};
 
 struct IndexedUV {
     //facet_i: usize,
@@ -11,7 +11,7 @@ struct IndexedUV {
 
 #[derive(Default)]
 pub struct HoneBasis{
-    pub index_pairs: Vec<TestPair3>,
+    pub index_pairs: Vec<TestPair>,
     pub pair_texels: Vec<i32>,
     pub facet_texels: Vec<f32>,
     pub uv_texels: Vec<f32>,
@@ -20,10 +20,10 @@ pub struct HoneBasis{
 }
 
 impl HoneBasis {
-    pub fn new(facets: &Vec<FacetShape>, pairs: &Vec<TestPair3>) -> Self{
+    pub fn new(facets: &Vec<FacetShape>, pairs: &Vec<TestPair>) -> Self{
         let mut max_facet_length = 0;
         let mut max_knot_count = 0;
-        let mut index_pairs: Vec<TestPair3> = vec![];
+        let mut index_pairs: Vec<TestPair> = vec![];
         let mut indexed_uv_groups: Vec<Vec<IndexedUV>> = vec![];
         let mut facet_texels: Vec<f32> = vec![];
         let mut pair_texels: Vec<i32> = vec![];
@@ -115,7 +115,7 @@ impl HoneBasis {
 
 #[derive(Default)]
 pub struct TraceBasis{
-    pub index_pairs:   Vec<TestPair3>,
+    pub index_pairs:   Vec<TestPair>,
     pub pair_texels:   Vec<i32>,
     pub uv_texels:     Vec<f32>,
     pub box_texels:    Vec<f32>,
@@ -142,8 +142,7 @@ impl TraceBasis {
                 // }
                 if hit_miss[i*4] < -5. {continue}
                 misses.push(MissPair { 
-                    i0: basis.index_pairs[i].i0,
-                    i1: basis.index_pairs[i].i1,
+                    pair:     basis.index_pairs[i].clone(),
                     dot0:     hit_miss[i*4+1], 
                     dot1:     hit_miss[i*4+2], 
                     distance: hit_miss[i*4+3],

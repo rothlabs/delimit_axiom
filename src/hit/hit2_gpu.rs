@@ -3,15 +3,15 @@ use glam::*;
 use web_sys::WebGlProgram;
 use crate::gpu::framebuffer::Framebuffer;
 use crate::{gpu::GPU, log, CurveShape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_TOL, HIT_TOL, UV_MISS_BUMP};
-use super::{Hit2, HoneBuffer, MissPair};
+use super::{HitPair2, HoneBuffer, MissPair, TestPair};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
 pub trait HitTest2 {
-    fn hit(self, pairs: Vec<(usize, usize)>) -> (Vec<Hit2>, Vec<MissPair>);
+    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>);
 }
 
 impl HitTest2 for Vec<CurveShape> {
-    fn hit(self, pairs: Vec<(usize, usize)>) -> (Vec<Hit2>, Vec<MissPair>) {
+    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>) {
         let gpu = GPU::new().unwrap();
         let mut basis = HoneBasis2::new(&self, &pairs);
         gpu.texture.make_r32f(0, &mut basis.curve_texels).unwrap();
@@ -24,7 +24,7 @@ impl HitTest2 for Vec<CurveShape> {
         };
         HitBasis2 {
             //curves:self, 
-            pairs, 
+            pairs: pairs.clone(), 
             basis, 
             buffer, 
             init_palette:     gpu.get_quad_program_from_source(INIT_PALETTE_SOURCE).unwrap(),
@@ -39,7 +39,7 @@ impl HitTest2 for Vec<CurveShape> {
 
 pub struct HitBasis2 {
     //curves: Vec<CurveShape>,
-    pairs:  Vec<(usize, usize)>,
+    pairs:  Vec<TestPair>,
     basis:  HoneBasis2,
     buffer: HoneBuffer,
     init_palette: WebGlProgram,
@@ -51,7 +51,7 @@ pub struct HitBasis2 {
 }
 
 impl HitBasis2 { 
-    pub fn make(&mut self) -> (Vec<Hit2>, Vec<MissPair>) { 
+    pub fn make(&mut self) -> (Vec<HitPair2>, Vec<MissPair>) { 
         self.hone();
         let hit_miss = self.gpu.read(&self.buffer.io, 0);
         let points   = self.gpu.read(&self.buffer.io, 1);
@@ -71,9 +71,8 @@ impl HitBasis2 {
                 if !duplicate {
                     self.spatial.insert(&point, self.points.len());
                     self.points.push(point);
-                    hits.push(Hit2{
-                        i0: pair.0,
-                        i1: pair.1,
+                    hits.push(HitPair2{
+                        pair:     pair.clone(),
                         u0:   hit_miss[j+0],
                         u1:   hit_miss[j+1],
                         dot0: hit_miss[j+2],
@@ -88,8 +87,7 @@ impl HitBasis2 {
                 // }
                 if hit_miss[i*4] < -5. {continue}
                 misses.push(MissPair { 
-                    i0: pair.0,
-                    i1: pair.1,
+                    pair:     pair.clone(),
                     dot0:     hit_miss[j+1], 
                     dot1:     hit_miss[j+2], 
                     distance: hit_miss[j+3],
@@ -146,7 +144,7 @@ struct IndexedU {
 
 #[derive(Default)]
 pub struct HoneBasis2{
-    pub index_pairs: Vec<(usize, usize)>,
+    pub index_pairs: Vec<TestPair>,
     pub pair_texels: Vec<i32>,
     pub curve_texels: Vec<f32>,
     pub u_texels: Vec<f32>,
@@ -154,9 +152,9 @@ pub struct HoneBasis2{
 }
 
 impl HoneBasis2 {
-    pub fn new(curves: &Vec<CurveShape>, pairs: &Vec<(usize, usize)>) -> Self{
+    pub fn new(curves: &Vec<CurveShape>, pairs: &Vec<TestPair>) -> Self{
         let mut max_knot_count = 0;
-        let mut index_pairs: Vec<(usize, usize)> = vec![];
+        let mut index_pairs: Vec<TestPair> = vec![];
         let mut u_groups: Vec<Vec<IndexedU>> = vec![];
         let mut curve_texels: Vec<f32> = vec![];
         let mut pair_texels: Vec<i32> = vec![];
@@ -191,9 +189,9 @@ impl HoneBasis2 {
             u_groups.push(u_indexes);
         }
         for pair in pairs {
-            for IndexedU{texel_index:t0, u:u0} in &u_groups[pair.0]{
-                for IndexedU{texel_index:t1, u:u1} in &u_groups[pair.1]{
-                    index_pairs.push(*pair);
+            for IndexedU{texel_index:t0, u:u0} in &u_groups[pair.i0]{
+                for IndexedU{texel_index:t1, u:u1} in &u_groups[pair.i1]{
+                    index_pairs.push(pair.clone());
                     pair_texels.push(*t0 as i32);
                     pair_texels.push(*t1 as i32);
                     u_texels.extend(&[*u0, *u1, 0., 0.]);

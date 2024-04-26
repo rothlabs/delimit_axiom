@@ -4,22 +4,22 @@ use glam::*;
 use web_sys::WebGlProgram;
 use super::basis3::{HoneBasis, TraceBasis};
 use super::traced::{get_traced_curves, TracedCurve};
-use super::{TestPair3, Hit3, MissPair};
+use super::{TestPair, HitPair3, MissPair};
 use super::shaders3::{
     INIT_HONE_PALETTE_SOURCE, HONE_PALETTE_SOURCE, HIT_MISS_SOURCE, 
     INIT_TRACE_PALETTE_SOURCE, TRACE_SEGMENT_SOURCE, TRACE_DUAL_SOURCE, TRACE_PALETTE_SOURCE, BOXES_DUAL,
 };
 
 pub trait HitTest3 {
-    fn hit(self, pairs: Vec<TestPair3>) -> (Vec<Hit3>, Vec<MissPair>);
+    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair3>, Vec<MissPair>);
 }
 
 impl HitTest3 for Vec<FacetShape> {
-    fn hit(self, pairs: Vec<TestPair3>) -> (Vec<Hit3>, Vec<MissPair>) {
+    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair3>, Vec<MissPair>) {
         let gpu = GPU::new().unwrap();
         HitBasis3 {
             facets: self,
-            pairs,
+            pairs: pairs.clone(),
             shapes: vec![],
             hone_basis: HoneBasis::default(),
             trace_count: 0,
@@ -56,7 +56,7 @@ struct TraceBuffer {
 //#[derive(Clone)]
 pub struct HitBasis3 {
     pub facets: Vec<FacetShape>,
-    pub pairs: Vec<TestPair3>,
+    pub pairs: Vec<TestPair>,
     //pub facet_hits: Vec<Hit3>, // Vec<TracedCurve>, // 
     //pub facet_miss: Vec<Miss3>, // Vec<Miss>, // 
     pub shapes: Vec<Shape>,
@@ -76,7 +76,7 @@ pub struct HitBasis3 {
 }
 
 impl HitBasis3 { 
-    pub fn make(&mut self) -> Result<(Vec<Hit3>, Vec<MissPair>), String> { 
+    pub fn make(&mut self) -> Result<(Vec<HitPair3>, Vec<MissPair>), String> { 
         let mut hone_basis = HoneBasis::new(&self.facets, &self.pairs);
         self.gpu.texture.make_r32f(0, &mut hone_basis.facet_texels)?;
         let (_, pair_buf_size) = self.gpu.texture.make_rg32i(1, &mut hone_basis.pair_texels)?;

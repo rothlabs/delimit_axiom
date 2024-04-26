@@ -1,7 +1,7 @@
 use glam::*;
-use crate::{hit::{Hit3, Miss, MissPair, TestPair3}, log, CurveShape, FacetShape, HitBasis3, HitTest3, Shape, Trim};
+use crate::{job_pairs, log, CurveShape, FacetShape, HitBasis3, HitTest3, Shape, Trim, UnionBatch};
 use super::union2::UnionBasis2;
-use super::get_job_breakdown;
+use crate::hit::{HitPair3, Miss, MissPair, TestPair, job_indexes};
 
 pub trait Union3 {
     fn union(self) -> Vec<Shape>;
@@ -14,45 +14,29 @@ impl Union3 for Vec<Vec<FacetShape>> {
 }
 
 pub struct UnionBasis3 {
-    hits3: Vec<Hit3>,
+    hits3: Vec<HitPair3>,
     misses3: Vec<MissPair>,
     pub facet_groups: Vec<Vec<FacetShape>>,
     hit_groups: Vec<Vec<Vec<CurveShape>>>,
-    indexes: Vec<(usize, usize, usize)>,
+    //indexes: Vec<(usize, usize, usize)>,
+    pub batch: UnionBatch,
     pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis3 { 
-    pub fn get_shapes(facet_groups: Vec<Vec<Vec<FacetShape>>>) -> Vec<Shape> {
-        let (jobs, groups, indexes) = get_job_breakdown(&facet_groups);
-        let facet_groups = facet_groups[0].clone();
-        let mut pairs = vec![];
-        for g1 in 1..facet_groups.len(){
-            for g0 in 0..g1{
-                for f0 in 0..facet_groups[g0].len(){
-                    for f1 in 0..facet_groups[g1].len(){
-                        pairs.push(TestPair3{i0:groups[g0]+f0, i1:groups[g1]+f1, reverse:false});
-                    }  
-                }   
-            }
-        }
+    pub fn get_shapes(jobs: Vec<Vec<Vec<FacetShape>>>) -> Vec<Shape> {
+        let batch = UnionBatch::new(&jobs);
+        let facet_groups = jobs[0].clone();
         let facets: Vec<FacetShape> = facet_groups.clone().into_iter().flatten().collect();
-        let (hits3, misses3) = facets.hit(pairs); 
+        let (hits3, misses3) = facets.hit(&batch.pairs); 
         UnionBasis3 {
             hits3,
             misses3,
-            //curve_groups,
             facet_groups,
             hit_groups: vec![],
-            indexes,
+            batch,
             shapes: vec![],
         }.make_shapes()
-    }
-
-    fn get_indexes(&self, i0: usize, i1: usize) -> (usize, usize, usize, usize) {
-        let (_, g0, f0) = self.indexes[i0];
-        let (_, g1, f1) = self.indexes[i1];
-        (g0, f0, g1, f1)
     }
 
     pub fn make_shapes(&mut self) -> Vec<Shape> {
@@ -73,12 +57,12 @@ impl UnionBasis3 {
         //}
         for hit in &self.hits3 {
             self.shapes.push(Shape::Curve(hit.curve2.clone()));
-            let (g0, f0, g1, f1) = self.get_indexes(hit.i0, hit.i1);
+            let (ji, g0, f0, g1, f1) = self.batch.index(&hit.pair);
             self.hit_groups[g0][f0].push(hit.curve0.clone());
             self.hit_groups[g1][f1].push(hit.curve1.clone());
         }
-        for MissPair{i0, i1, dot0, dot1, distance} in &self.misses3 {
-            let (g0, f0, g1, f1) = self.get_indexes(*i0, *i1);
+        for MissPair{pair, dot0, dot1, distance} in &self.misses3 {
+            let (ji, g0, f0, g1, f1) = self.batch.index(&pair);
             miss_groups[g0][f0].push(Miss{distance:*distance, dot:*dot0});
             miss_groups[g1][f1].push(Miss{distance:*distance, dot:*dot1});
         }

@@ -1,4 +1,4 @@
-use crate::{log, hit::Miss, CurveHit, CurveShape, HitMiss2, HitTester2, Shape, Spatial3};
+use crate::{hit::Miss, log, CurveHit, CurveShape, HitMiss2, HitTester2, Shape, Spatial3, DUP_TOL};
 use glam::*;
 
 
@@ -16,7 +16,7 @@ impl UnionBasis2 {
         UnionBasis2 {
             tester: HitTester2 {
                 curves: (CurveShape::default(), CurveShape::default()),
-                spatial: Spatial3::new(), 
+                spatial: Spatial3::new(DUP_TOL), 
                 points:  vec![],
             },
             hits: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],

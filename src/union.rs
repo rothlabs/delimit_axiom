@@ -2,11 +2,13 @@ mod union2;
 mod union2_gpu;
 mod union3;
 
-use crate::{get_grouped_curves_and_facets, hit::{job_indexes, HitMiss2, TestPair}, Model, Reshape, Shape};
+use crate::{log, get_grouped_curves_and_facets, hit::{job_indexes, HitMiss2, TestPair}, Model, Reshape, Shape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
 use self::{union2::UnionBasis2, union3::{Union3, UnionBasis3}};
+use self::union2_gpu::UnionBatch2;
+
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -33,10 +35,11 @@ impl Union {
                 groups.push(group);
             }
             let mut curves0 = groups.first().unwrap_or(&vec![]).clone();
+            log("start compound gpu union2");
             for curves1 in groups.iter().skip(1) {
-                let mut basis = UnionBasis2::new(curves0, curves1.clone());
-                curves0 = basis.build();
-                shapes.extend(basis.shapes);
+                // let mut basis = UnionBasis2::new(curves0, curves1.clone());
+                // curves0 = basis.build(); // shapes.extend(basis.shapes);
+                curves0 = vec![vec![curves0, curves1.clone()]].union()[0].clone();
             }
             shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
             shapes
@@ -84,9 +87,9 @@ impl UnionBatch {
             indexes,
         }
     }
-    pub fn hit_miss(&self) {
+    // pub fn hit_miss(&self) {
         
-    }
+    // }
     pub fn index(&self, pair: &TestPair) -> (usize, usize, usize, usize, usize) {
         let (_,  g0, i0) = self.indexes[pair.i0];
         let (ji, g1, i1) = self.indexes[pair.i1];
@@ -96,11 +99,11 @@ impl UnionBatch {
 
 pub fn job_pairs<T>(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<T>>>) -> Vec<TestPair> {
     let mut pairs = vec![];
-    for (ji, job) in jobs.iter().enumerate() {
-        for g1 in 1..job.len(){
+    for (ji, groups) in jobs.iter().enumerate() {
+        for g1 in 1..groups.len(){
             for g0 in 0..g1 {
-                for c0 in 0..job[g0].len(){
-                    for c1 in 0..job[g1].len(){
+                for c0 in 0..groups[g0].len(){
+                    for c1 in 0..groups[g1].len(){
                         pairs.push(TestPair{
                             i0: starts[0][ji] + starts[1][g0] + c0, 
                             i1: starts[0][ji] + starts[1][g1] + c1,

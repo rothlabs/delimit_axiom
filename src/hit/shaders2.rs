@@ -70,29 +70,31 @@ HEADER, GEOM_CORE, ARROW_HIT, MOVE_U, ARROW_IN, ARROW_OUT,
 
 pub const HIT_MISS_SOURCE: &str = concatcp!(
 HEADER, GEOM_CORE, ARROW_IN, r##"
-float tolerance = 0.005;
+float tolerance = 0.05;
 vec3 vec_z = vec3(0., 0., 1.);
-out vec4 hit_miss;
+layout(location=0) out vec4 hit_miss;
+layout(location=1) out vec3 point;
 void main() {"##,
     CORE_PARTS, GEOM_PARTS, PALETTE_IN_POS, ARROW_PALETTE, r##"
     d0u = normalize(d0u);
     d1u = normalize(d1u);
     if(length(p0 - p1) < tolerance){
-        hit_miss = vec4(-10, -10, -10, -10); 
-        if((us.r > 0.9999 && us.g < 0.0001) || (us.r < 0.0001 && us.g > 0.9999)){
-            return;
-        }
-        if(abs(dot(d0u, d1u)) > 0.9999){     
-            return;
-        }
+        // hit_miss = vec4(-10., -10., -10., -10.); 
+        // if((us.r > 0.9999 && us.g < 0.0001) || (us.r < 0.0001 && us.g > 0.9999)){
+        //     return;
+        // }
+        // if(abs(dot(d0u, d1u)) > 0.9999){     
+        //     return;
+        // }
         vec3 cross0 = normalize(cross(d0u, vec_z));
         vec3 cross1 = normalize(cross(d1u, vec_z));
         hit_miss = vec4(
             us.r,
             us.g,
             dot(cross0, d1u), 
-            dot(cross1, d0u),
+            dot(cross1, d0u)
         );
+        point = (p0 + p1) / 2.;
     }else{
         if(us.r < 0.0001){
             p0 = p0 + d0u * 0.0001;
@@ -100,17 +102,17 @@ void main() {"##,
             p0 = p0 - d0u * 0.0001;
         }
         if(us.g < 0.0001){
-            p0 = p0 + d1u * 0.0001;
+            p1 = p1 + d1u * 0.0001;
         }else if(us.g > 0.9999){
-            p0 = p0 - d1u * 0.0001;
+            p1 = p1 - d1u * 0.0001;
         }
-        float delta = p1 - p0;
+        vec3 delta = p1 - p0;
         vec3 delta_cross = normalize(cross(delta, vec_z));
         hit_miss = vec4(
             -1,  
             dot( delta_cross, d1u), 
             dot(-delta_cross, d0u),
-            length(delta),
+            length(delta)
         );
     }
 }"##);

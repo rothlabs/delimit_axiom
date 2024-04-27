@@ -152,20 +152,16 @@ impl CurveShape {
     }
 
     pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
-        let ray = self.get_arrow(u);
-        let length_ratio = target.length() / ray.delta.length();
-        let u_dir = ray.delta.normalize().dot(target.normalize()) * length_ratio;
-
-        let mut u1 = u;
-        // if u_dir.is_nan() {
-        //     console_log!("u_dir is nan!! {}", target.length());
-        // }
-        if u_dir.abs() > EPSILON {// step.abs() {
-            u1 = u + u_dir; 
+        if target.length() < 0.00001 {
+            let point = self.get_point(u);
+            return (u, point)
         }
-        u1 = u1.clamp(0., 1.); 
-        let point = self.get_point(u1);
-        (u1, point)
+        let arrow = self.get_arrow(u);
+        let length_ratio = target.length() / arrow.delta.length();
+        let mut u = u + arrow.delta.normalize().dot(target.normalize()) * length_ratio;
+        u = u.clamp(0., 1.); 
+        let point = self.get_point(u);
+        (u, point)
     }
 
     pub fn get_polyline(&self, query: &DiscreteQuery) -> Polyline {

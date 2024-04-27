@@ -24,14 +24,14 @@ impl HitTest2 for Vec<CurveShape> {
         };
         HitBasis2 {
             //curves:self, 
-            pairs: pairs.clone(), 
+            //pairs: pairs.clone(), 
             basis, 
             buffer, 
             init_palette:     gpu.get_quad_program_from_source(INIT_PALETTE_SOURCE).unwrap(),
             hone_palette:     gpu.get_quad_program_from_source(HONE_SOURCE).unwrap(),
             hit_miss_program: gpu.get_quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
             gpu,
-            spatial: Spatial3::new(), 
+            spatial: Spatial3::new(0.1), 
             points:  vec![],
         }.make() // .expect("HitBasis2 should work for Vec<CurveShape>.hit()")
     }
@@ -39,7 +39,7 @@ impl HitTest2 for Vec<CurveShape> {
 
 pub struct HitBasis2 {
     //curves: Vec<CurveShape>,
-    pairs:  Vec<TestPair>,
+    //pairs:  Vec<TestPair>,
     basis:  HoneBasis2,
     buffer: HoneBuffer,
     init_palette: WebGlProgram,
@@ -54,16 +54,20 @@ impl HitBasis2 {
     pub fn make(&mut self) -> (Vec<HitPair2>, Vec<MissPair>) { 
         self.hone();
         let hit_miss = self.gpu.read(&self.buffer.io, 0);
+        //console_log!("hit_miss {:?}", hit_miss);
         let points   = self.gpu.read(&self.buffer.io, 1);
         let mut hits = vec![];
         let mut misses = vec![];
-        for (i, pair) in self.pairs.iter().enumerate() {
+        let mut to_prints: Vec<f32> = vec![];
+        for (i, pair) in self.basis.pairs.iter().enumerate() {
             let j = i * 4;
             if hit_miss[j] > -0.5 { // it's a hit
+                to_prints.extend(&[999., hit_miss[j], hit_miss[j+1], hit_miss[j+2], hit_miss[j+3]]);
+                log("hit!");
                 let point = vec3(points[j+0], points[j+1], points[j+2]);
                 let mut duplicate = false;
                 for i in self.spatial.get(&point) {
-                    if self.points[i].distance(point) < DUP_TOL {
+                    if self.points[i].distance(point) < 0.1 { //DUP_TOL {
                         duplicate = true;
                         break;
                     }
@@ -94,11 +98,15 @@ impl HitBasis2 {
                 });
             }
         }
+        console_log!("hits {:?}", to_prints);
+        // let wow: Vec<f32> = vec![1.234567891234567891234; 3];
+        // console_log!("wow {}", wow[0]);
+        // console_log!("f32::DIGITS {}", f32::DIGITS);
         (hits, misses)
     }
     fn hone(&self) {
         self.draw_init_hone_palette();
-        for _ in 0..5 {
+        for _ in 0..40 {
             self.draw_hone_palette(&self.buffer.palette1, 4);
             self.draw_hone_palette(&self.buffer.palette0, 6);
         }
@@ -144,7 +152,7 @@ struct IndexedU {
 
 #[derive(Default)]
 pub struct HoneBasis2{
-    pub index_pairs: Vec<TestPair>,
+    pub pairs: Vec<TestPair>,
     pub pair_texels: Vec<i32>,
     pub curve_texels: Vec<f32>,
     pub u_texels: Vec<f32>,
@@ -174,6 +182,9 @@ impl HoneBasis2 {
             ]); 
             for i in 0..curve.nurbs.knots.len()-1 {
                 if curve.nurbs.knots[i] < curve.nurbs.knots[i+1] || i == curve.nurbs.knots.len() - curve.nurbs.order {
+                    // if curve.nurbs.knots[i] > 1. {
+                    //     log("what?!?????????");
+                    // }
                     u_indexes.push(IndexedU{
                         texel_index, 
                         u: curve.nurbs.knots[i],
@@ -199,7 +210,7 @@ impl HoneBasis2 {
             }  
         }
         HoneBasis2 {
-            index_pairs,
+            pairs: index_pairs,
             pair_texels,
             curve_texels,
             u_texels,

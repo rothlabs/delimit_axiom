@@ -53,17 +53,17 @@ impl HoneBasis {
                         curve.min,
                         curve.max,
                     ]); 
-                    for i in 0..curve.nurbs.knots.len()-1 {
-                        if curve.nurbs.knots[i] < curve.nurbs.knots[i+1] || i == curve.nurbs.knots.len() - curve.nurbs.order {
+                    facet_texels.push(0.);
+                    for i in 1..curve.nurbs.knots.len() { //-1 {
+                        if curve.nurbs.knots[i-1] < curve.nurbs.knots[i] || i == curve.nurbs.order-1 { // curve.nurbs.knots.len() - curve.nurbs.order
                             indexed_uvs.push(IndexedUV{
-                                //facet_i,
                                 texel_i, 
                                 uv:vec2(curve.nurbs.knots[i], ci as f32 / (facet.controls.len()-1) as f32)
                             }); 
                         }
                         facet_texels.push(curve.nurbs.knots[i]);
                     }  
-                    facet_texels.push(curve.nurbs.knots[curve.nurbs.knots.len()-1]);
+                    //facet_texels.push(curve.nurbs.knots[curve.nurbs.knots.len()-1]);
                     facet_texels.extend(&curve.nurbs.weights);
                     for point in &curve.controls {
                         facet_texels.extend(point.to_array());

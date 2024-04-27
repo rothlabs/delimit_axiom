@@ -47,6 +47,7 @@ impl GPU {
         gpu.gl.bind_vertex_array(Some(&vao));
         gpu.gl.vertex_attrib_pointer_with_i32(position_attribute_location as u32, 2, GL::FLOAT, false, 0, 0);
         gpu.gl.enable_vertex_attrib_array(position_attribute_location as u32);
+        gpu.gl.disable(0x0BD0); // DITHER constant
         Ok(gpu)
     }
     pub fn read(&self, buffer: &Framebuffer, attachment: u32) -> Vec<f32> {

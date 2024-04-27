@@ -2,45 +2,39 @@ use crate::{log, CurveHit, CurveShape, HitTester2, Shape, Spatial3, UnionBatch};
 use crate::hit::{hit2_gpu::HitTest2, Miss, HitMiss2, Hit2};
 use glam::*;
 
-pub trait Union2 {
+pub trait UnionBatch2 {
     fn union(self) -> Vec<Vec<CurveShape>>;
 }
 
-impl Union2 for Vec<Vec<Vec<CurveShape>>> { // job, stage, group
+impl UnionBatch2 for Vec<Vec<Vec<CurveShape>>> { // jobs, groups, curves
     fn union(self) -> Vec<Vec<CurveShape>> { 
         let batch = UnionBatch::new(&self);
         let curves: Vec<CurveShape> = self.clone().into_iter().flatten().flatten().collect();
-        let (hits, misses) = curves.hit(&batch.pairs);
-        let mut hit_miss: Vec<Vec<Vec<Vec<HitMiss2>>>> = vec![vec![]; self.len()];
+        let (flat_hits, misses) = curves.hit(&batch.pairs);
+        let mut hits:   Vec<[Vec<HitMiss2>; 2]> = vec![[vec![], vec![]]; self.len()];
         for (ji, groups) in self.iter().enumerate() {
-            hit_miss[ji].push(vec![vec![]; groups.len()-1]);
-            for g1 in 0..groups.len()-1 {
-                for g0 in 0..=g1+1  {
-                    hit_miss[ji][g1].push(vec![HitMiss2::default(); groups[g0].len()]);
-                }
-            }
+            hits[ji][0].extend(vec![HitMiss2::default(); groups[0].len()]);
+            hits[ji][1].extend(vec![HitMiss2::default(); groups[1].len()]);
         }
-        for hit in &hits {
+        for hit in &flat_hits {
             let (ji, g0, i0, g1, i1) = batch.index(&hit.pair);
-            hit_miss[ji][g1-1][g0][i0].hits.push(Hit2{u:hit.u0, dot:hit.dot0});
-            hit_miss[ji][g1-1][g1][i1].hits.push(Hit2{u:hit.u1, dot:hit.dot1});
+            hits[ji][g0][i0].hits.push(Hit2{u:hit.u0, dot:hit.dot0});
+            hits[ji][g1][i1].hits.push(Hit2{u:hit.u1, dot:hit.dot1});
         }
         for miss in &misses {
             let (ji, g0, i0, g1, i1) = batch.index(&miss.pair);
-            hit_miss[ji][g1-1][g0][i0].misses.push(Miss{dot:miss.dot0, distance:miss.distance});
-            hit_miss[ji][g1-1][g1][i1].misses.push(Miss{dot:miss.dot1, distance:miss.distance});
+            hits[ji][g0][i0].misses.push(Miss{dot:miss.dot0, distance:miss.distance});
+            hits[ji][g1][i1].misses.push(Miss{dot:miss.dot1, distance:miss.distance});
         }
         let mut results = vec![];
         for (ji, groups) in self.iter().enumerate() {
-            let mut curves = groups[0].clone();
-            for g1 in 1..groups.len() {
-                curves = UnionBasis2::new(curves.clone(), groups[g1].clone());
-            }
+            let curves = UnionBasis2::new(groups[0].clone(), groups[1].clone(), hits[ji].clone());
             results.push(curves);
         }
         results
     }
 }
+
 
 // impl Union2 for Vec<Vec<CurveShape>> { // job, group, curve
 //     fn union(self) { 
@@ -56,24 +50,26 @@ impl Union2 for Vec<Vec<Vec<CurveShape>>> { // job, stage, group
 
 
 pub struct UnionBasis2 {
-    pub tester: HitTester2,
+    //pub tester: HitTester2,
     pub groups: [Vec<CurveShape>; 2],
-    pub hits:   [Vec<Vec<CurveHit>>; 2], 
-    pub miss:   [Vec<Vec<Miss>>; 2], 
+    //pub hits:   [Vec<Vec<CurveHit>>; 2], 
+    //pub miss:   [Vec<Vec<Miss>>; 2], 
+    pub hits:   [Vec<HitMiss2>; 2], 
     pub curves: Vec<CurveShape>,
     pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis2 { 
-    pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>) -> Vec<CurveShape> {
+    pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>, hits:[Vec<HitMiss2>; 2]) -> Vec<CurveShape> {
         UnionBasis2 {
-            tester: HitTester2 {
-                curves: (CurveShape::default(), CurveShape::default()),
-                spatial: Spatial3::new(), 
-                points:  vec![],
-            },
-            hits: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
-            miss: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
+            // tester: HitTester2 {
+            //     curves: (CurveShape::default(), CurveShape::default()),
+            //     spatial: Spatial3::new(), 
+            //     points:  vec![],
+            // },
+            hits,
+            //hits: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
+            //miss: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
             groups: [curves0, curves1],
             curves: vec![],
             shapes: vec![],
@@ -81,16 +77,15 @@ impl UnionBasis2 {
     }
 
     pub fn build(&mut self) -> Vec<CurveShape> {
-        self.test_groups();
         for g in 0..2 {
             for i in 0..self.groups[g].len() {
-                if self.hits[g][i].is_empty() {
-                    self.miss[g][i].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                    if self.miss[g][i].is_empty() || self.miss[g][i][0].dot * self.groups[g][i].nurbs.sign < 0. { 
+                if self.hits[g][i].hits.is_empty() {
+                    self.hits[g][i].misses.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+                    if self.hits[g][i].misses.is_empty() || self.hits[g][i].misses[0].dot * self.groups[g][i].nurbs.sign > 0. { 
                         self.curves.push(self.groups[g][i].clone());   
                     }
                 }else{
-                    self.hits[g][i].sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
+                    self.hits[g][i].hits.sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
                     self.add_bounded_curves(g, i);   
                 }
             }
@@ -104,8 +99,8 @@ impl UnionBasis2 {
     fn add_bounded_curves(&mut self, g: usize, i: usize) {
         let mut curve = self.groups[g][i].clone();
         let min_basis = curve.min;
-        for curve_hit in self.hits[g][i].iter() {
-            if curve_hit.dot * curve.nurbs.sign > 0. {
+        for curve_hit in self.hits[g][i].hits.iter() {
+            if curve_hit.dot * curve.nurbs.sign < 0. {
                 curve.set_min(curve_hit.u);
             }else{
                 let range = curve_hit.u - min_basis;
@@ -117,40 +112,34 @@ impl UnionBasis2 {
                 curve = self.groups[g][i].clone();
             }
         }
-        if self.hits[g][i].last().expect("There should be one or more hits.").dot * curve.nurbs.sign > 0. {
+        if self.hits[g][i].hits.last().expect("There should be one or more hits.").dot * curve.nurbs.sign < 0. {
             self.curves.push(curve);
         }
     }
+}
 
-    fn test_groups(&mut self){
-        for i0 in 0..self.groups[0].len() {
-            for i1 in 0..self.groups[1].len() {
-                self.tester.curves.0 = self.groups[0][i0].clone();
-                self.tester.curves.1 = self.groups[1][i1].clone();
-                for u0 in self.groups[0][i0].get_unique_knots() { 
-                    for u1 in self.groups[1][i1].get_unique_knots() { 
-                        self.test_curves(i0, i1, u0, u1);
-                    }
-                }
-            }
-        }
-    }
 
-    fn test_curves(&mut self, i0: usize, i1: usize, u0: f32, u1: f32) { 
-        // if let Some(hit_miss) = self.tester.test(u0, u1) {
-        //     match hit_miss {
-        //         HitMiss2::Hit(hit) => {
-        //             self.hits[0][i0].push(hit.hit.0);
-        //         self.hits[1][i1].push(hit.hit.1);
-        //         },
-        //         HitMiss2::Miss(miss) => {
-        //             self.miss[0][i0].push(miss.0);
-        //             self.miss[1][i1].push(miss.1);
+
+// let mut results = vec![];
+//         for (ji, groups) in self.iter().enumerate() {
+//             let mut curves = groups[0].clone();
+//             for g1 in 1..groups.len() {
+//                 curves = UnionBasis2::new(curves.clone(), groups[g1].clone());
+//             }
+//             results.push(curves);
+//         }
+
+
+// for (ji, groups) in self.iter().enumerate() {
+        //     hit_miss[ji].push(vec![vec![]; groups.len()-1]);
+        //     for g1 in 0..groups.len()-1 {
+        //         for g0 in 0..=g1+1  {
+        //             hit_miss[ji][g1].push(vec![HitMiss2::default(); groups[g0].len()]);
         //         }
         //     }
         // }
-    }
-}
+
+
 
 
 // let (starts, indexes) = job_indexes(&self);

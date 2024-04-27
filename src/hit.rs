@@ -16,15 +16,15 @@ pub fn job_indexes<T>(jobs: &Vec<Vec<Vec<T>>>) -> ([Vec<usize>; 2], Vec<(usize, 
     let mut indexes = vec![];
     let mut starts = [vec![], vec![]];
     let mut job_start = 0;
-    for (ji, job) in jobs.iter().enumerate() {
+    for (ji, groups) in jobs.iter().enumerate() {
         starts[0].push(job_start);
-        job_start += job.len();
+        job_start += groups.len();
         let mut group_start = 0;
-        for (gi, group) in job.iter().enumerate() {
+        for (gi, items) in groups.iter().enumerate() {
             starts[1].push(group_start);
-            group_start += group.len();
-            for ci in 0..group.len(){
-                indexes.push((ji, gi, ci));
+            group_start += items.len();
+            for i in 0..items.len(){
+                indexes.push((ji, gi, i));
             }
         }
     }

@@ -134,6 +134,10 @@ impl Nurbs {
             let d0 = a1 + w2xuk0 * uk0 * k1r1;
             let d1 = a1 + w2 * k0u * k0u * k1r1;
             basis.1 = [0., n0/d0/d0, n1/d0/d0, n2/d1/d1];
+            // let d0 = 2. * k1u / k0k1 / k1r1;
+            // let d1 = (2. * (k0 * ur1 + k1 * k2u + u * r1k2)) / (k0k1 * k0k2 * k1r1);
+            // let d2 = (2. * uk0) / (k0k1 * k0k2);
+            // basis.1 = [0., d0, d1, d2];
         } else { // linear
             basis.0 = [0., 0., k1u_d_k1k0, uk0_d_k1k0];
             basis.1 = [0., 0., 1./k0k1, 1./k1k0];

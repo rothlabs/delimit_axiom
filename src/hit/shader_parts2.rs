@@ -57,7 +57,7 @@ float get_moved_u(float u, vec3 du, vec3 delta) {
     if(isnan(delta.x) || isnan(delta.y) || isnan(delta.z) || length(delta) < 0.0001){  
         return u;
     }
-    u = u + dot(normalize(du), normalize(delta)) * length(delta) / length(du);
+    u = u + dot(normalize(du), normalize(delta)) / length(du) * length(delta);
     u = clamp(u, 0., 1.);
     return u;
 }

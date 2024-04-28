@@ -3,15 +3,23 @@ use const_format::concatcp;
 pub const ARROW_IN: &str = r##"
 uniform sampler2D point_tex;
 uniform sampler2D delta_tex;
+uniform sampler2D param_tex;
 "##;
 
 pub const ARROW_OUT: &str = r##"
-layout(location=0) out vec3 point;
+layout(location=0) out vec4 point;
 layout(location=1) out vec4 delta;
+layout(location=2) out vec2 param;
 void output_arrow(int ci, float u){
     float[6] arrow = get_curve_arrow(ci, u);
-    point = vec3(arrow[0], arrow[1], arrow[2]);
-    delta = vec4(arrow[3], arrow[4], arrow[5], u);
+    float x_round = round(arrow[0] * 1000000.) / 1000000.;
+    float y_round = round(arrow[1] * 1000000.) / 1000000.;
+    point = vec4(x_round, y_round, arrow[0] - x_round, arrow[1] - y_round);
+    float d0_round = round(arrow[3] * 1000000.) / 1000000.;
+    float d1_round = round(arrow[4] * 1000000.) / 1000000.;
+    delta = vec4(d0_round, d1_round, arrow[3] - d0_round, arrow[4] - d1_round);
+    float u_round = round(u * 1000000.) / 1000000.;
+    param = vec2(u, u - u_round);
 }
 "##;
 
@@ -35,21 +43,34 @@ pub const ARROW_PALETTE: &str = r##"
         p0 = p0c;
         p1 = p1c;
     }
-    vec4 t0 = vec4(0., 0., 0., 0.);
-    vec4 t1 = vec4(0., 0., 0., 0.);
+    float u0 = 0.;
+    float u1 = 0.;
+            // vec4 t0 = vec4(0., 0., 0., 0.);
+            // vec4 t1 = vec4(0., 0., 0., 0.);
+    vec2 t0 = vec2(0., 0.);
+    vec2 t1 = vec2(0., 0.);
+            // vec3 d0u = vec2(0., 0.);
+            // vec3 d1u = vec2(0., 0.);
     if(pick > 1){
-        t0 = texelFetch(delta_tex, in_pos0c,  0);
-        t1 = texelFetch(delta_tex, in_pos1c,  0);
+        u0 = texelFetch(param_tex, in_pos0c,  0).r + texelFetch(param_tex, in_pos0c,  0).g;
+        u1 = texelFetch(param_tex, in_pos1c,  0).r + texelFetch(param_tex, in_pos1c,  0).g;
+        t0 = texelFetch(delta_tex, in_pos0c,  0).rg + texelFetch(delta_tex, in_pos0c,  0).ba;
+        t1 = texelFetch(delta_tex, in_pos1c,  0).rg + texelFetch(delta_tex, in_pos1c,  0).ba;
     }else if(pick > 0){
-        t0 = texelFetch(delta_tex, in_pos0b,  0);
-        t1 = texelFetch(delta_tex, in_pos1a,  0);
+        u0 = texelFetch(param_tex, in_pos0b,  0).r + texelFetch(param_tex, in_pos0b,  0).g;
+        u1 = texelFetch(param_tex, in_pos1a,  0).r + texelFetch(param_tex, in_pos1a,  0).g;
+        t0 = texelFetch(delta_tex, in_pos0b,  0).rg + texelFetch(delta_tex, in_pos0b,  0).ba;
+        t1 = texelFetch(delta_tex, in_pos1a,  0).rg + texelFetch(delta_tex, in_pos1a,  0).ba;
     }else{
-        t0 = texelFetch(delta_tex, in_pos0a,  0);
-        t1 = texelFetch(delta_tex, in_pos1b,  0);
+        u0 = texelFetch(param_tex, in_pos0a,  0).r + texelFetch(param_tex, in_pos0a,  0).g;
+        u1 = texelFetch(param_tex, in_pos1b,  0).r + texelFetch(param_tex, in_pos1b,  0).g;
+        t0 = texelFetch(delta_tex, in_pos0a,  0).rg + texelFetch(delta_tex, in_pos0a,  0).ba;
+        t1 = texelFetch(delta_tex, in_pos1b,  0).rg + texelFetch(delta_tex, in_pos1b,  0).ba;
     }
-    vec2 us = vec2(t0.a, t1.a);
-    vec3 d0u = t0.xyz;
-    vec3 d1u = t1.xyz;
+            // vec3 d0u = t0.xyz;
+            // vec3 d1u = t1.xyz;
+    vec3 d0u = vec3(t0.x, t0.y, 0.);
+    vec3 d1u = vec3(t1.x, t1.y, 0.);
 "##;
 
 pub const MOVE_U: &str = r##"

@@ -47,16 +47,23 @@ HEADER, GEOM_CORE, ARROW_HIT, MOVE_U, ARROW_IN, ARROW_OUT,
     vec3 deltaX = vec3(0., 0., 0.);
     if(out_pos.y < pair_size.y){
         curve_index = texelFetch(pair_tex, in_pos0a, 0).r;
-        u = us.r; du = d0u; 
+        u = u0; du = d0u; 
         pa = p0; pb = p1;
     }else{
         curve_index = texelFetch(pair_tex, in_pos0a, 0).g;
-        u = us.g; du = d1u; 
+        u = u1; du = d1u; 
         pa = p1; pb = p0;
     }
     if(out_pos.x < pair_size.x){
-        point = pa;
-        delta = vec4(du.x, du.y, du.z, u);
+        vec3 pa_r = round(pa * 1000000.) / 1000000.;
+        point = vec4(pa_r.x, pa_r.y, pa.x - pa_r.x, pa.y - pa_r.y);
+        vec3 du_r = round(du * 1000000.) / 1000000.;
+        delta = vec4(du_r.x, du_r.y, du.x - du_r.x, du.y - du_r.y);
+        float u_r = round(u * 1000000.) / 1000000.;
+        param = vec2(u, u - u_r);
+                // point = vec4(pa.x, pa.y, 0., 0.);
+                // delta = vec4(du.x, du.y, 0., 0.);
+                // param = vec2(u, 0.);
     }else{
         if(out_pos.x < pair_size.x * 2){
             deltaX = pb - pa;
@@ -80,7 +87,7 @@ void main() {"##,
     d1u = normalize(d1u);
     if(length(p0 - p1) < tolerance){
         // hit_miss = vec4(-10., -10., -10., -10.); 
-        // if((us.r > 0.9999 && us.g < 0.0001) || (us.r < 0.0001 && us.g > 0.9999)){
+        // if((u0 > 0.9999 && u1 < 0.0001) || (u0 < 0.0001 && u1 > 0.9999)){
         //     return;
         // }
         // if(abs(dot(d0u, d1u)) > 0.9999){     
@@ -89,21 +96,21 @@ void main() {"##,
         vec3 cross0 = normalize(cross(d0u, vec_z));
         vec3 cross1 = normalize(cross(d1u, vec_z));
         hit_miss = vec4(
-            us.r,
-            us.g,
+            u0,
+            u1,
             dot(cross0, d1u), 
             dot(cross1, d0u)
         );
         point = (p0 + p1) / 2.;
     }else{
-        if(us.r < 0.0001){
+        if(u0 < 0.0001){
             p0 = p0 + d0u * 0.0001;
-        }else if(us.r > 0.9999){
+        }else if(u0 > 0.9999){
             p0 = p0 - d0u * 0.0001;
         }
-        if(us.g < 0.0001){
+        if(u1 < 0.0001){
             p1 = p1 + d1u * 0.0001;
-        }else if(us.g > 0.9999){
+        }else if(u1 > 0.9999){
             p1 = p1 - d1u * 0.0001;
         }
         vec3 delta = p1 - p0;

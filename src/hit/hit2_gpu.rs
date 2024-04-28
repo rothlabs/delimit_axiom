@@ -19,8 +19,8 @@ impl HitTest2 for Vec<CurveShape> {
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
         let buffer = HoneBuffer{
             io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.u_texels, 2).unwrap(),
-            palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_buf_size, 2).unwrap(),
-            palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_buf_size, 2).unwrap(),
+            palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_buf_size, 3).unwrap(),
+            palette1: gpu.framebuffer.make_multi_empty_rgba32f(7, palette_buf_size, 3).unwrap(),
         };
         HitBasis2 {
             //curves:self, 
@@ -106,9 +106,9 @@ impl HitBasis2 {
     }
     fn hone(&self) {
         self.draw_init_hone_palette();
-        for _ in 0..40 {
+        for _ in 0..20 {
             self.draw_hone_palette(&self.buffer.palette1, 4);
-            self.draw_hone_palette(&self.buffer.palette0, 6);
+            self.draw_hone_palette(&self.buffer.palette0, 7);
         }
         self.draw_hit_miss();
     }
@@ -140,6 +140,7 @@ impl HitBasis2 {
     fn set_arrow_uniforms(&self, program: &WebGlProgram, i: i32) {
         self.gpu.set_uniform_1i(program, "point_tex", i);
         self.gpu.set_uniform_1i(program, "delta_tex", i + 1);
+        self.gpu.set_uniform_1i(program, "param_tex", i + 2);
     }
 }
 

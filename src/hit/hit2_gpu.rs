@@ -98,7 +98,7 @@ impl HitBasis2 {
                 });
             }
         }
-        console_log!("hits {:?}", to_prints);
+        // console_log!("hits {:?}", to_prints);
         // let wow: Vec<f32> = vec![1.234567891234567891234; 3];
         // console_log!("wow {}", wow[0]);
         // console_log!("f32::DIGITS {}", f32::DIGITS);
@@ -106,7 +106,7 @@ impl HitBasis2 {
     }
     fn hone(&self) {
         self.draw_init_hone_palette();
-        for _ in 0..20 {
+        for _ in 0..8 {
             self.draw_hone_palette(&self.buffer.palette1, 4);
             self.draw_hone_palette(&self.buffer.palette0, 7);
         }

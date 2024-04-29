@@ -35,7 +35,7 @@ impl Union {
                 groups.push(group);
             }
             let mut curves0 = groups.first().unwrap_or(&vec![]).clone();
-            log("start compound gpu union2");
+            // log("start compound gpu union2");
             for curves1 in groups.iter().skip(1) {
                 // let mut basis = UnionBasis2::new(curves0, curves1.clone());
                 // curves0 = basis.build(); // shapes.extend(basis.shapes);

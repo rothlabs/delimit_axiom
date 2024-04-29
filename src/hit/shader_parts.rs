@@ -143,18 +143,47 @@ pub const PALETTE_IN_POS: &str = r##"
 
 pub const ARROW_HIT: &str = r##"
 vec3 get_arrow_hit(vec3 p0, vec3 delta0, vec3 p1, vec3 delta1) {
+    delta0 = normalize(delta0);
+    delta1 = normalize(delta1);
     float dotx = dot(delta0, delta1);
-    if(abs(dotx) > 0.9999) {
-        return (p0 + p1) / 2.;
-    }
-    vec3 delta = p0 - p1;
-    float dot0 = dot(delta, delta0);
-    float dot1 = dot(delta, delta1);
+        if(abs(dotx) > 0.9999) {
+            return (p0 + p1) / 2.;
+        }
     float denom = 1. - dotx * dotx;
-    float t = (dotx * dot1 - dot0) / denom;
-    float s = (dot1 - dotx * dot0) / denom;
-    vec3 closest0 = p0 + t * delta0;               // TODO: can use this part as u or uv move directly!!!
-    vec3 closest1 = p1 + s * delta1;
+    vec3 v0a = p0 * delta0 / denom        - p1 * delta0 / denom;
+    vec3 v0b = p0 * delta0 * dotx / denom - p1 * delta0 * dotx / denom;
+    vec3 v1a = p0 * delta1 * dotx / denom - p1 * delta1 * dotx / denom;
+    vec3 v1b = p0 * delta1 / denom        - p1 * delta1 / denom;
+    float dot0a = v0a.x + v0a.y + v0a.z;
+    float dot0b = v0b.x + v0b.y + v0b.z;
+    float dot1a = v1a.x + v1a.y + v1a.z;
+    float dot1b = v1b.x + v1b.y + v1b.z;
+        // float u0 = dot1a - dot0a;
+        // float u1 = dot1b - dot0b;
+    vec3 closest0 = p0 + delta0 * dot1a - delta0 * dot0a;               
+    vec3 closest1 = p1 + delta1 * dot1b - delta1 * dot0b;
+        // vec3 closest0 = p0 + delta0 * u0;               // TODO: can use this part as u or uv move directly!!!
+        // vec3 closest1 = p1 + delta1 * u1;
     return (closest0 + closest1) / 2.;
 }
 "##;
+
+
+
+// pub const ARROW_HIT: &str = r##"
+// vec3 get_arrow_hit(vec3 p0, vec3 delta0, vec3 p1, vec3 delta1) {
+//     float dotx = dot(delta0, delta1);
+//     // if(abs(dotx) > 0.9999) {
+//     //     return (p0 + p1) / 2.;
+//     // }
+//     vec3 delta = p0 - p1;
+//     float dot0 = dot(delta, delta0);
+//     float dot1 = dot(delta, delta1);
+//     float denom = 1. - dotx * dotx;
+//     float t = (       dotx * dot1 - dot0) / denom;
+//     float s = (dot1 - dotx * dot0)        / denom;
+//     vec3 closest0 = p0 + t * delta0;               // TODO: can use this part as u or uv move directly!!!
+//     vec3 closest1 = p1 + s * delta1;
+//     return (closest0 + closest1) / 2.;
+// }
+// "##;

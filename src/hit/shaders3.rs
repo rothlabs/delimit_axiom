@@ -155,7 +155,6 @@ void main() {"##,
 pub const TRACE_DUAL_SOURCE: &str = concatcp!(
 HEADER, GEOM_CORE, FACET_CORE, MOVE_UV_STOP, ARROW_IN, ARROW_OUT, r##"
 float step = 0.7;
-uniform int current_segment;
 uniform int trace_count;
 uniform sampler2D box_tex;
 layout(location=3) out vec4 box;

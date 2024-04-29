@@ -167,8 +167,8 @@ vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1
     vec3 normal0 = cross(d0u, d0v);
     vec3 normal1 = cross(d1u, d1v);
     vec3 normal_cross = cross(normal0, normal1);
-    vec3 cross0 = normalize(cross(normal0, normal_cross));
-    vec3 cross1 = normalize(cross(normal1, normal_cross));
+    vec3 cross0 = cross(normal0, normal_cross);
+    vec3 cross1 = cross(normal1, normal_cross);
     return get_arrow_hit(p0, cross0, p1, cross1);
 }
 "##);
@@ -192,13 +192,13 @@ vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1
     if(uv0.x < 0.0001 || uv0.x > 0.9999){
         cross0 = d0v;
     }else if(uv0.y > 0.0001 && uv0.y < 0.9999){
-        cross0 = normalize(cross(normal0, normal_cross));
+        cross0 = cross(normal0, normal_cross);
     }
     vec3 cross1 = d1u;
     if(uv1.x < 0.0001 || uv1.x > 0.9999){
         cross1 = d1v;
     }else if(uv1.y > 0.0001 && uv1.y < 0.9999){
-        cross1 = normalize(cross(normal1, normal_cross));
+        cross1 = cross(normal1, normal_cross);
     }
     return get_arrow_hit(p0, cross0, p1, cross1);
 }
@@ -206,9 +206,9 @@ vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1
 
 pub const MOVE_UV: &str = r##"
 vec2 get_moved_uv(vec2 uv, vec3 du, vec3 dv, vec3 target) {
-    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  
-        return uv;
-    }
+        // if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  
+        //     return uv;
+        // }
     uv = uv + vec2(
         dot(normalize(du), normalize(target)) * length(target) / length(du), 
         dot(normalize(dv), normalize(target)) * length(target) / length(dv)
@@ -221,7 +221,7 @@ vec2 get_moved_uv(vec2 uv, vec3 du, vec3 dv, vec3 target) {
 
 pub const MOVE_UV_STOP: &str = r##"
 vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, vec3 target) {
-    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  // 0.0001
+    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  
         return uv0;
     }
     vec2 delta0 = vec2(
@@ -260,6 +260,38 @@ vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, ve
 "##;
 
 
+
+// pub const HONE: &str = r##"
+//     int facet_index = 0;
+//     vec2 uv    = vec2(0., 0.);
+//     vec3 du    = vec3(0., 0., 0.);
+//     vec3 dv    = vec3(0., 0., 0.);
+//     vec3 pa    = vec3(0., 0., 0.);
+//     vec3 pb    = vec3(0., 0., 0.);
+//     vec3 deltaX = vec3(0., 0., 0.);
+//     if(out_pos.y < pair_size.y){
+//         facet_index = texelFetch(pair_tex, in_pos0a, 0).r;
+//         uv = uvs.rg; du = d0u; dv = d0v;
+//         pa = p0; pb = p1;
+//     }else{
+//         facet_index = texelFetch(pair_tex, in_pos0a, 0).g;
+//         uv = uvs.ba; du = d1u; dv = d1v;
+//         pa = p1; pb = p0;
+//     }
+//     if(out_pos.x < pair_size.x){
+//         point    = pa;
+//         delta_u = vec4(du.x, du.y, du.z, uv.x);
+//         delta_v = vec4(dv.x, dv.y, dv.z, uv.y);
+//     }else{
+//         if(out_pos.x < pair_size.x * 2){
+//             deltaX = pb - pa;
+//         }else{
+//             deltaX = get_facet_convergence_point(uvs.rg, p0, d0u, d0v, uvs.ba, p1, d1u, d1v) - pa;
+//         }
+//         uv = get_moved_uv(uv, du, dv, deltaX);
+//         output_arrows(facet_index, uv);
+//     }
+// "##;
 
 
 // pub const FACET_EDGE_HIT: &str = concatcp!(ARROW_HIT, r##"

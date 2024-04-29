@@ -213,15 +213,15 @@ pub fn get_traced_curves(
         }
         
 
-        // let mut curve0 = CurveShape::default();
-        // let mut curve1 = CurveShape::default();
-        // let mut curve2 = CurveShape::default();
-        // curve0.controls.extend(rays0a.iter().map(|x| x.point));
-        // curve1.controls.extend(rays1a.iter().map(|x| x.point));
-        // curve2.controls.extend(rays2a.iter().map(|x| x.point));
-        let mut curve0 = rays0a.to_curve();
-        let mut curve1 = rays1a.to_curve();
-        let mut curve2 = rays2a.to_curve();
+        let mut curve0 = CurveShape::default();
+        let mut curve1 = CurveShape::default();
+        let mut curve2 = CurveShape::default();
+        curve0.controls.extend(rays0a.iter().map(|x| x.point));
+        curve1.controls.extend(rays1a.iter().map(|x| x.point));
+        curve2.controls.extend(rays2a.iter().map(|x| x.point));
+        // let mut curve0 = rays0a.to_curve();
+        // let mut curve1 = rays1a.to_curve();
+        // let mut curve2 = rays2a.to_curve();
         curve0.negate();
         curve1.negate();
         curve0 = curve0.get_valid();

@@ -151,14 +151,14 @@ impl CurveShape {
         knots
     }
 
-    pub fn get_u_and_point_from_target(&self, u: f32, target: Vec3) -> (f32, Vec3) {
-        if target.length() < 0.00001 {
+    pub fn get_u_and_point_from_target(&self, u: f32, delta: Vec3) -> (f32, Vec3) {
+        if delta.length() < 0.00001 {
             let point = self.get_point(u);
             return (u, point)
         }
         let arrow = self.get_arrow(u);
-        let length_ratio = target.length() / arrow.delta.length();
-        let mut u = u + arrow.delta.normalize().dot(target.normalize()) * length_ratio;
+       //let length_ratio = delta.length() / arrow.delta.length();
+        let mut u = u + arrow.delta.normalize().dot(delta) / arrow.delta.length();
         u = u.clamp(0., 1.); 
         let point = self.get_point(u);
         (u, point)
@@ -231,6 +231,21 @@ impl CurveShape {
         }
     }
 }
+
+
+
+// pub fn get_u_and_point_from_target(&self, u: f32, delta: Vec3) -> (f32, Vec3) {
+//     if delta.length() < 0.00001 {
+//         let point = self.get_point(u);
+//         return (u, point)
+//     }
+//     let arrow = self.get_arrow(u);
+//     let length_ratio = delta.length() / arrow.delta.length();
+//     let mut u = u + arrow.delta.normalize().dot(delta.normalize()) * length_ratio;
+//     u = u.clamp(0., 1.); 
+//     let point = self.get_point(u);
+//     (u, point)
+// }
 
 
 

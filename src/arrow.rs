@@ -21,12 +21,17 @@ impl Arrow {
         if dotx.abs() > DOT_1_TOL { 
             return (self.point + arrow.point) / 2.;
         }
-        let delta = self.point - arrow.point;
-        let dot0 = delta.dot(delta0);
-        let dot1 = delta.dot(delta1);
+        // let delta = self.point - arrow.point;
+        // let dot0 = delta.dot(delta0);
+        // let dot1 = delta.dot(delta1);
         let denom = 1. - dotx * dotx;
-        let u0 = (dotx * dot1 - dot0) / denom;
-        let u1 = (dot1 - dotx * dot0) / denom;
+        let dot0a = (self.point * delta0 / denom - arrow.point * delta0 / denom).element_sum();
+        let dot0b = (self.point * delta0 * dotx / denom - arrow.point * delta0 * dotx / denom).element_sum();
+        let dot1a = (self.point * delta1 * dotx / denom - arrow.point * delta1 * dotx / denom).element_sum();
+        let dot1b = (self.point * delta1 / denom - arrow.point * delta1 / denom).element_sum();
+        // let dot1 = (self.point * delta1 - arrow.point * delta1).element_sum();
+        let u0 = dot1a - dot0a;
+        let u1 = dot1b - dot0b;
         let closest0 = self.point  + delta0 * u0;
         let closest1 = arrow.point + delta1 * u1;
         let point = (closest0 + closest1) / 2.;
@@ -40,6 +45,8 @@ impl Arrow {
         point
     }
 }
+
+
 
 
 pub trait ToCurve {
@@ -93,6 +100,38 @@ impl ArrowsToCurve {
         self.arrow = arrow.clone();
     }
 }
+
+
+
+
+
+// pub fn middle(&self, arrow: &Arrow) -> Vec3 {
+//     let delta0 = self.delta.normalize();
+//     let delta1 = arrow.delta.normalize();
+//     let dotx = delta0.dot(delta1);
+//     if dotx.abs() > DOT_1_TOL { 
+//         return (self.point + arrow.point) / 2.;
+//     }
+//     let delta = self.point - arrow.point;
+//     let dot0 = delta.dot(delta0);
+//     let dot1 = delta.dot(delta1);
+//     let denom = 1. - dotx * dotx;
+//     let u0 = (       dotx * dot1 - dot0) / denom;
+//     let u1 = (dot1 - dotx * dot0)        / denom;
+//     let closest0 = self.point  + delta0 * u0;
+//     let closest1 = arrow.point + delta1 * u1;
+//     let point = (closest0 + closest1) / 2.;
+//     if point.is_nan() {
+//         //log("arrow.middle -> nan!");
+//         console_log!("arrow.middle point distance {}", self.point.distance(arrow.point));
+//         console_log!("self.delta, arrow.delta {}, {}", self.delta, arrow.delta);
+//         console_log!("delta0, delta1 {}, {}", delta0, delta1);
+//         panic!("arrow.middle -> nan!");
+//     }
+//     point
+// }
+
+
 
 
 // if (self.arrow.point - middle).length() == 0. {

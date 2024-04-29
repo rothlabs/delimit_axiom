@@ -52,16 +52,20 @@ impl CurveTrimmer {
             if curve_hit.dot * curve.nurbs.sign > 0. {
                 curve.set_min(curve_hit.u);
             }else{
-                let range = curve_hit.u - min_basis;
-                if range < 0.0001 {
+                curve.set_max(min_basis, curve_hit.u);
+                let range = curve.max - curve.min;
+                if range < 0.001 {
                     console_log!("trim range: {}", range);
                 }
-                curve.set_max(min_basis, curve_hit.u);
                 self.curves.push(curve);
                 curve = self.group[i].clone();
             }
         }
         if self.hits[i].last().expect("There should be one or more hits.").dot * curve.nurbs.sign > 0. {
+            let range = curve.max - curve.min;
+            if range < 0.001 {
+                console_log!("trim range: {}", range);
+            }
             self.curves.push(curve);
         }
     }

@@ -66,11 +66,11 @@ HEADER, GEOM_CORE, ARROW_HIT, MOVE_U, ARROW_IN, ARROW_OUT,
                 // param = vec2(u, 0.);
     }else{
         if(out_pos.x < pair_size.x * 2){
-            deltaX = pb - pa;
+            deltaX = pb; // - pa;
         }else{
-            deltaX = get_arrow_hit(p0, d0u, p1, d1u) - pa;
+            deltaX = get_arrow_hit(p0, d0u, p1, d1u); // - pa;
         }
-        u = get_moved_u(u, du, deltaX);
+        u = get_moved_u(u, du, pa, deltaX);
         output_arrow(curve_index, u);
     }
 }"##);

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use glam::*;
 
-use crate::DUP_TOL;
+use crate::DUP_0_TOL;
 
 #[derive(Default)]
 pub struct Spatial3 {

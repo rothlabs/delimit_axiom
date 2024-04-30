@@ -31,7 +31,7 @@ pub fn get_traced_curves(
         let mut duplicate = false;
         if box_map.contains_key(&key) {
             for (min1, max1) in box_map.get(&key).unwrap() {
-                if min.distance(*min1) < 0.05 && max.distance(*max1) < 0.05 {
+                if min.distance(*min1) < 0.01 && max.distance(*max1) < 0.01 {
                     duplicate = true;
                 }
             }
@@ -42,7 +42,7 @@ pub fn get_traced_curves(
         if let Some(vec) = box_map.get_mut(&key) {
             vec.push((min, max));
         }
-        let mut prev_point = vec3(100000., 100000., 100000.);
+        //let mut prev_point = vec3(100000., 100000., 100000.);
         
         // if index_pairs[i].g0 > index_pairs[i].g1 {
         //     log("What?!!!!!!!!!!!");
@@ -88,6 +88,7 @@ pub fn get_traced_curves(
             if starts.2.point.distance(point) < TRACE_STEP {
                 if can_loop {
                     if starts.2.delta.normalize().dot((point - starts.2.point).normalize()) > 0.5 {
+                        log("looped!!!");
                         add_last_arrow_and_add_reverse = false;
                         rays0a.push(starts.0.clone());
                         rays1a.push(starts.1.clone());
@@ -137,13 +138,13 @@ pub fn get_traced_curves(
                 let j = i * 4;
                 let delta0 = starts.0.delta.normalize();//vec3(uv_dirs[j+0], uv_dirs[j+1], 0.).normalize();
                 let delta1 = starts.1.delta.normalize();////vec3(uv_dirs[j+2], uv_dirs[j+3], 0.).normalize();
-                if       delta0.x.abs() > DELTA_0_TOL && (traces[j+0] < AT_0_TOL || traces[j+0] > AT_1_TOL) { 
+                if       (delta0.x < -DELTA_0_TOL && traces[j+0] > AT_1_TOL) || (delta0.x > DELTA_0_TOL && traces[j+0] < AT_0_TOL) { 
                     add_reverse_trace = false;
-                }else if delta0.y.abs() > DELTA_0_TOL && (traces[j+1] < AT_0_TOL || traces[j+1] > AT_1_TOL) { 
+                }else if (delta0.y < -DELTA_0_TOL && traces[j+1] > AT_1_TOL) || (delta0.y > DELTA_0_TOL && traces[j+1] < AT_0_TOL) { 
                     add_reverse_trace = false;
-                }else if delta1.x.abs() > DELTA_0_TOL && (traces[j+2] < AT_0_TOL || traces[j+2] > AT_1_TOL) { 
+                }else if (delta1.x < -DELTA_0_TOL && traces[j+2] > AT_1_TOL) || (delta1.x > DELTA_0_TOL && traces[j+2] < AT_0_TOL) { 
                     add_reverse_trace = false;
-                }else if delta1.y.abs() > DELTA_0_TOL && (traces[j+3] < AT_0_TOL || traces[j+3] > AT_1_TOL) { 
+                }else if (delta1.y < -DELTA_0_TOL && traces[j+3] > AT_1_TOL) || (delta1.y > DELTA_0_TOL && traces[j+3] < AT_0_TOL) { 
                     add_reverse_trace = false;
                 }
             }
@@ -236,6 +237,37 @@ pub fn get_traced_curves(
     }
     traced_curves
 }
+
+
+// if       (delta0.x > DELTA_0_TOL && traces[j+0] > AT_1_TOL) || (delta0.x < -DELTA_0_TOL && traces[j+0] < AT_0_TOL) { 
+//     break;
+// }else if (delta0.y > DELTA_0_TOL && traces[j+1] > AT_1_TOL) || (delta0.y < -DELTA_0_TOL && traces[j+1] < AT_0_TOL) { 
+//     break;
+// }else if (delta1.x > DELTA_0_TOL && traces[j+2] > AT_1_TOL) || (delta1.x < -DELTA_0_TOL && traces[j+2] < AT_0_TOL) { 
+//     break;
+// }else if (delta1.y > DELTA_0_TOL && traces[j+3] > AT_1_TOL) || (delta1.y < -DELTA_0_TOL && traces[j+3] < AT_0_TOL) { 
+//     break;
+// }
+
+// if       delta0.x.abs() > DELTA_0_TOL && (traces[j+0] < AT_0_TOL || traces[j+0] > AT_1_TOL) { 
+//     add_reverse_trace = false;
+// }else if delta0.y.abs() > DELTA_0_TOL && (traces[j+1] < AT_0_TOL || traces[j+1] > AT_1_TOL) { 
+//     add_reverse_trace = false;
+// }else if delta1.x.abs() > DELTA_0_TOL && (traces[j+2] < AT_0_TOL || traces[j+2] > AT_1_TOL) { 
+//     add_reverse_trace = false;
+// }else if delta1.y.abs() > DELTA_0_TOL && (traces[j+3] < AT_0_TOL || traces[j+3] > AT_1_TOL) { 
+//     add_reverse_trace = false;
+// }
+
+// if       (delta0.x > DELTA_0_TOL && traces[j+0] > AT_1_TOL) || (delta0.x < -DELTA_0_TOL && traces[j+0] < AT_0_TOL) { 
+//     break;
+// }else if (delta0.y > DELTA_0_TOL && traces[j+1] > AT_1_TOL) || (delta0.y < -DELTA_0_TOL && traces[j+1] < AT_0_TOL) { 
+//     break;
+// }else if (delta1.x > DELTA_0_TOL && traces[j+2] > AT_1_TOL) || (delta1.x < -DELTA_0_TOL && traces[j+2] < AT_0_TOL) { 
+//     break;
+// }else if (delta1.y > DELTA_0_TOL && traces[j+3] > AT_1_TOL) || (delta1.y < -DELTA_0_TOL && traces[j+3] < AT_0_TOL) { 
+//     break;
+// }
 
 
 // for t in 0..rays0a.len()-1 {

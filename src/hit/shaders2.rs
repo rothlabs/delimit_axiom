@@ -1,4 +1,5 @@
 use const_format::concatcp;
+
 use super::shader_parts::{
     HEADER, CORE_PARTS, GEOM_CORE, GEOM_PARTS,
     PALETTE_IN_POS,
@@ -44,7 +45,7 @@ HEADER, GEOM_CORE, ARROW_HIT, MOVE_U, ARROW_IN, ARROW_OUT,
     vec3 du = vec3(0., 0., 0.);
     vec3 pa = vec3(0., 0., 0.);
     vec3 pb = vec3(0., 0., 0.);
-    vec3 deltaX = vec3(0., 0., 0.);
+    vec3 pt = vec3(0., 0., 0.);
     if(out_pos.y < pair_size.y){
         curve_index = texelFetch(pair_tex, in_pos0a, 0).r;
         u = u0; du = d0u; 
@@ -55,29 +56,21 @@ HEADER, GEOM_CORE, ARROW_HIT, MOVE_U, ARROW_IN, ARROW_OUT,
         pa = p1; pb = p0;
     }
     if(out_pos.x < pair_size.x){
-        vec3 pa_r = round(pa * 1000000.) / 1000000.;
-        point = vec4(pa_r.x, pa_r.y, pa.x - pa_r.x, pa.y - pa_r.y);
-        vec3 du_r = round(du * 1000000.) / 1000000.;
-        delta = vec4(du_r.x, du_r.y, du.x - du_r.x, du.y - du_r.y);
-        float u_r = round(u * 1000000.) / 1000000.;
-        param = vec2(u, u - u_r);
-                // point = vec4(pa.x, pa.y, 0., 0.);
-                // delta = vec4(du.x, du.y, 0., 0.);
-                // param = vec2(u, 0.);
+        point = pa.xy;
+        delta = vec4(du.x, du.y, 0., u);
     }else{
         if(out_pos.x < pair_size.x * 2){
-            deltaX = pb; // - pa;
+            pt = pb;
         }else{
-            deltaX = get_arrow_hit(p0, d0u, p1, d1u); // - pa;
+            pt = get_arrow_hit(p0, d0u, p1, d1u);
         }
-        u = get_moved_u(u, du, pa, deltaX);
+        u = get_moved_u(u, du, pa, pt);
         output_arrow(curve_index, u);
     }
 }"##);
 
 pub const HIT_MISS_SOURCE: &str = concatcp!(
 HEADER, GEOM_CORE, ARROW_IN, r##"
-float tolerance = 0.05;
 vec3 vec_z = vec3(0., 0., 1.);
 layout(location=0) out vec4 hit_miss;
 layout(location=1) out vec3 point;
@@ -85,14 +78,14 @@ void main() {"##,
     CORE_PARTS, GEOM_PARTS, PALETTE_IN_POS, ARROW_PALETTE, r##"
     d0u = normalize(d0u);
     d1u = normalize(d1u);
-    if(length(p0 - p1) < tolerance){
-        // hit_miss = vec4(-10., -10., -10., -10.); 
-        // if((u0 > 0.9999 && u1 < 0.0001) || (u0 < 0.0001 && u1 > 0.9999)){
-        //     return;
-        // }
-        // if(abs(dot(d0u, d1u)) > 0.9999){     
-        //     return;
-        // }
+    if(length(p0 - p1) < HIT_TOL){
+        hit_miss = vec4(-10., -10., -10., -10.); 
+        if((u0 > AT_1_TOL && u1 < AT_0_TOL) || (u0 < AT_0_TOL && u1 > AT_1_TOL)){
+            return;
+        }
+        if(abs(dot(d0u, d1u)) > AT_1_TOL){     
+            return;
+        }
         vec3 cross0 = normalize(cross(d0u, vec_z));
         vec3 cross1 = normalize(cross(d1u, vec_z));
         hit_miss = vec4(
@@ -103,15 +96,15 @@ void main() {"##,
         );
         point = (p0 + p1) / 2.;
     }else{
-        if(u0 < 0.0001){
-            p0 = p0 + d0u * 0.0001;
-        }else if(u0 > 0.9999){
-            p0 = p0 - d0u * 0.0001;
+        if(u0 < AT_0_TOL){
+            p0 = p0 + d0u * MISS_PADDING;
+        }else if(u0 > AT_1_TOL){
+            p0 = p0 - d0u * MISS_PADDING;
         }
-        if(u1 < 0.0001){
-            p1 = p1 + d1u * 0.0001;
-        }else if(u1 > 0.9999){
-            p1 = p1 - d1u * 0.0001;
+        if(u1 < AT_0_TOL){
+            p1 = p1 + d1u * MISS_PADDING;
+        }else if(u1 > AT_1_TOL){
+            p1 = p1 - d1u * MISS_PADDING;
         }
         vec3 delta = p1 - p0;
         vec3 delta_cross = normalize(cross(delta, vec_z));

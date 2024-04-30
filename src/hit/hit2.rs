@@ -1,6 +1,6 @@
 use std::f32::EPSILON;
 use glam::*;
-use crate::{log, CurveShape, Spatial3, AT_0_TOL, AT_1_TOL, UV_MISS_BUMP, DOT_1_TOL, DUP_TOL, HIT_TOL};
+use crate::{log, CurveShape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, DUP_1_TOL, HIT_TOL, MISS_PADDING};
 
 use super::Miss;
 
@@ -71,13 +71,13 @@ impl HitTester2 {
             let center = (p0 + p1) / 2.;
             let mut duplicate = false;
                 for i in self.spatial.get(&center) {
-                    if self.points[i].distance(center) < DUP_TOL {
+                    if self.points[i].distance(center) < DUP_0_TOL {
                         duplicate = true;
                         break;
                     }
                 }
             if !duplicate {
-                if (u0 > AT_1_TOL && u1 < AT_0_TOL) || (u0 < AT_0_TOL && u1 > AT_1_TOL) {
+                if (u0 > DUP_1_TOL && u1 < DUP_0_TOL) || (u0 < DUP_0_TOL && u1 > DUP_1_TOL) {
                     return None;
                 }
                 let delta0 = self.curves.0.get_arrow(u0).delta.normalize();
@@ -85,12 +85,13 @@ impl HitTester2 {
                 if delta0.dot(delta1).abs() > 0.9999 {
                     return None;
                 }
+                self.spatial.insert(&center, self.points.len());
+                self.points.push(center);
+
                 //let delta0 = self.curves.0.get_arrow(u0).delta;
                 //let delta1 = self.curves.1.get_arrow(u1).delta;
                 let cross0 = Vec3::Z.cross(delta0).normalize();
                 let cross1 = Vec3::Z.cross(delta1).normalize();
-                self.spatial.insert(&center, self.points.len());
-                self.points.push(center);
                 return Some(HitMiss2::Hit(Hit2{
                     center,
                     hit: (CurveHit {u:u0, dot:cross0.dot(delta1)}, 
@@ -104,14 +105,14 @@ impl HitTester2 {
         let cross0 = Vec3::Z.cross(p1 - p0).normalize();
         let cross1 = Vec3::Z.cross(p0 - p1).normalize();
         if u0 < AT_0_TOL {
-            p0 += delta0 * UV_MISS_BUMP;
+            p0 += delta0 * MISS_PADDING;
         } else if u0 > AT_1_TOL {
-            p0 -= delta0 * UV_MISS_BUMP;
+            p0 -= delta0 * MISS_PADDING;
         }
         if u1 < AT_0_TOL {
-            p1 += delta1 * UV_MISS_BUMP;
+            p1 += delta1 * MISS_PADDING;
         } else if u1 > AT_1_TOL {
-            p1 -= delta1 * UV_MISS_BUMP;
+            p1 -= delta1 * MISS_PADDING;
         }
         let distance = p0.distance(p1);
         Some(HitMiss2::Miss((

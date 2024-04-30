@@ -6,7 +6,7 @@ use super::shader_parts::{
 use super::shader_parts3::{
     FACET_CORE, ARROW_DUAL, 
     ARROW_PALETTE, ARROW_IN, ARROW_OUT, HONE,
-    MOVE_UV, MOVE_UV_STOP,
+    MOVE_UV, MOVE_UV_STOP, MOVE_UV_STICKY,
     FACET_HIT, FACET_EDGE_HIT,
 };
 
@@ -45,7 +45,7 @@ HEADER, GEOM_CORE, FACET_CORE, MOVE_UV, FACET_HIT, ARROW_IN, ARROW_OUT,
 
 pub const HIT_MISS_SOURCE: &str = concatcp!(
 HEADER, GEOM_CORE, FACET_CORE, ARROW_IN, r##"
-float tolerance = 0.005;
+float tolerance = 0.001;
 out vec4 hit_miss;
 void main() {"##,
     CORE_PARTS, GEOM_PARTS, PALETTE_IN_POS, ARROW_PALETTE, r##"
@@ -170,15 +170,15 @@ void main() {"##,
     ivec2 box_in_pos = ivec2(in_pos0a.x, out_pos.y);
     if(out_pos.y < pair_size.y){
         facet_index = texelFetch(pair_tex, in_pos0a, 0).r;
-        uv = uvs.rg; du = d0u; dv = d0v;
-        uv_b = uvs.ba; du_b = d1u; dv_b = d1v;
+        uv   = uvs.rg;  du   = d0u;  dv =   d0v;
+        uv_b = uvs.ba;  du_b = d1u;  dv_b = d1v;
         if(pick > 0){
             box_in_pos.x = in_pos0b.x;
         }
     }else{
         facet_index = texelFetch(pair_tex, in_pos0a, 0).g;
-        uv = uvs.ba; du = d1u; dv = d1v;
-        uv_b = uvs.rg; du_b = d0u; dv_b = d0v;
+        uv   = uvs.ba;  du   = d1u;  dv   = d1v;
+        uv_b = uvs.rg;  du_b = d0u;  dv_b = d0v;
         if(pick < 1){
             box_in_pos.x = in_pos0b.x;
         }
@@ -201,7 +201,7 @@ void main() {"##,
 }"##);
 
 pub const TRACE_PALETTE_SOURCE: &str = concatcp!(
-HEADER, GEOM_CORE, FACET_CORE, MOVE_UV, FACET_EDGE_HIT, ARROW_IN, ARROW_OUT, r##"
+HEADER, GEOM_CORE, FACET_CORE, MOVE_UV_STICKY, FACET_EDGE_HIT, ARROW_IN, ARROW_OUT, r##"
 uniform sampler2D box_tex;
 layout(location=3) out vec4 box;
 void main() {"##,

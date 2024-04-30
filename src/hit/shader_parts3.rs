@@ -137,7 +137,7 @@ pub const HONE: &str = r##"
     vec3 dv    = vec3(0., 0., 0.);
     vec3 pa    = vec3(0., 0., 0.);
     vec3 pb    = vec3(0., 0., 0.);
-    vec3 deltaX = vec3(0., 0., 0.);
+    vec3 pt    = vec3(0., 0., 0.);
     if(out_pos.y < pair_size.y){
         facet_index = texelFetch(pair_tex, in_pos0a, 0).r;
         uv = uvs.rg; du = d0u; dv = d0v;
@@ -153,11 +153,11 @@ pub const HONE: &str = r##"
         delta_v = vec4(dv.x, dv.y, dv.z, uv.y);
     }else{
         if(out_pos.x < pair_size.x * 2){
-            deltaX = pb - pa;
+            pt = pb; 
         }else{
-            deltaX = get_facet_convergence_point(uvs.rg, p0, d0u, d0v, uvs.ba, p1, d1u, d1v) - pa;
+            pt = get_facet_convergence_point(uvs.rg, p0, d0u, d0v, uvs.ba, p1, d1u, d1v); 
         }
-        uv = get_moved_uv(uv, du, dv, deltaX);
+        uv = get_moved_uv(uv, du, dv, pa, pt);
         output_arrows(facet_index, uv);
     }
 "##;
@@ -176,28 +176,28 @@ vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1
 pub const FACET_EDGE_HIT: &str = concatcp!(ARROW_HIT, r##"
 vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1, vec3 p1, vec3 d1u, vec3 d1v){
     vec3 normal0 = d0u;
-    if(uv0.x < 0.0001 || uv0.x > 0.9999){
+    if(uv0.x < 0.00001 || uv0.x > 0.99999){
         normal0 = d0v;
-    }else if(uv0.y > 0.0001 && uv0.y < 0.9999){
+    }else if(uv0.y > 0.00001 && uv0.y < 0.99999){
         normal0 = cross(d0u, d0v);
     }
     vec3 normal1 = d1u; // cross(d1u, d1v);
-    if(uv1.x < 0.0001 || uv1.x > 0.9999){
+    if(uv1.x < 0.00001 || uv1.x > 0.99999){
         normal1 = d1v;
-    }else if(uv1.y > 0.0001 && uv1.y < 0.9999){
+    }else if(uv1.y > 0.00001 && uv1.y < 0.99999){
         normal1 = cross(d1u, d1v);
     }
     vec3 normal_cross = cross(normal0, normal1);
     vec3 cross0 = d0u;
-    if(uv0.x < 0.0001 || uv0.x > 0.9999){
+    if(uv0.x < 0.00001 || uv0.x > 0.99999){
         cross0 = d0v;
-    }else if(uv0.y > 0.0001 && uv0.y < 0.9999){
+    }else if(uv0.y > 0.00001 && uv0.y < 0.99999){
         cross0 = cross(normal0, normal_cross);
     }
     vec3 cross1 = d1u;
-    if(uv1.x < 0.0001 || uv1.x > 0.9999){
+    if(uv1.x < 0.00001 || uv1.x > 0.99999){
         cross1 = d1v;
-    }else if(uv1.y > 0.0001 && uv1.y < 0.9999){
+    }else if(uv1.y > 0.00001 && uv1.y < 0.99999){
         cross1 = cross(normal1, normal_cross);
     }
     return get_arrow_hit(p0, cross0, p1, cross1);
@@ -205,51 +205,77 @@ vec3 get_facet_convergence_point(vec2 uv0, vec3 p0, vec3 d0u, vec3 d0v, vec2 uv1
 "##);
 
 pub const MOVE_UV: &str = r##"
-vec2 get_moved_uv(vec2 uv, vec3 du, vec3 dv, vec3 target) {
-        // if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  
-        //     return uv;
-        // }
-    uv = uv + vec2(
-        dot(normalize(du), normalize(target)) * length(target) / length(du), 
-        dot(normalize(dv), normalize(target)) * length(target) / length(dv)
-    );
-    uv.x = clamp(uv.x, 0., 1.);
-    uv.y = clamp(uv.y, 0., 1.);
+vec2 get_moved_uv(vec2 uv, vec3 du, vec3 dv, vec3 p0, vec3 p1) {
+    float du_lg = length(du);
+    float dv_lg = length(dv);
+    float du_sq = du_lg * du_lg;
+    float dv_sq = dv_lg * dv_lg;
+    float u0 = dot(p0, du) / du_sq;
+    float v0 = dot(p0, dv) / dv_sq;
+    float u1 = dot(p1, du) / du_sq;
+    float v1 = dot(p1, dv) / dv_sq;
+    uv.x = clamp(uv.x + u1 - u0, 0., 1.);
+    uv.y = clamp(uv.y + v1 - v0, 0., 1.);
+    return uv;
+}
+"##;
+
+pub const MOVE_UV_STICKY: &str = r##"
+vec2 get_moved_uv(vec2 uv, vec3 du, vec3 dv, vec3 p0, vec3 p1) {
+    float du_lg = length(du);
+    float dv_lg = length(dv);
+    float du_sq = du_lg * du_lg;
+    float dv_sq = dv_lg * dv_lg;
+    float u0 = dot(p0, du) / du_sq;
+    float v0 = dot(p0, dv) / dv_sq;
+    float u1 = dot(p1, du) / du_sq;
+    float v1 = dot(p1, dv) / dv_sq;
+    if(uv.x > 0.9999){ 
+        uv.x = 1.;
+    }else if(uv.x < 0.0001){ 
+        uv.x = 0.;
+    }else{
+        uv.x = clamp(uv.x + u1 - u0, 0., 1.);
+    }
+    if(uv.y > 0.9999){ 
+        uv.y = 1.;
+    }else if(uv.y < 0.0001){ 
+        uv.y = 0.;
+    }else{
+        uv.y = clamp(uv.y + v1 - v0, 0., 1.);
+    }
     return uv;
 }
 "##;
 
 pub const MOVE_UV_STOP: &str = r##"
-vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, vec3 target) {
-    if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  
-        return uv0;
-    }
+vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, vec3 delta) {
     vec2 delta0 = vec2(
-        dot(normalize(du0), normalize(target)) * length(target) / length(du0), 
-        dot(normalize(dv0), normalize(target)) * length(target) / length(dv0)
+        dot(normalize(du0), delta) / length(du0), 
+        dot(normalize(dv0), delta) / length(dv0)
     );
     vec2 delta1 = vec2(
-        dot(normalize(du1), normalize(target)) * length(target) / length(du1), 
-        dot(normalize(dv1), normalize(target)) * length(target) / length(dv1)
+        dot(normalize(du1), delta) / length(du1), 
+        dot(normalize(dv1), delta) / length(dv1)
     );
     vec2 nd0 = normalize(delta0);
     vec2 nd1 = normalize(delta1);
-    if      (nd0.x >  0.01 && uv0.x > 0.9999){ 
+    if      (nd0.x >  0.001 && uv0.x > 0.99999){ 
         return uv0;
-    }else if(nd0.x < -0.01 && uv0.x < 0.0001){ 
+    }else if(nd0.x < -0.001 && uv0.x < 0.00001){ 
         return uv0;
-    }else if(nd0.y >  0.01 && uv0.y > 0.9999){ 
+    }else if(nd0.y >  0.001 && uv0.y > 0.99999){ 
         return uv0;
-    }else if(nd0.y < -0.01 && uv0.y < 0.0001){ 
+    }else if(nd0.y < -0.001 && uv0.y < 0.00001){ 
         return uv0;
     }
-    if      (nd1.x >  0.01 && uv1.x > 0.9999){ 
+    if      (nd1.x >  0.001 && uv1.x > 0.99999){ 
         return uv0;
-    }else if(nd1.x < -0.01 && uv1.x < 0.0001){ 
+    }else if(nd1.x < -0.001 && uv1.x < 0.00001){ 
         return uv0;
-    }else if(nd1.y >  0.01 && uv1.y > 0.9999){ 
+    }else if(nd1.y >  0.001 && uv1.y > 0.99999){ 
         return uv0;
-    }else if(nd1.y < -0.01 && uv1.y < 0.0001){ 
+    }else if(nd1.y < -0.001 && uv1.y < 0.00001){ 
         return uv0;
     }
     vec2 uv = uv0 + delta0;
@@ -259,6 +285,89 @@ vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, ve
 }
 "##;
 
+
+// pub const MOVE_UV_STOP: &str = r##"
+// vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, vec3 target) {
+//     if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  
+//         return uv0;
+//     }
+//     vec2 delta0 = vec2(
+//         dot(normalize(du0), normalize(target)) * length(target) / length(du0), 
+//         dot(normalize(dv0), normalize(target)) * length(target) / length(dv0)
+//     );
+//     vec2 delta1 = vec2(
+//         dot(normalize(du1), normalize(target)) * length(target) / length(du1), 
+//         dot(normalize(dv1), normalize(target)) * length(target) / length(dv1)
+//     );
+//     vec2 nd0 = normalize(delta0);
+//     vec2 nd1 = normalize(delta1);
+//     if      (nd0.x >  0.01 && uv0.x > 0.9999){ 
+//         return uv0;
+//     }else if(nd0.x < -0.01 && uv0.x < 0.0001){ 
+//         return uv0;
+//     }else if(nd0.y >  0.01 && uv0.y > 0.9999){ 
+//         return uv0;
+//     }else if(nd0.y < -0.01 && uv0.y < 0.0001){ 
+//         return uv0;
+//     }
+//     if      (nd1.x >  0.01 && uv1.x > 0.9999){ 
+//         return uv0;
+//     }else if(nd1.x < -0.01 && uv1.x < 0.0001){ 
+//         return uv0;
+//     }else if(nd1.y >  0.01 && uv1.y > 0.9999){ 
+//         return uv0;
+//     }else if(nd1.y < -0.01 && uv1.y < 0.0001){ 
+//         return uv0;
+//     }
+//     vec2 uv = uv0 + delta0;
+//     uv.x = clamp(uv.x, 0., 1.);
+//     uv.y = clamp(uv.y, 0., 1.);
+//     return uv;
+// }
+// "##;
+
+// pub const MOVE_UV_STICKY: &str = r##"
+// vec2 get_moved_uv(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
+//     if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.00001){  // 0.0001
+//         return uv_in;
+//     }
+//     vec2 uv_delta = vec2(
+//         dot(normalize(du), normalize(target)) * length(target) / length(du), 
+//         dot(normalize(dv), normalize(target)) * length(target) / length(dv)
+//     );
+//     vec2 uv = uv_in + uv_delta;
+//     if(uv_in.x > 0.99999){ 
+//         uv.x = 1.;
+//     }else if(uv_in.x < 0.00001){ 
+//         uv.x = 0.;
+//     }
+//     if(uv_in.y > 0.99999){ 
+//         uv.y = 1.;
+//     }else if(uv_in.y < 0.00001){ 
+//         uv.y = 0.;
+//     }
+//     uv.x = clamp(uv.x, 0., 1.);
+//     uv.y = clamp(uv.y, 0., 1.);
+//     return uv;
+// }
+// "##;
+
+
+
+// if(isnan(p0.x) || isnan(p0.y) || isnan(p0.z) || length(p0 - p1) < 0.0001){  
+//     return uv;
+// }
+// if(isnan(p1.x) || isnan(p1.y) || isnan(p1.z)){  
+//     return uv;
+// }
+// uv = uv + vec2(
+//     dot(normalize(du), normalize(target)) * length(target) / length(du), 
+//     dot(normalize(dv), normalize(target)) * length(target) / length(dv)
+// );
+// uv.x = clamp(uv.x, 0., 1.);
+// uv.y = clamp(uv.y, 0., 1.);
+// return uv;
+// }
 
 
 // pub const HONE: &str = r##"
@@ -352,28 +461,3 @@ vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, ve
 // }
 
 
-// pub const MOVE_UV_STICKY: &str = r##"
-// vec2 get_moved_uv(vec2 uv_in, vec3 du, vec3 dv, vec3 target) {
-//     if(isnan(target.x) || isnan(target.y) || isnan(target.z) || length(target) < 0.0001){  // 0.0001
-//         return uv_in;
-//     }
-//     vec2 uv_delta = vec2(
-//         dot(normalize(du), normalize(target)) * length(target) / length(du), 
-//         dot(normalize(dv), normalize(target)) * length(target) / length(dv)
-//     );
-//     vec2 uv = uv_in + uv_delta;
-//     if(uv_in.x > 0.99999){ 
-//         uv.x = 1.;
-//     }else if(uv_in.x < 0.00001){ 
-//         uv.x = 0.;
-//     }
-//     if(uv_in.y > 0.99999){ 
-//         uv.y = 1.;
-//     }else if(uv_in.y < 0.00001){ 
-//         uv.y = 0.;
-//     }
-//     uv.x = clamp(uv.x, 0., 1.);
-//     uv.y = clamp(uv.y, 0., 1.);
-//     return uv;
-// }
-// "##;

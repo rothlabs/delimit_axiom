@@ -2,7 +2,7 @@ use std::f32::EPSILON;
 use glam::*;
 use web_sys::WebGlProgram;
 use crate::gpu::framebuffer::Framebuffer;
-use crate::{gpu::GPU, log, CurveShape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_TOL, HIT_TOL, UV_MISS_BUMP};
+use crate::{gpu::GPU, log, CurveShape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, HIT_TOL, MISS_PADDING};
 use super::{HitPair2, HoneBuffer, MissPair, TestPair};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
@@ -19,8 +19,8 @@ impl HitTest2 for Vec<CurveShape> {
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
         let buffer = HoneBuffer{
             io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.u_texels, 2).unwrap(),
-            palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_buf_size, 3).unwrap(),
-            palette1: gpu.framebuffer.make_multi_empty_rgba32f(7, palette_buf_size, 3).unwrap(),
+            palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_buf_size, 2).unwrap(),
+            palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_buf_size, 2).unwrap(),
         };
         HitBasis2 {
             //curves:self, 
@@ -108,7 +108,7 @@ impl HitBasis2 {
         self.draw_init_hone_palette();
         for _ in 0..8 {
             self.draw_hone_palette(&self.buffer.palette1, 4);
-            self.draw_hone_palette(&self.buffer.palette0, 7);
+            self.draw_hone_palette(&self.buffer.palette0, 6);
         }
         self.draw_hit_miss();
     }
@@ -140,7 +140,6 @@ impl HitBasis2 {
     fn set_arrow_uniforms(&self, program: &WebGlProgram, i: i32) {
         self.gpu.set_uniform_1i(program, "point_tex", i);
         self.gpu.set_uniform_1i(program, "delta_tex", i + 1);
-        self.gpu.set_uniform_1i(program, "param_tex", i + 2);
     }
 }
 

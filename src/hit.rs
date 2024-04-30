@@ -74,6 +74,12 @@ pub struct HitMiss2 {
     pub misses: Vec<Miss>,
 }
 
+#[derive(Clone, Default)]
+pub struct HitMiss3 {
+    pub hits:   Vec<CurveShape>,
+    pub misses: Vec<Miss>,
+}
+
 #[derive(Clone)]
 pub struct HitPair3 {
     pub pair:   TestPair,

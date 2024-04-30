@@ -1,5 +1,11 @@
 use const_format::concatcp;
-use crate::{HIT_TOL_STR, AT_0_TOL_STR, AT_1_TOL_STR, MISS_PADDING_STR};
+use crate::{
+    HIT_TOL_STR, 
+    MISS_PADDING_STR, 
+    AT_0_TOL_STR, AT_1_TOL_STR, 
+    DUP_0_TOL_STR, DUP_1_TOL_STR, 
+    DOT_1_TOL_STR,
+};
 
 pub const HEADER: &str = concatcp!(r##"#version 300 es
 precision highp float;
@@ -9,7 +15,10 @@ uniform isampler2D pair_tex;
 const float HIT_TOL      = "##, HIT_TOL_STR, r##";
 const float MISS_PADDING = "##, MISS_PADDING_STR, r##";
 const float AT_0_TOL     = "##, AT_0_TOL_STR, r##";
-const float AT_1_TOL     = "##, AT_1_TOL_STR, ";"
+const float AT_1_TOL     = "##, AT_1_TOL_STR, r##";
+const float DUP_0_TOL    = "##, DUP_0_TOL_STR, r##";
+const float DUP_1_TOL    = "##, DUP_1_TOL_STR, r##";
+const float DOT_1_TOL    = "##, DOT_1_TOL_STR, ";"
 ); 
 
 pub const GEOM_CORE: &str = r##"

@@ -11,11 +11,11 @@ use super::shaders3::{
 };
 
 pub trait HitTest3 {
-    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair3>, Vec<MissPair>, Vec<Shape>);
+    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair3>, Vec<MissPair>);
 }
 
 impl HitTest3 for Vec<FacetShape> {
-    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair3>, Vec<MissPair>, Vec<Shape>) {
+    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair3>, Vec<MissPair>) {
         let gpu = GPU::new().unwrap();
         HitBasis3 {
             facets: self,
@@ -76,7 +76,7 @@ pub struct HitBasis3 {
 }
 
 impl HitBasis3 { 
-    pub fn make(&mut self) -> Result<(Vec<HitPair3>, Vec<MissPair>, Vec<Shape>), String> { 
+    pub fn make(&mut self) -> Result<(Vec<HitPair3>, Vec<MissPair>), String> { 
         let mut hone_basis = HoneBasis::new(&self.facets, &self.pairs);
         self.gpu.texture.make_r32f(0, &mut hone_basis.facet_texels)?;
         let (_, pair_buf_size) = self.gpu.texture.make_rg32i(1, &mut hone_basis.pair_texels)?;
@@ -139,7 +139,7 @@ impl HitBasis3 {
         let uv_vectors = self.gpu.read(&buff1.trace, 3);
         let hits = get_traced_curves(trace_basis.index_pairs, trace_buf_size, uvs, boxes, origins, uv_vectors, vectors);
         //self.facet_miss = trace_basis.misses;  
-        Ok((hits, trace_basis.misses, self.shapes.clone()))     
+        Ok((hits, trace_basis.misses))     
     }
 
     fn set_facet_uniforms(&self, program: &WebGlProgram) {

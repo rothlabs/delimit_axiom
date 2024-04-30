@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use crate::{log, CurveHit, CurveShape, HitTester2, Shape, Spatial3, UnionBatch};
 use crate::hit::{hit2_gpu::HitTest2, Miss, HitMiss2, Hit2};
 use glam::*;
@@ -10,13 +12,13 @@ impl UnionBatch2 for Vec<Vec<Vec<CurveShape>>> { // jobs, groups, curves
     fn union(self) -> Vec<Vec<CurveShape>> { 
         let batch = UnionBatch::new(&self);
         let curves: Vec<CurveShape> = self.clone().into_iter().flatten().flatten().collect();
-        let (flat_hits, misses) = curves.hit(&batch.pairs);
+        let (hits2, misses) = curves.hit(&batch.pairs);
         let mut hits:   Vec<[Vec<HitMiss2>; 2]> = vec![[vec![], vec![]]; self.len()];
         for (ji, groups) in self.iter().enumerate() {
             hits[ji][0].extend(vec![HitMiss2::default(); groups[0].len()]);
             hits[ji][1].extend(vec![HitMiss2::default(); groups[1].len()]);
         }
-        for hit in &flat_hits {
+        for hit in &hits2 {
             let (ji, g0, i0, g1, i1) = batch.index(&hit.pair);
             hits[ji][g0][i0].hits.push(Hit2{u:hit.u0, dot:hit.dot0});
             hits[ji][g1][i1].hits.push(Hit2{u:hit.u1, dot:hit.dot1});
@@ -28,49 +30,25 @@ impl UnionBatch2 for Vec<Vec<Vec<CurveShape>>> { // jobs, groups, curves
         }
         let mut results = vec![];
         for (ji, groups) in self.iter().enumerate() {
-            let curves = UnionBasis2::new(groups[0].clone(), groups[1].clone(), hits[ji].clone());
+            let curves = UnionBasis2::shape([&groups[0], &groups[1]], &hits[ji]); 
             results.push(curves);
         }
         results
     }
 }
 
-
-// impl Union2 for Vec<Vec<CurveShape>> { // job, group, curve
-//     fn union(self) { 
-//         let batch = UnionBatch::new(&self);
-//         let curves: Vec<CurveShape> = self.clone().into_iter().flatten().flatten().collect();
-//         let (hits, misses) = curves.hit(&batch.pairs);
-//         for hit in &hits {
-//             let (ji, g0, i0, g1, i1) = batch.index(&hit.pair);
-            
-//         }
-//     }
-// }
-
-
 pub struct UnionBasis2 {
-    //pub tester: HitTester2,
     pub groups: [Vec<CurveShape>; 2],
-    //pub hits:   [Vec<Vec<CurveHit>>; 2], 
-    //pub miss:   [Vec<Vec<Miss>>; 2], 
     pub hits:   [Vec<HitMiss2>; 2], 
     pub curves: Vec<CurveShape>,
     pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis2 { 
-    pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>, hits:[Vec<HitMiss2>; 2]) -> Vec<CurveShape> {
+    pub fn shape(groups: [&Vec<CurveShape>; 2], hits: &[Vec<HitMiss2>; 2]) -> Vec<CurveShape> { 
         UnionBasis2 {
-            // tester: HitTester2 {
-            //     curves: (CurveShape::default(), CurveShape::default()),
-            //     spatial: Spatial3::new(), 
-            //     points:  vec![],
-            // },
-            hits,
-            //hits: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
-            //miss: [vec![vec![]; curves0.len()], vec![vec![]; curves1.len()]],
-            groups: [curves0, curves1],
+            hits: hits.clone(),
+            groups: [groups[0].clone(), groups[1].clone()], 
             curves: vec![],
             shapes: vec![],
         }.build()

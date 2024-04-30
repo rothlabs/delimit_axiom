@@ -80,10 +80,10 @@ void main() {"##,
     d1u = normalize(d1u);
     if(length(p0 - p1) < HIT_TOL){
         hit_miss = vec4(-10., -10., -10., -10.); 
-        if((u0 > AT_1_TOL && u1 < AT_0_TOL) || (u0 < AT_0_TOL && u1 > AT_1_TOL)){
+        if((u0 > DUP_1_TOL && u1 < DUP_0_TOL) || (u0 < DUP_0_TOL && u1 > DUP_1_TOL)){
             return;
         }
-        if(abs(dot(d0u, d1u)) > AT_1_TOL){     
+        if(abs(dot(d0u, d1u)) > DOT_1_TOL){     
             return;
         }
         vec3 cross0 = normalize(cross(d0u, vec_z));

@@ -58,16 +58,16 @@ impl HitBasis2 {
         let points   = self.gpu.read(&self.buffer.io, 1);
         let mut hits = vec![];
         let mut misses = vec![];
-        let mut to_prints: Vec<f32> = vec![];
+        //let mut to_prints: Vec<f32> = vec![];
         for (i, pair) in self.basis.pairs.iter().enumerate() {
             let j = i * 4;
             if hit_miss[j] > -0.5 { // it's a hit
-                to_prints.extend(&[999., hit_miss[j], hit_miss[j+1], hit_miss[j+2], hit_miss[j+3]]);
-                log("hit!");
+                //to_prints.extend(&[999., hit_miss[j], hit_miss[j+1], hit_miss[j+2], hit_miss[j+3]]);
+                //log("hit!");
                 let point = vec3(points[j+0], points[j+1], points[j+2]);
                 let mut duplicate = false;
                 for i in self.spatial.get(&point) {
-                    if self.points[i].distance(point) < 0.1 { //DUP_TOL {
+                    if self.points[i].distance(point) < DUP_0_TOL { 
                         duplicate = true;
                         break;
                     }

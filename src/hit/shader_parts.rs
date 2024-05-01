@@ -178,7 +178,7 @@ vec3 get_arrow_hit(vec3 p0, vec3 delta0, vec3 p1, vec3 delta1) {
         // float u1 = dot1b - dot0b;
     vec3 closest0 = p0 + delta0 * dot1a - delta0 * dot0a;               
     vec3 closest1 = p1 + delta1 * dot1b - delta1 * dot0b;
-        // vec3 closest0 = p0 + delta0 * u0;               // TODO: can use this part as u or uv move directly!!!
+        // vec3 closest0 = p0 + delta0 * u0;               // TODO: can use this part as u or uv move directly?!
         // vec3 closest1 = p1 + delta1 * u1;
     return (closest0 + closest1) / 2.;
 }

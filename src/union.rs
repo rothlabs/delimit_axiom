@@ -6,7 +6,7 @@ use crate::{log, get_grouped_curves_and_facets, hit::{job_indexes, HitMiss2, Tes
 use serde::{Deserialize, Serialize};
 use glam::*;
 
-use self::{union2::UnionBasis2, union3::{Union3, UnionBasis3}};
+use self::{union2::UnionBasis2, union2_gpu::UnionCurves2, union3::{Union3, UnionBasis3}};
 use self::union2_gpu::UnionBatch2;
 
 
@@ -39,7 +39,7 @@ impl Union {
             for curves1 in groups.iter().skip(1) {
                 // let mut basis = UnionBasis2::new(curves0, curves1.clone());
                 // curves0 = basis.build(); // shapes.extend(basis.shapes);
-                curves0 = vec![vec![curves0, curves1.clone()]].union()[0].clone();
+                curves0 = [curves0, curves1.clone()].union();
             }
             shapes.extend(curves0.iter().map(|c| Shape::Curve(c.clone())));
             shapes

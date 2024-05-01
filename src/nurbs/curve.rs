@@ -65,6 +65,22 @@ pub struct CurveRectifier {
     pub facet: FacetShape,
 }
 
+pub trait Curves {
+    fn curves(&self) -> Vec<CurveShape>;
+}
+
+impl Curves for Vec<Shape> {
+    fn curves(&self) -> Vec<CurveShape> {
+        let mut curves = vec![];
+        for shape in self {
+            if let Shape::Curve(curve) = shape {
+                curves.push(curve.clone());
+            }
+        }
+        curves
+    }
+}
+
 #[derive(Clone)]
 pub struct CurveShape {
     pub controls: Vec<Vec3>,

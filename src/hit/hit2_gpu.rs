@@ -2,16 +2,17 @@ use std::f32::EPSILON;
 use glam::*;
 use web_sys::WebGlProgram;
 use crate::gpu::framebuffer::Framebuffer;
+use crate::{get_curves, Shape};
 use crate::{gpu::GPU, log, CurveShape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, HIT_TOL, MISS_PADDING};
 use super::{HitPair2, HoneBuffer, MissPair, TestPair};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
 pub trait HitTest2 {
-    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>);
+    fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>);
 }
 
-impl HitTest2 for Vec<CurveShape> {
-    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>) {
+impl HitTest2 for Vec<Shape> {
+    fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>) {
         let gpu = GPU::new().unwrap();
         let mut basis = HoneBasis2::new(&self, &pairs);
         gpu.texture.make_r32f(0, &mut basis.curve_texels).unwrap();
@@ -160,44 +161,46 @@ pub struct HoneBasis2{
 }
 
 impl HoneBasis2 {
-    pub fn new(curves: &Vec<CurveShape>, pairs: &Vec<TestPair>) -> Self{
+    pub fn new(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> Self{
         let mut max_knot_count = 0;
         let mut index_pairs: Vec<TestPair> = vec![];
         let mut u_groups: Vec<Vec<IndexedU>> = vec![];
         let mut curve_texels: Vec<f32> = vec![];
         let mut pair_texels: Vec<i32> = vec![];
         let mut u_texels: Vec<f32> = vec![];
-        for (ci, curve) in curves.iter().enumerate() {
-            let mut u_indexes: Vec<IndexedU> = vec![];
-            if curve.nurbs.knots.len() > max_knot_count { 
-                max_knot_count = curve.nurbs.knots.len(); 
-            }
-            let texel_index = curve_texels.len();
-            curve_texels.extend([
-                9000000. + ci as f32,
-                curve.controls.len() as f32,
-                curve.nurbs.order as f32,
-                curve.min,
-                curve.max,
-            ]); 
-            for i in 0..curve.nurbs.knots.len()-1 {
-                if curve.nurbs.knots[i] < curve.nurbs.knots[i+1] || i == curve.nurbs.knots.len() - curve.nurbs.order {
-                    // if curve.nurbs.knots[i] > 1. {
-                    //     log("what?!?????????");
-                    // }
-                    u_indexes.push(IndexedU{
-                        texel_index, 
-                        u: curve.nurbs.knots[i],
-                    }); 
+        for shape in shapes {
+            if let Shape::Curve(curve) = shape {
+                let mut u_indexes: Vec<IndexedU> = vec![];
+                if curve.nurbs.knots.len() > max_knot_count { 
+                    max_knot_count = curve.nurbs.knots.len(); 
                 }
-                curve_texels.push(curve.nurbs.knots[i]);
-            }  
-            curve_texels.push(curve.nurbs.knots[curve.nurbs.knots.len()-1]);
-            curve_texels.extend(&curve.nurbs.weights);
-            for point in &curve.controls {
-                curve_texels.extend(point.to_array());
+                let texel_index = curve_texels.len();
+                curve_texels.extend([
+                    9000000., // + ci as f32,
+                    curve.controls.len() as f32,
+                    curve.nurbs.order as f32,
+                    curve.min,
+                    curve.max,
+                ]); 
+                for i in 0..curve.nurbs.knots.len()-1 {
+                    if curve.nurbs.knots[i] < curve.nurbs.knots[i+1] || i == curve.nurbs.knots.len() - curve.nurbs.order {
+                        // if curve.nurbs.knots[i] > 1. {
+                        //     log("what?!?????????");
+                        // }
+                        u_indexes.push(IndexedU{
+                            texel_index, 
+                            u: curve.nurbs.knots[i],
+                        }); 
+                    }
+                    curve_texels.push(curve.nurbs.knots[i]);
+                }  
+                curve_texels.push(curve.nurbs.knots[curve.nurbs.knots.len()-1]);
+                curve_texels.extend(&curve.nurbs.weights);
+                for point in &curve.controls {
+                    curve_texels.extend(point.to_array());
+                }
+                u_groups.push(u_indexes);
             }
-            u_groups.push(u_indexes);
         }
         for pair in pairs {
             for IndexedU{texel_index:t0, u:u0} in &u_groups[pair.i0]{

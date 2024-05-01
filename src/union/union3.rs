@@ -1,6 +1,6 @@
 use glam::*;
 use crate::{job_pairs, log, CurveShape, FacetShape, HitBasis3, HitTest3, Shape, Trim, UnionBatch};
-use super::{union2::UnionBasis2, union2_gpu::UnionBatch2};
+use super::{union2::UnionBasis2, union2_gpu::{UnionBatch2, UnionCurves2}};
 use crate::hit::{HitPair3, Miss, MissPair, TestPair, HitMiss3};
 
 pub trait Union3 {
@@ -182,7 +182,7 @@ impl UnionBasis3 {
         // }
         // let mut union = UnionBasis2::new(facet.boundaries.clone(), trimmed.clone()); // self.facet_hits[g][i].clone()
         // facet.boundaries = union.build();
-        facet.boundaries = vec![vec![facet.boundaries.clone(), trimmed.clone()]].union()[0].clone();
+        facet.boundaries = [facet.boundaries.clone(), trimmed.clone()].union();
         //if gi < 1 {
             for j in 0..facet.boundaries.len() {
                 let mut bndry = facet.boundaries[j].clone();

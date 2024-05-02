@@ -1,5 +1,5 @@
 use std::f32::consts::{FRAC_PI_2, PI};
-use crate::{get_shapes, CurveShape, Reshape, Model, Revolve, Shape};
+use crate::{log, CurveShape, Model, ModelsToShapes, Reshape, Revolve};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -28,9 +28,9 @@ pub struct Turn {
 }
 
 impl Sketch {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         let mut sketch_shape = SketchShape {
-            shapes: get_shapes(&self.parts),
+            shapes: self.parts.shapes(),
             reshape: self.reshape.clone(),
             actions: self.actions.clone(),
             start_point: vec2(0., 0.),
@@ -42,7 +42,7 @@ impl Sketch {
 
 #[derive(Default)]
 pub struct SketchShape {
-    pub shapes:  Vec<Shape>,
+    pub shapes:  Vec<CurveShape>,
     pub actions: Vec<Action>,
     pub start_point: Vec2,
     pub turtle: Turtle,
@@ -50,10 +50,11 @@ pub struct SketchShape {
 }
 
 impl SketchShape { 
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         self.reshape.get_reshapes(self.shapes.clone())
+        //self.shapes.clone()
     }
-    pub fn build_from_actions(&mut self) -> Vec<Shape> {
+    pub fn build_from_actions(&mut self) -> Vec<CurveShape> {
         let mut closed = false;
         for action in self.actions.clone() {
             match action {
@@ -67,7 +68,7 @@ impl SketchShape {
             };
         }
         if !closed {
-            self.shapes.push(Shape::Point(self.start_point.extend(0.)));
+            self.shapes.push(CurveShape::from_point(self.start_point.extend(0.)));
         }
         self.reshape.get_reshapes(self.shapes.clone())
     }
@@ -81,9 +82,11 @@ impl SketchShape {
         let mut curve = CurveShape::default();
         // curve.nurbs.knots = vec![0., 0., 1., 1.];
         // curve.nurbs.weights = vec![1., 1.];
-        curve.controls = vec![self.turtle.pos.extend(0.), point.extend(0.)]; 
-        self.shapes.push(Shape::Curve(curve.get_valid()));
-        self.shapes.push(Shape::Point(point.extend(0.)));
+        curve.controls = vec![CurveShape::from_point(self.turtle.pos.extend(0.)), CurveShape::from_point(point.extend(0.))]; 
+        curve.nurbs.order = 2;
+        curve.validate();
+        self.shapes.push(curve);
+        self.shapes.push(CurveShape::from_point(point.extend(0.)));
         self.turtle.jump_to(point);
         self
         //self.actions.push(Action::LineTo([x, y]));
@@ -97,24 +100,35 @@ impl SketchShape {
         self.turtle.jump_forward(length);
         let end_point = self.turtle.pos;
         let mut curve = CurveShape::default();
-        // curve.nurbs.knots = vec![0., 0., 1., 1.];
-        // curve.nurbs.weights = vec![1., 1.];
-        curve.controls = vec![start_point.extend(0.), end_point.extend(0.)]; 
-        self.shapes.push(Shape::Curve(curve.get_valid()));
-        self.shapes.push(Shape::Point(end_point.extend(0.)));
+        curve.controls = vec![CurveShape::from_point(start_point.extend(0.)), CurveShape::from_point(end_point.extend(0.))];
+        curve.validate(); 
+        self.shapes.push(curve);
+        self.shapes.push(CurveShape::from_point(end_point.extend(0.)));
         self
     }
     fn turn(&mut self, angle: f32, radius: f32) -> &mut Self {
         let center = self.turtle.pos + self.turtle.dir.perp() * radius * angle.signum(); 
+        //console_log!("turtle pos and center {:?}, {:?}", self.turtle.pos, center);
         if radius > 0. {
+            //console_log!("angle {}", angle);
             let revolve = Revolve {
-                parts: vec![Model::Point(self.turtle.pos.extend(0.))], // [self.turtle.pos.x, self.turtle.pos.y, 0.]
-                center: center.extend(0.),//[center.x, center.y, 0.],
-                axis: vec3(0., 0., angle.signum()),//[0., 0., angle.signum()],
+                parts: vec![Model::Point(self.turtle.pos.extend(0.))], 
+                center: center.extend(0.),
+                axis: vec3(0., 0., angle.signum()),
                 angle: angle.abs(),
-                ..Default::default()//reshape: Reshape::default(),
+                ..Default::default()
             };
-            self.shapes.extend(revolve.get_shapes());
+            let shapes = revolve.get_shapes();
+            // let shape = &shapes[2];
+            // let points: Vec<Vec3> = shape.controls.iter().map(|x| x.vector.unwrap()).collect();
+            // console_log!("points {:?}", points);
+            // console_log!("rank {}", shape.rank);
+            // console_log!("vector {:?}", shape.vector);
+            // console_log!("order {}", shape.nurbs.order);
+            // console_log!("knots {:?}", shape.nurbs.knots);
+            // console_log!("weights {:?}", shape.nurbs.weights);
+            // console_log!("control len {}", shape.controls.len());
+            self.shapes.extend(shapes);
         }
         self.turtle.turn(center, angle);
         self
@@ -160,7 +174,7 @@ pub struct Circle {
 }
 
 impl Circle {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         let mut revolve = Revolve {
             parts: vec![Model::Point(vec3(self.center.x + self.radius, self.center.y, 0.))], 
             center: self.center.extend(0.),
@@ -169,15 +183,15 @@ impl Circle {
         revolve.reshape.reverse = self.reverse;
         let mut shapes = revolve.get_shapes();
         if self.arrows > 0 {
-            if let Shape::Curve(circle) = shapes[0].clone() {
+            //if let Shape::Curve(circle) = shapes[0].clone() {
                 for i in 0..self.arrows {
                     let mut curve = CurveShape::default();
-                    let arrow = circle.get_arrow(i as f32 / (self.arrows - 1) as f32);
-                    curve.controls.push(arrow.point);
-                    curve.controls.push(arrow.point + arrow.delta);
-                    shapes.push(Shape::Curve(curve.get_valid()));
+                    let arrow = shapes[0].get_arrow(&[i as f32 / (self.arrows - 1) as f32]);
+                    curve.controls.push(CurveShape::from_point(arrow.point));
+                    curve.controls.push(CurveShape::from_point(arrow.point + arrow.delta));
+                    shapes.push(curve.get_valid());
                 }
-            }
+            //}
         }
         shapes
     }
@@ -197,7 +211,7 @@ pub struct Rectangle {
 }
 
 impl Rectangle {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         let mut sketch = SketchShape::default();
         sketch.reshape.reverse = self.reverse;
         let mut point_a = -Vec2::from_array(self.half_lengths);
@@ -209,7 +223,7 @@ impl Rectangle {
             point_a = Vec2::from_array(self.point_a);
             point_b = Vec2::from_array(self.point_b);
         }
-        sketch.jump_to(point_a + Vec2::X * self.radius) // point_a[0]+self.radius, point_a[1]
+        let shapes = sketch.jump_to(point_a + Vec2::X * self.radius) // point_a[0]+self.radius, point_a[1]
             .line_to(vec2(point_b.x-self.radius, point_a.y)) // point_b[0]-self.radius, point_a[1]
             .turn(FRAC_PI_2, self.radius) // if self.radius > 0. {
             .line_to(point_b - Vec2::Y * self.radius) // point_b[0], point_b[1]-self.radius
@@ -218,15 +232,27 @@ impl Rectangle {
             .turn(FRAC_PI_2, self.radius)
             .line_to(point_a + Vec2::Y * self.radius)  // point_a[0], point_a[1]+self.radius
             .turn(FRAC_PI_2, self.radius)
-            .get_shapes()
+            .get_shapes();
+        // console_log!("rect count {}", shapes.len());
+        // for shape in &shapes {
+        //     console_log!("rank {}", shape.rank);
+        //     console_log!("vector {:?}", shape.vector);
+        //     console_log!("order {}", shape.nurbs.order);
+        //     console_log!("knots {:?}", shape.nurbs.knots);
+        //     console_log!("weights {:?}", shape.nurbs.weights);
+        //     console_log!("control len {}", shape.controls.len());
+        // }
+        shapes
     }
     pub fn unit() -> Vec<CurveShape> {
         let mut curves = vec![];
         let mut rect = Rectangle::default();
         rect.point_a = [0., 0.];
         rect.point_b = [1., 1.];
-        for shape in rect.get_shapes() {
-            if let Shape::Curve(c) = shape {curves.push(c);}
+        for shape in rect.get_shapes() { // TODO: is it needed to check for curves in the rectangle?
+            if shape.rank == 1 {
+                curves.push(shape);
+            }
         }
         curves
     }
@@ -244,7 +270,7 @@ pub struct Slot {
 }
 
 impl Slot {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         let mut sketch = SketchShape::default();
         sketch.reshape.reverse = self.reverse;
         let mut point_a = vec2(-self.half_length, 0.);
@@ -281,7 +307,7 @@ pub struct Arc {
 }
 
 impl Arc {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         // let mut revolve = Revolve {
         //     parts: vec![Model::Point([self.center[0] + self.radius, self.center[1], 0.])],
         //     center: [self.center[0], self.center[1], 0.],

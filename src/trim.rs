@@ -1,4 +1,4 @@
-use crate::{hit::Miss, log, CurveHit, CurveShape, HitMiss2, HitTester2, Shape, Spatial3, DUP_0_TOL};
+use crate::{hit::Miss, log, CurveHit, CurveShape, HitMiss2, HitTester2, Spatial3, DUP_0_TOL};
 use glam::*;
 
 pub trait Trim {
@@ -28,7 +28,7 @@ pub struct CurveTrimmer {
     pub hits:   Vec<Vec<CurveHit>>, 
     pub miss:   Vec<Vec<Miss>>, 
     pub curves: Vec<CurveShape>,
-    pub shapes: Vec<Shape>,
+    pub shapes: Vec<CurveShape>,
 }
 
 impl CurveTrimmer { 

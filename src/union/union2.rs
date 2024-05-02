@@ -1,4 +1,4 @@
-use crate::{hit::Miss, log, CurveHit, CurveShape, HitMiss2, HitTester2, Shape, Spatial3, DUP_0_TOL};
+use crate::{hit::Miss, log, CurveHit, CurveShape, HitMiss2, HitTester2, Spatial3, DUP_0_TOL};
 use glam::*;
 
 
@@ -8,7 +8,7 @@ pub struct UnionBasis2 {
     pub hits:   [Vec<Vec<CurveHit>>; 2], 
     pub miss:   [Vec<Vec<Miss>>; 2], 
     pub curves: Vec<CurveShape>,
-    pub shapes: Vec<Shape>,
+    pub shapes: Vec<CurveShape>,
 }
 
 impl UnionBasis2 { 

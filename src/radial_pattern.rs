@@ -1,5 +1,5 @@
 use std::f32::consts::PI;
-use crate::{get_shapes, get_reshapes, Reshape, Model, Shape};
+use crate::{CurveShape, Model, ModelsToShapes, Reshape, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -27,14 +27,14 @@ impl Default for RadialPattern {
 }
 
 impl RadialPattern {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         let mut shapes = vec![];
         let reshape_matrix = self.reshape.get_matrix();
-        let basis_shapes = get_shapes(&self.parts);
+        let basis_shapes = self.parts.shapes();
         for i in 0..self.count {
             let angle = self.angle * i as f32 / self.count as f32;
             let mat4 = Mat4::from_axis_angle(self.axis, angle);
-            shapes.extend(get_reshapes(&basis_shapes, reshape_matrix * mat4));
+            shapes.extend(basis_shapes.reshaped(reshape_matrix * mat4));
         }
         shapes //self.reshape.get_reshapes(shapes)
     }

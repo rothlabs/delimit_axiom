@@ -1,6 +1,4 @@
-use crate::{get_reshaped_point, get_shapes, 
-    nurbs::Nurbs, Area, Circle, 
-    CurveShape, FacetShape, Reshape, Model, Rectangle, Shape
+use crate::{nurbs::Nurbs, Area, Circle, CurveShape, Shapes, Model, ModelsToShapes, Rectangle, Reshape
 };
 use serde::{Deserialize, Serialize};
 use glam::*;
@@ -25,61 +23,31 @@ impl Default for Extrude {
     }
 }
 
+
+// TODO: two types of extrude: 1. reshape all with translation by length and invert originals and increament lower ranks up one over length. 
+//                     2. Same as 1 but also create new shape with highest ranking plus one and remaining one lower ranks copied into its boundaries 
 impl Extrude {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
+        let shapes0 = self.parts.shapes();
+        if self.length == 0. {
+            return shapes0;
+        }
         //let axis = self.axis;//get_vec3_or(&self.axis, Vec3::Z).normalize(); 
         let basis = ExtrudeBasis::new(self.axis * self.length);
-        let mut shapes = vec![];
-        for shape in get_shapes(&self.parts) {
-            if let Shape::Facet(facet) = &shape { 
-                if self.length > 0. {
-                    shapes.push(Shape::Facet(facet.get_inverted())); 
-                }else{
-                    shapes.push(shape.clone());
-                }
-            }else{
-                shapes.push(shape.clone());
-            }
-            match &shape {
-                Shape::Point(point) => {
-                    // let mut curve = CurveShape {
-                    //     nurbs: basis.nurbs.clone(),
-                    //     controls: vec![*point, get_reshaped_point(point, basis.mat4)], 
-                    //     min: 0.,
-                    //     max: 1.,
-                    // };
-                    let mut curve = CurveShape::from_nurbs_and_controls(
-                        basis.nurbs.clone(), 
-                        vec![*point, get_reshaped_point(point, basis.mat4)]
-                    );
-                    if self.length < 0. {
-                        curve.controls.reverse();
-                    }
-                    shapes.push(Shape::Curve(curve));
-                    shapes.push(shape.get_reshape(basis.mat4));
-                },
-                Shape::Curve(curve) => {
-                    let mut facet = FacetShape {
-                        nurbs: basis.nurbs.clone(),
-                        controls:   vec![curve.clone(), curve.get_reshape(basis.mat4)], 
-                        boundaries: Rectangle::unit(),
-                    };
-                    if self.length < 0. {
-                        facet.controls.reverse();
-                    }
-                    shapes.push(Shape::Facet(facet));
-                    shapes.push(shape.get_reshape(basis.mat4));
-                },
-                Shape::Facet(facet) => {
-                    if self.length > 0. {
-                        shapes.push(Shape::Facet(facet.get_reshape(basis.mat4)));
-                    }else{
-                        shapes.push(Shape::Facet(facet.get_reverse_reshape(basis.mat4))); 
-                    }
-                },
+        let high_rank = shapes0.high_rank();
+        let mut shapes1 = shapes0.clone();
+        for shape0 in shapes0 {
+            let mut shape1 = shape0.clone();
+            shape1.invert().reshape(basis.mat4);
+            shapes1.push(shape1.clone());
+            if shape0.rank < high_rank {
+                let mut shape2 = basis.nurbs.shape();
+                shape2.controls = vec![shape0.clone(), shape1];
+                shape2.validate(); 
+                shapes1.push(shape2);
             }
         }
-        self.reshape.get_reshapes(shapes) 
+        self.reshape.get_reshapes(shapes1) 
     }
     pub fn from_area(area: Area, length: f32, reshape: &Reshape) -> Self {
         let mut model = Self::default();
@@ -118,7 +86,7 @@ pub struct Cuboid {
 }
 
 impl Cuboid {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         let mut rect = Rectangle::default();
         rect.lengths = [self.lengths[0], self.lengths[1]];
         let area = Area::from_part(Model::Rectangle(rect));
@@ -136,7 +104,7 @@ pub struct Cylinder {
 }
 
 impl Cylinder {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         let mut circle = Circle::default();
         circle.radius = self.radius;
         circle.center = self.center;
@@ -144,3 +112,43 @@ impl Cylinder {
         Extrude::from_area(area, self.length, &self.reshape).get_shapes()
     }
 }
+
+
+// match &shape.rank {
+//     0 => {
+//         // let mut curve = CurveShape {
+//         //     nurbs: basis.nurbs.clone(),
+//         //     controls: vec![*point, get_reshaped_point(point, basis.mat4)], 
+//         //     min: 0.,
+//         //     max: 1.,
+//         // };
+//         let mut curve = CurveShape::from_nurbs_and_controls(
+//             basis.nurbs.clone(), 
+//             vec![*point, get_reshaped_point(point, basis.mat4)]
+//         );
+//         if self.length < 0. {
+//             curve.controls.reverse();
+//         }
+//         shapes.push(Shape::Curve(curve));
+//         shapes.push(shape.get_reshape(basis.mat4));
+//     },
+//     Shape::Curve(curve) => {
+//         let mut facet = FacetShape {
+//             nurbs: basis.nurbs.clone(),
+//             controls:   vec![curve.clone(), curve.reshaped(basis.mat4)], 
+//             boundaries: Rectangle::unit(),
+//         };
+//         if self.length < 0. {
+//             facet.controls.reverse();
+//         }
+//         shapes.push(Shape::Facet(facet));
+//         shapes.push(shape.get_reshape(basis.mat4));
+//     },
+//     Shape::Facet(facet) => {
+//         if self.length > 0. {
+//             shapes.push(Shape::Facet(facet.get_reshape(basis.mat4)));
+//         }else{
+//             shapes.push(Shape::Facet(facet.get_reverse_reshape(basis.mat4))); 
+//         }
+//     },
+// }

@@ -1,8 +1,8 @@
-use std::f32::{EPSILON, INFINITY};
+use std::f32::INFINITY;
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::scene::Mesh;
-use crate::{get_curves, get_vector_hash, CurveShape, Model, Rectangle, Shape};
+use crate::{get_vector_hash, CurveShape, Model, ModelsToShapes, Rectangle};
 //use euclid::{point3, Box3D, Point3D};
 use glam::*;
 use serde::{Deserialize, Serialize};
@@ -23,300 +23,305 @@ pub struct Facet {
 }
 
 impl Facet {
-    pub fn get_shapes(&self) -> Vec<Shape> {
-        vec![Shape::Facet(FacetShape{
-            controls: get_curves(&self.controls),
-            boundaries: get_curves(&self.boundaries.clone()),
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
+        vec![CurveShape{
+            controls: self.controls.shapes(),
+            boundaries: self.boundaries.shapes(),
             nurbs: self.nurbs.clone(),
-        }.get_valid())]
+            min: 0., 
+            max: 1., 
+            rectifier: None,
+            vector: None,
+            rank: 2,
+        }.get_valid()]
     }
 }
 
-#[derive(Clone)]
-pub struct FacetShape {
-    pub nurbs:      Nurbs,
-    pub controls:   Vec<CurveShape>,
-    pub boundaries: Vec<CurveShape>,
-}
+// #[derive(Clone)]
+// pub struct FacetShape {
+//     pub nurbs:      Nurbs,
+//     pub controls:   Vec<CurveShape>,
+//     pub boundaries: Vec<CurveShape>,
+// }
 
-impl Default for FacetShape {
-    fn default() -> Self {
-        FacetShape {
-            nurbs: Nurbs::default(),
-            controls: vec![],
-            boundaries: vec![],
-        }
-    }
-}
+// impl Default for FacetShape {
+//     fn default() -> Self {
+//         FacetShape {
+//             nurbs: Nurbs::default(),
+//             controls: vec![],
+//             boundaries: vec![],
+//         }
+//     }
+// }
 
-impl FacetShape { 
-    pub fn negate(&mut self) -> &mut Self {
-        self.nurbs.sign = -self.nurbs.sign;
-        // for curve in &mut self.boundaries {
-        //     curve.negate();
-        // }
-        self
-    }
+// impl FacetShape { 
+//     pub fn negate(&mut self) -> &mut Self {
+//         self.nurbs.sign = -self.nurbs.sign;
+//         // for curve in &mut self.boundaries {
+//         //     curve.negate();
+//         // }
+//         self
+//     }
 
-    pub fn invert(&mut self) -> &mut Self {
-        self.nurbs.knots.reverse();
-        for i in 0..self.nurbs.knots.len() {
-            self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
-        }
-        self.nurbs.weights.reverse();
-        self.controls.reverse();
-        for bndry in &mut self.boundaries {
-            bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
-            bndry.reverse();
-        }
-        self
-    }
+//     pub fn invert(&mut self) -> &mut Self {
+//         self.nurbs.knots.reverse();
+//         for i in 0..self.nurbs.knots.len() {
+//             self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
+//         }
+//         self.nurbs.weights.reverse();
+//         self.controls.reverse();
+//         for bndry in &mut self.boundaries {
+//             bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
+//             bndry.reverse();
+//         }
+//         self
+//     }
 
-    pub fn reverse(&mut self) -> &mut Self {
-        self.nurbs.knots.reverse();
-        for i in 0..self.nurbs.knots.len() {
-            self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
-        }
-        self.nurbs.weights.reverse();
-        self.controls.reverse();
-        for bndry in &mut self.boundaries {
-            bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
-        }
-        self
-    }
+//     pub fn reverse(&mut self) -> &mut Self {
+//         self.nurbs.knots.reverse();
+//         for i in 0..self.nurbs.knots.len() {
+//             self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
+//         }
+//         self.nurbs.weights.reverse();
+//         self.controls.reverse();
+//         for bndry in &mut self.boundaries {
+//             bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
+//         }
+//         self
+//     }
 
-    pub fn reshape(&mut self, mat4: Mat4) -> &mut Self {
-        for control in &mut self.controls {
-            control.reshape(mat4);
-        }
-        self
-    }
+//     pub fn reshape(&mut self, mat4: Mat4) -> &mut Self {
+//         for control in &mut self.controls {
+//             control.reshape(mat4);
+//         }
+//         self
+//     }
 
-    pub fn get_inverted(&self) -> Self {
-        let mut facet = self.clone();
-        facet.invert();
-        facet
-    }
+//     pub fn get_inverted(&self) -> Self {
+//         let mut facet = self.clone();
+//         facet.invert();
+//         facet
+//     }
 
-    pub fn get_reshape(&self, mat4: Mat4) -> Self {
-        let mut facet = self.clone();
-        facet.reshape(mat4);
-        facet
-    }
+//     pub fn get_reshape(&self, mat4: Mat4) -> Self {
+//         let mut facet = self.clone();
+//         facet.reshape(mat4);
+//         facet
+//     }
 
-    pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
-        let mut facet = self.clone();
-        facet.invert();
-        facet.reshape(mat4);
-        facet
-    }
+//     pub fn get_reverse_reshape(&self, mat4: Mat4) -> Self {
+//         let mut facet = self.clone();
+//         facet.invert();
+//         facet.reshape(mat4);
+//         facet
+//     }
 
-    // pub fn get_box3(&self) -> Box3D<f32, f32> {
-    //     let mut points = vec![];
-    //     for curve in &self.controls {
-    //         for control in &curve.controls {
-    //             points.push(Point3D::from(control.to_array()));
-    //         }
-    //     }
-    //     let box3 = Box3D::from_points(points);
-    //     box3.inflate(0.01, 0.01, 0.01)
-    // }
+//     // pub fn get_box3(&self) -> Box3D<f32, f32> {
+//     //     let mut points = vec![];
+//     //     for curve in &self.controls {
+//     //         for control in &curve.controls {
+//     //             points.push(Point3D::from(control.to_array()));
+//     //         }
+//     //     }
+//     //     let box3 = Box3D::from_points(points);
+//     //     box3.inflate(0.01, 0.01, 0.01)
+//     // }
 
-    // pub fn get_normalized_knots(&self) -> Vec<Vec2> {
-    //     let mut knots = vec![];
-    //     //let last_knot = self.nurbs.knots.last().unwrap();
-    //     for i in 0..self.controls.len() {
-    //         let v = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
-    //         for u in self.controls[i].get_inflection_params(){
-    //             knots.push(vec2(u, v));
-    //         }
-    //     }
-    //     knots
-    // }
+//     // pub fn get_normalized_knots(&self) -> Vec<Vec2> {
+//     //     let mut knots = vec![];
+//     //     //let last_knot = self.nurbs.knots.last().unwrap();
+//     //     for i in 0..self.controls.len() {
+//     //         let v = self.nurbs.knots[self.nurbs.order + i - 1];// / last_knot;
+//     //         for u in self.controls[i].get_inflection_params(){
+//     //             knots.push(vec2(u, v));
+//     //         }
+//     //     }
+//     //     knots
+//     // }
 
-    // pub fn get_normal_at_uv(&self, uv: Vec2) -> Vec3 {
-    //     let mut step_u = 0.0001;
-    //     let mut step_v = 0.0001;
-    //     if uv.x + step_u > 1. {step_u = -step_u;}
-    //     if uv.y + step_v > 1. {step_v = -step_v;}
-    //     let p0 = self.get_point(uv);
-    //     let p1 = self.get_point(uv + Vec2::X * step_u);
-    //     let p2 = self.get_point(uv + Vec2::Y * step_v);
-    //     step_u.signum() * step_v.signum() * (p0 - p1).cross(p0 - p2).normalize() // TODO: remove final normalize after Union3 works!!!!
-    // }
+//     // pub fn get_normal_at_uv(&self, uv: Vec2) -> Vec3 {
+//     //     let mut step_u = 0.0001;
+//     //     let mut step_v = 0.0001;
+//     //     if uv.x + step_u > 1. {step_u = -step_u;}
+//     //     if uv.y + step_v > 1. {step_v = -step_v;}
+//     //     let p0 = self.get_point(uv);
+//     //     let p1 = self.get_point(uv + Vec2::X * step_u);
+//     //     let p2 = self.get_point(uv + Vec2::Y * step_v);
+//     //     step_u.signum() * step_v.signum() * (p0 - p1).cross(p0 - p2).normalize() // TODO: remove final normalize after Union3 works!!!!
+//     // }
 
-        // pub fn get_uv_and_point_from_target(&self, uv: Vec2, point: Vec3, target: Vec3) -> (Vec2, Vec3) {
-        //     if target.is_nan() || target.length() < EPSILON {
-        //         return (uv, point);
-        //     }
-        //     let mut step_u = 0.0001;
-        //     let mut step_v = 0.0001;
-        //     if uv.x + step_u > 1. {step_u = -step_u;}
-        //     if uv.y + step_v > 1. {step_v = -step_v;}
-        //     let p0 = self.get_point(uv);
-        //     let pu = self.get_point(uv + Vec2::X * step_u);
-        //     let pv = self.get_point(uv + Vec2::Y * step_v);
-        //     let length_ratio_u = target.length() / p0.distance(pu) * step_u;
-        //     let length_ratio_v = target.length() / p0.distance(pv) * step_v;
-        //     let uv_delta = vec2(
-        //         (pu-p0).normalize().dot(target.normalize()) * length_ratio_u, 
-        //         (pv-p0).normalize().dot(target.normalize()) * length_ratio_v
-        //     );
-        //     let mut uv1 = uv + uv_delta;
-        //     if uv1.x > 1. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
-        //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::X, Vec2::ONE).unwrap_or(uv1);
-        //     }else if uv1.x < 0. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
-        //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::Y).unwrap_or(uv1);
-        //     }
-        //     if uv1.y > 1. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
-        //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::Y, Vec2::ONE).unwrap_or(uv1);
-        //     }else if uv1.y < 0. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
-        //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::X).unwrap_or(uv1);
-        //     }
-        //     uv1 = uv1.clamp(Vec2::ZERO, Vec2::ONE); // TODO: might not be needed
-        //     let point = self.get_point(uv1);
-        //     (uv1, point)
-        // }
+//         // pub fn get_uv_and_point_from_target(&self, uv: Vec2, point: Vec3, target: Vec3) -> (Vec2, Vec3) {
+//         //     if target.is_nan() || target.length() < EPSILON {
+//         //         return (uv, point);
+//         //     }
+//         //     let mut step_u = 0.0001;
+//         //     let mut step_v = 0.0001;
+//         //     if uv.x + step_u > 1. {step_u = -step_u;}
+//         //     if uv.y + step_v > 1. {step_v = -step_v;}
+//         //     let p0 = self.get_point(uv);
+//         //     let pu = self.get_point(uv + Vec2::X * step_u);
+//         //     let pv = self.get_point(uv + Vec2::Y * step_v);
+//         //     let length_ratio_u = target.length() / p0.distance(pu) * step_u;
+//         //     let length_ratio_v = target.length() / p0.distance(pv) * step_v;
+//         //     let uv_delta = vec2(
+//         //         (pu-p0).normalize().dot(target.normalize()) * length_ratio_u, 
+//         //         (pv-p0).normalize().dot(target.normalize()) * length_ratio_v
+//         //     );
+//         //     let mut uv1 = uv + uv_delta;
+//         //     if uv1.x > 1. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
+//         //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::X, Vec2::ONE).unwrap_or(uv1);
+//         //     }else if uv1.x < 0. && uv_delta.normalize().dot(Vec2::Y).abs() < 0.95 {
+//         //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::Y).unwrap_or(uv1);
+//         //     }
+//         //     if uv1.y > 1. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
+//         //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::Y, Vec2::ONE).unwrap_or(uv1);
+//         //     }else if uv1.y < 0. && uv_delta.normalize().dot(Vec2::X).abs() < 0.95 {
+//         //         uv1 = get_line_intersection2(uv, uv + uv_delta*100., Vec2::ZERO, Vec2::X).unwrap_or(uv1);
+//         //     }
+//         //     uv1 = uv1.clamp(Vec2::ZERO, Vec2::ONE); // TODO: might not be needed
+//         //     let point = self.get_point(uv1);
+//         //     (uv1, point)
+//         // }
 
-    // pub fn get_curvature(&self, uv0: Vec2, p0: Vec3, dir: Vec3) -> f32 {
-    //     let step = 1.;
-    //     let (uv1, p1) = self.get_uv_and_point_from_target(uv0, p0, dir * step);
-    //     let normal0 = self.get_normal_at_uv(uv0);
-    //     let normal1 = self.get_normal_at_uv(uv1);
-    //     let distance = p0.distance(p1);
-    //     if distance > EPSILON*10. {
-    //         (1. + (1. - normal0.dot(normal1)) / distance).powf(30.)
-    //     }else{
-    //         1.
-    //     }
-    // }
+//     // pub fn get_curvature(&self, uv0: Vec2, p0: Vec3, dir: Vec3) -> f32 {
+//     //     let step = 1.;
+//     //     let (uv1, p1) = self.get_uv_and_point_from_target(uv0, p0, dir * step);
+//     //     let normal0 = self.get_normal_at_uv(uv0);
+//     //     let normal1 = self.get_normal_at_uv(uv1);
+//     //     let distance = p0.distance(p1);
+//     //     if distance > EPSILON*10. {
+//     //         (1. + (1. - normal0.dot(normal1)) / distance).powf(30.)
+//     //     }else{
+//     //         1.
+//     //     }
+//     // }
 
-    // pub fn get_point_at_uv(&self, uv: Vec2) -> Vec3 {
-    //     let p = self.get_vector_at_uv(uv.x, uv.y);
-    //     vec3(p[0], p[1], p[2])
-    // }
+//     // pub fn get_point_at_uv(&self, uv: Vec2) -> Vec3 {
+//     //     let p = self.get_vector_at_uv(uv.x, uv.y);
+//     //     vec3(p[0], p[1], p[2])
+//     // }
 
-    pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { 
-        let facet = self.get_valid();
-        let mut u_count = 0;
-        for curve in &facet.controls {
-            let sample_count = curve.nurbs.get_sample_count(query.count);
-            if u_count < sample_count { u_count = sample_count; } 
-        }
-        let v_count = facet.nurbs.get_sample_count(query.count);
-        let mut builder = lyon::path::Path::builder();
-        // if facet.boundaries.is_empty() { // self.nurbs.sign < 0. || 
-        //     builder.add_rectangle(&Box2D{min:Point::new(0., 0.), max:Point::new(1., 1.)}, Winding::Positive);
-        // }
-        for ui in 0..u_count {
-            let u = ui as f32 / (u_count-1) as f32;
-            builder.add_rectangle(&Box2D{min:Point::new(u, 0.), max:Point::new(u, 1.)}, Winding::Positive);
-        }
-        for vi in 0..v_count {
-            let v = vi as f32 / (v_count-1) as f32;
-            builder.add_rectangle(&Box2D{min:Point::new(0., v), max:Point::new(1., v)}, Winding::Positive);
-        }
-        let mut loop_open = false;
-        let mut bndry_i = 0;
-        let mut start_bndry_i = bndry_i;
-        let mut used_boundaries = vec![];
-        for _ in 0..facet.boundaries.len() {
-            let bndry = &facet.boundaries[bndry_i];
-            for p in bndry.get_polyline_vector(query).chunks(3) {
-                //let mut y = p[1];
-                //////if facet.reversed {y = 1.-y;}
-                let point = lyon::geom::Point::new(p[0], p[1]); // y
-                if loop_open {
-                    builder.line_to(point);
-                }else{
-                    builder.begin(point);
-                    loop_open = true;
-                }
-            }
-            bndry_i = facet.get_next_boundary_index(&bndry.get_point(1.), &mut used_boundaries);
-            used_boundaries.push(bndry_i);
-            if bndry_i == start_bndry_i {
-                builder.end(true);
-                loop_open = false;
-                for i in 0..facet.boundaries.len() {
-                    if !used_boundaries.contains(&i) {
-                        bndry_i = i;
-                        start_bndry_i = i;
-                        break;
-                    }
-                }
-            }
-        }
-        builder.end(true);
-        let path = builder.build();
-        let options = FillOptions::default().with_tolerance(0.0001); //tolerance(query.tolerance);
-        let mut geometry: VertexBuffers<[f32; 2], usize> = VertexBuffers::new();
-        let mut buffer_builder = BuffersBuilder::new(&mut geometry, |vertex: FillVertex| vertex.position().to_array());
-        let mut tessellator = FillTessellator::new();
-        tessellator.tessellate_path(&path, &options, &mut buffer_builder).expect("Tessellation failed");
-        let mut vector = vec![];
-        for [u, v] in geometry.vertices.into_iter(){
-            vector.extend(facet.get_point(vec2(u, v)).to_array());
-        }
-        let mut trivec = geometry.indices;
-        for k in 0..trivec.len()/3 {
-            let i = k * 3;
-            let index = trivec[i];
-            trivec[i] = trivec[i+1];
-            trivec[i+1] = index;
-        }
-        Mesh {
-            digest: get_vector_hash(&vector), 
-            vector, 
-            trivec, 
-        }
-    }
+//     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { 
+//         let facet = self.get_valid();
+//         let mut u_count = 0;
+//         for curve in &facet.controls {
+//             let sample_count = curve.nurbs.get_sample_count(query.count);
+//             if u_count < sample_count { u_count = sample_count; } 
+//         }
+//         let v_count = facet.nurbs.get_sample_count(query.count);
+//         let mut builder = lyon::path::Path::builder();
+//         // if facet.boundaries.is_empty() { // self.nurbs.sign < 0. || 
+//         //     builder.add_rectangle(&Box2D{min:Point::new(0., 0.), max:Point::new(1., 1.)}, Winding::Positive);
+//         // }
+//         for ui in 0..u_count {
+//             let u = ui as f32 / (u_count-1) as f32;
+//             builder.add_rectangle(&Box2D{min:Point::new(u, 0.), max:Point::new(u, 1.)}, Winding::Positive);
+//         }
+//         for vi in 0..v_count {
+//             let v = vi as f32 / (v_count-1) as f32;
+//             builder.add_rectangle(&Box2D{min:Point::new(0., v), max:Point::new(1., v)}, Winding::Positive);
+//         }
+//         let mut loop_open = false;
+//         let mut bndry_i = 0;
+//         let mut start_bndry_i = bndry_i;
+//         let mut used_boundaries = vec![];
+//         for _ in 0..facet.boundaries.len() {
+//             let bndry = &facet.boundaries[bndry_i];
+//             for p in bndry.get_polyline_vector(query).chunks(3) {
+//                 //let mut y = p[1];
+//                 //////if facet.reversed {y = 1.-y;}
+//                 let point = lyon::geom::Point::new(p[0], p[1]); // y
+//                 if loop_open {
+//                     builder.line_to(point);
+//                 }else{
+//                     builder.begin(point);
+//                     loop_open = true;
+//                 }
+//             }
+//             bndry_i = facet.get_next_boundary_index(&bndry.get_point(&[1.]), &mut used_boundaries);
+//             used_boundaries.push(bndry_i);
+//             if bndry_i == start_bndry_i {
+//                 builder.end(true);
+//                 loop_open = false;
+//                 for i in 0..facet.boundaries.len() {
+//                     if !used_boundaries.contains(&i) {
+//                         bndry_i = i;
+//                         start_bndry_i = i;
+//                         break;
+//                     }
+//                 }
+//             }
+//         }
+//         builder.end(true);
+//         let path = builder.build();
+//         let options = FillOptions::default().with_tolerance(0.0001); //tolerance(query.tolerance);
+//         let mut geometry: VertexBuffers<[f32; 2], usize> = VertexBuffers::new();
+//         let mut buffer_builder = BuffersBuilder::new(&mut geometry, |vertex: FillVertex| vertex.position().to_array());
+//         let mut tessellator = FillTessellator::new();
+//         tessellator.tessellate_path(&path, &options, &mut buffer_builder).expect("Tessellation failed");
+//         let mut vector = vec![];
+//         for [u, v] in geometry.vertices.into_iter(){
+//             vector.extend(facet.get_point(vec2(u, v)).to_array());
+//         }
+//         let mut trivec = geometry.indices;
+//         for k in 0..trivec.len()/3 {
+//             let i = k * 3;
+//             let index = trivec[i];
+//             trivec[i] = trivec[i+1];
+//             trivec[i+1] = index;
+//         }
+//         Mesh {
+//             digest: get_vector_hash(&vector), 
+//             vector, 
+//             trivec, 
+//         }
+//     }
     
-    fn get_next_boundary_index(&self, point: &Vec3, used_boundaries: &mut Vec<usize>) -> usize {
-        let mut bndry_i = 0;
-        let mut distance = INFINITY;
-        for (i, curve) in self.boundaries.iter().enumerate() { 
-            let p1 = curve.get_point(0.);
-            let dist = point.distance(p1);
-            if !used_boundaries.contains(&i) && distance > dist {
-                distance = dist;
-                bndry_i = i;
-            }
-        }
-        bndry_i
-    }
+//     fn get_next_boundary_index(&self, point: &Vec3, used_boundaries: &mut Vec<usize>) -> usize {
+//         let mut bndry_i = 0;
+//         let mut distance = INFINITY;
+//         for (i, curve) in self.boundaries.iter().enumerate() { 
+//             let p1 = curve.get_point(&[0.]);
+//             let dist = point.distance(p1);
+//             if !used_boundaries.contains(&i) && distance > dist {
+//                 distance = dist;
+//                 bndry_i = i;
+//             }
+//         }
+//         bndry_i
+//     }
 
-    pub fn get_point(&self, uv: Vec2) -> Vec3 {
-        let mut point = Vec3::ZERO;
-        // let knot_index = self.nurbs.get_knot_index(uv.y);
-        // if let Some(ki) = knot_index {
-            let ki = self.nurbs.get_knot_index(uv.y);
-            let basis = self.nurbs.get_basis(ki, uv.y); 
-            for k in 0..self.nurbs.order {
-                let i = 4 - self.nurbs.order + k;
-                let ci = ki - 3 + i;
-                point += self.controls[ci].get_point(uv.x) * basis.0[i];
-            }
-        // }else{
-        //     point = self.controls.last().expect(TWO_CONTROLS).get_point(uv.x);
-        // }
-        point
-    }
+//     pub fn get_point(&self, uv: Vec2) -> Vec3 {
+//         let mut point = Vec3::ZERO;
+//         // let knot_index = self.nurbs.get_knot_index(uv.y);
+//         // if let Some(ki) = knot_index {
+//             let ki = self.nurbs.get_knot_index(uv.y);
+//             let basis = self.nurbs.get_basis(ki, uv.y); 
+//             for k in 0..self.nurbs.order {
+//                 let i = 4 - self.nurbs.order + k;
+//                 let ci = ki - 3 + i;
+//                 point += self.controls[ci].get_point(&[uv.x]) * basis.0[i];
+//             }
+//         // }else{
+//         //     point = self.controls.last().expect(TWO_CONTROLS).get_point(uv.x);
+//         // }
+//         point
+//     }
 
-    pub fn get_valid(&self) -> FacetShape {
-        let mut boundaries = self.boundaries.clone(); 
-        if boundaries.is_empty() {
-            boundaries = Rectangle::unit();
-        }
-        FacetShape {
-            nurbs: self.nurbs.get_valid(self.controls.len()),
-            controls: self.controls.iter().map(|c| c.get_valid()).collect(), // self.controls.clone(), //
-            boundaries,
-        }
-    }
-}
+//     pub fn get_valid(&self) -> FacetShape {
+//         let mut boundaries = self.boundaries.clone(); 
+//         if boundaries.is_empty() {
+//             boundaries = Rectangle::unit();
+//         }
+//         FacetShape {
+//             nurbs: self.nurbs.get_valid(self.controls.len()),
+//             controls: self.controls.iter().map(|c| c.get_valid()).collect(), // self.controls.clone(), //
+//             boundaries,
+//         }
+//     }
+// }
 
-
+///////////////////////////////////////////////////////////////
 
 
 

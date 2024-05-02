@@ -31,8 +31,8 @@ impl HitTester2 {
     pub fn test(&mut self, start_u0: f32, start_u1: f32) -> Option<HitMiss2> { 
         let mut u0 = start_u0;
         let mut u1 = start_u1;
-        let mut p0 = self.curves.0.get_point(u0);
-        let mut p1 = self.curves.1.get_point(u1);
+        let mut p0 = self.curves.0.get_point(&[u0]);
+        let mut p1 = self.curves.1.get_point(&[u1]);
         for _ in 0..8 {
             if p0.distance(p1) < EPSILON {
                 break;
@@ -80,8 +80,8 @@ impl HitTester2 {
                 if (u0 > DUP_1_TOL && u1 < DUP_0_TOL) || (u0 < DUP_0_TOL && u1 > DUP_1_TOL) {
                     return None;
                 }
-                let delta0 = self.curves.0.get_arrow(u0).delta.normalize();
-                let delta1 = self.curves.1.get_arrow(u1).delta.normalize();
+                let delta0 = self.curves.0.get_arrow(&[u0]).delta.normalize();
+                let delta1 = self.curves.1.get_arrow(&[u1]).delta.normalize();
                 if delta0.dot(delta1).abs() > 0.9999 {
                     return None;
                 }
@@ -100,8 +100,8 @@ impl HitTester2 {
             }
             
         } 
-        let delta0 = self.curves.0.get_arrow(u0).delta.normalize();
-        let delta1 = self.curves.1.get_arrow(u1).delta.normalize();
+        let delta0 = self.curves.0.get_arrow(&[u0]).delta.normalize();
+        let delta1 = self.curves.1.get_arrow(&[u1]).delta.normalize();
         let cross0 = Vec3::Z.cross(p1 - p0).normalize();
         let cross1 = Vec3::Z.cross(p0 - p1).normalize();
         if u0 < AT_0_TOL {
@@ -122,8 +122,8 @@ impl HitTester2 {
     }
 
     pub fn get_tangent_intersection(&self, u0: f32, u1: f32) -> Vec3 {
-        let arrow0 = self.curves.0.get_arrow(u0);
-        let arrow1 = self.curves.1.get_arrow(u1);
+        let arrow0 = self.curves.0.get_arrow(&[u0]);
+        let arrow1 = self.curves.1.get_arrow(&[u1]);
         if arrow1.delta.length() < 0.00001 {
             console_log!("u1 {}", u1);
             panic!("hi2.get_tengent_intersection arrow1.delta is 0!");

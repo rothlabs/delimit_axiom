@@ -1,4 +1,4 @@
-use crate::{get_facets, get_vector_hash, query::DiscreteQuery, Curve, Facet, Shape};
+use crate::{get_vector_hash, query::DiscreteQuery, Curve, Facet};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -31,10 +31,11 @@ pub fn get_scene(val: JsValue) -> Result<JsValue, JsValue> {
     let query = query.get_valid();
     let mut scene = Scene::default();
     for shape in query.model.get_shapes() {
-        match &shape {
-            Shape::Point(s) => scene.points.push(s.to_array()),
-            Shape::Curve(s) => scene.polylines.push(s.get_polyline(&query)),
-            Shape::Facet(s) => scene.meshes.push(s.get_mesh(&query)),
+        match shape.rank {
+            0 => scene.points.push(shape.get_point(&[]).to_array()),
+            1 => scene.polylines.push(shape.get_polyline(&query)),
+            2 => scene.meshes.push(shape.get_mesh(&query)),
+            _ => ()
         }
     }
     Ok(serde_wasm_bindgen::to_value(&scene)?)
@@ -46,8 +47,8 @@ pub fn get_curve_scene(val: JsValue) -> Result<JsValue, JsValue> {
     let query = query.get_valid();
     let mut polylines = vec![];
     for shape in query.model.get_shapes() {
-        match &shape {
-            Shape::Curve(s) => polylines.push(s.get_polyline(&query)),
+        match shape.rank {
+            1 => polylines.push(shape.get_polyline(&query)),
             _ => ()
         }
     }
@@ -60,11 +61,13 @@ pub fn get_facet_scene(val: JsValue) -> Result<JsValue, JsValue> {
     let query = query.get_valid();
     let mut mesh = Mesh::default();
     let mut offset = 0;
-    for facet in get_facets(&vec![query.model.clone()]) {
-        let facet_mesh = facet.get_mesh(&query);
-        mesh.vector.extend(&facet_mesh.vector);
-        mesh.trivec.extend(facet_mesh.trivec.iter().map(|v| v + offset));
-        offset += facet_mesh.vector.len() / 3;
+    for shape in query.model.get_shapes() {
+        if shape.rank == 2 {
+            let facet_mesh = shape.get_mesh(&query);
+            mesh.vector.extend(&facet_mesh.vector);
+            mesh.trivec.extend(facet_mesh.trivec.iter().map(|v| v + offset));
+            offset += facet_mesh.vector.len() / 3;
+        }
     }
     mesh.digest = get_vector_hash(&mesh.vector);
     Ok(serde_wasm_bindgen::to_value(&mesh)?)

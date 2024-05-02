@@ -1,5 +1,5 @@
 use glam::*;
-use crate::{log, FacetShape};
+use crate::{log, CurveShape};
 use super::{MissPair, TestPair};
 
 struct IndexedUV {
@@ -20,7 +20,7 @@ pub struct HoneBasis{
 }
 
 impl HoneBasis {
-    pub fn new(facets: &Vec<FacetShape>, pairs: &Vec<TestPair>) -> Self{
+    pub fn new(facets: &Vec<CurveShape>, pairs: &Vec<TestPair>) -> Self{
         let mut max_facet_length = 0;
         let mut max_knot_count = 0;
         let mut index_pairs: Vec<TestPair> = vec![];
@@ -65,8 +65,8 @@ impl HoneBasis {
                     }  
                     //facet_texels.push(curve.nurbs.knots[curve.nurbs.knots.len()-1]);
                     facet_texels.extend(&curve.nurbs.weights);
-                    for point in &curve.controls {
-                        facet_texels.extend(point.to_array());
+                    for control in &curve.controls {
+                        facet_texels.extend(control.get_point(&[]).to_array());
                     }
                 }
                 let facet_length = facet_texels.len() - texel_i;

@@ -1,4 +1,4 @@
-use crate::{get_shapes, get_reshapes, Reshape, Model, Shape};
+use crate::{CurveShape, Model, ModelsToShapes, Reshape, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -19,7 +19,7 @@ pub struct GridPattern {
 }
 
 impl GridPattern {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         let mut x_count = self.x_count;
         let mut y_count = self.y_count;
         let mut z_count = self.z_count;
@@ -39,7 +39,7 @@ impl GridPattern {
             count: [x_count, y_count, z_count],
             length: vec3(x_length, y_length, z_length),
         };
-        self.reshape.get_reshapes(basis.get_shapes(get_shapes(&self.parts)))
+        self.reshape.get_reshapes(basis.get_shapes(self.parts.shapes()))
     }
 }
 
@@ -49,7 +49,7 @@ pub struct GridPatternBasis {
 }
 
 impl GridPatternBasis {
-    pub fn get_shapes(&self, parts: Vec<Shape>) -> Vec<Shape> {
+    pub fn get_shapes(&self, parts: Vec<CurveShape>) -> Vec<CurveShape> {
         let mut shapes = vec![];
         let mut div = (1., 1., 1.);
         if self.count[0] > 1 {div.0 = (self.count[0]-1) as f32;} 
@@ -64,7 +64,7 @@ impl GridPatternBasis {
                         (z as f32 / div.2) * self.length.z - self.length.z/2., 
                     );
                     let mat4 = Mat4::from_translation(pos);
-                    shapes.extend(get_reshapes(&parts, mat4));
+                    shapes.extend(parts.reshaped(mat4));
                 }
             }
         }

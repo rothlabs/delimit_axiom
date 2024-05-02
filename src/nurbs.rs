@@ -4,6 +4,8 @@ pub mod facet;
 use glam::*;
 use serde::{Deserialize, Serialize};
 
+use crate::CurveShape;
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Nurbs {
@@ -17,7 +19,7 @@ impl Default for Nurbs {
     fn default() -> Self {
         Nurbs {
             sign:    1.,
-            order:   2,
+            order:   1,
             knots:   vec![],
             weights: vec![],    
         }
@@ -25,15 +27,61 @@ impl Default for Nurbs {
 }
 
 impl Nurbs {
+    pub fn shape(&self) -> CurveShape {
+        CurveShape {
+            nurbs: self.clone(),
+            controls: vec![],  
+            boundaries: vec![],
+            min: 0.,
+            max: 1.,  
+            rank: 0,
+            rectifier: None,
+            vector: None, // Some(Vec3::ZERO)
+        }
+    }
+
     pub fn get_sample_count(&self, count: usize) -> usize { 
         let mul = self.weights.len()-1;
         self.weights.len() + count * (self.order - 2) * mul
     }
 
+    fn validate(&mut self, control_len: usize) {
+        self.order = self.order.min(control_len);
+        self.validate_knots(control_len);
+        if self.weights.len() != control_len {
+            self.weights = vec![1.; control_len];
+        }
+        if self.sign.abs() != 1. {
+            self.sign = 1.
+        }
+    }
+
+    fn validate_knots(&mut self, control_len: usize) {
+        if self.knots.len() == control_len + self.order {
+            self.normalize();
+        }else{
+            self.make_knots(control_len);
+        }
+    }
+
+    fn make_knots(&mut self, control_len: usize) {
+        let repeats = self.order - 1; 
+        let max = control_len - 1;
+        self.knots = vec![0.; repeats];
+        self.knots.extend((0..=max).map(|k| k as f32 / max as f32));
+        self.knots.extend(vec![1.; repeats]);
+    }
+
+    pub fn normalize(&mut self) {
+        if let Some(last) = self.knots.last() {
+            self.knots = self.knots.iter().map(|k| k / last).collect();
+        }
+    }
+
     fn get_valid(&self, control_count: usize) -> Self {
-        let order = self.order.min(control_count).max(2);
+        let order = self.order.min(control_count); // .max(2)
         let mut sign = self.sign;
-        if sign.abs() < 1. {sign = 1.;}
+        if sign.abs() != 1. {sign = 1.;}
         Nurbs {
             sign,
             order,//:   self.get_valid_order(control_count),
@@ -50,18 +98,13 @@ impl Nurbs {
         }
     }
 
-    fn get_valid_knots(&self, control_count: usize, order: usize) -> Vec<f32> {
-        if self.knots.len() == control_count + order { 
+    fn get_valid_knots(&self, control_len: usize, order: usize) -> Vec<f32> {
+        if self.knots.len() == control_len + order { 
             let last_knot = self.knots.last().unwrap();
             self.knots.iter().map(|k| k / last_knot).collect()
         } else {
-            self.get_open_knots(control_count, order)
+            self.get_open_knots(control_len, order)
         }
-    }
-    
-    pub fn normalize_knots(&mut self) {
-        let last_knot = self.knots.last().unwrap();
-        self.knots = self.knots.iter().map(|k| k / last_knot).collect();
     }
 
     fn get_open_knots(&self, control_count: usize, order: usize) -> Vec<f32> {

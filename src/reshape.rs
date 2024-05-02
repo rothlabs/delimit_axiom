@@ -1,4 +1,4 @@
-use crate::{Model, Shape, get_shapes};
+use crate::{CurveShape, Model, ModelsToShapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -32,19 +32,19 @@ impl Default for Reshape {
 }
 
 impl Reshape {
-    pub fn get_shapes(&self) -> Vec<Shape> {
-        self.get_reshapes(get_shapes(&self.parts))
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
+        self.get_reshapes(self.parts.shapes())
     }
-    pub fn get_reshapes(&self, shapes: Vec<Shape>) -> Vec<Shape> {
+    pub fn get_reshapes(&self, shapes: Vec<CurveShape>) -> Vec<CurveShape> {
         let mat4 = self.get_matrix();
         let mut result = vec![];
         if self.reverse {
             for shape in shapes {
-                result.push(shape.clone().get_reverse().get_reshape(mat4));
+                result.push(shape.reversed().reshaped(mat4));
             }
         }else{
             for shape in shapes {
-                result.push(shape.clone().get_reshape(mat4));
+                result.push(shape.reshaped(mat4));
             }
         }
         result

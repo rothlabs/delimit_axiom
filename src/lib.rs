@@ -80,9 +80,9 @@ pub enum Model {
 }
 
 impl Model {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn get_shapes(&self) -> Vec<CurveShape> {
         match self {
-            Model::Point(m)     => vec![Shape::Point(*m)], 
+            Model::Point(m)     => vec![CurveShape::from_point(*m)], 
             Model::Curve(m)     => m.get_shapes(),
             Model::Facet(m)     => m.get_shapes(),
             Model::Sketch(m)    => m.get_shapes(),
@@ -106,128 +106,130 @@ impl Model {
 
 impl Default for Model {
     fn default() -> Self { 
-        Model::Point(Vec3::ZERO) // [0.; 3] 
+        Model::Point(Vec3::ZERO) 
     }
 }
 
-#[derive(Clone)] 
-pub enum Shape {
-    Point(Vec3),
-    Curve(CurveShape),
-    Facet(FacetShape),
+pub trait ModelsToShapes {
+    fn shapes(&self) -> Vec<CurveShape>;
+    fn shape_groups(&self) -> Vec<Vec<CurveShape>>;
 }
 
-impl Shape {
-    pub fn get_reshape(&self, mat4: Mat4) -> Self {
-        match self {
-            Shape::Point(s) => Shape::Point(get_reshaped_point(s, mat4)),
-            Shape::Curve(s) => Shape::Curve(s.get_reshape(mat4)),
-            Shape::Facet(s) => Shape::Facet(s.get_reshape(mat4)),
+impl ModelsToShapes for Vec<Model> {
+    fn shapes(&self) -> Vec<CurveShape> {
+        let mut result = vec![];
+        for part in self {
+            result.extend(part.get_shapes());
         }
+        result
     }
-    pub fn get_reverse(&self) -> Self {
-        match self {
-            Shape::Point(s) => Shape::Point(*s),
-            Shape::Curve(s) => Shape::Curve(s.get_reverse()),
-            Shape::Facet(s) => Shape::Facet(s.get_inverted()),
+    fn shape_groups(&self) -> Vec<Vec<CurveShape>> {
+        let mut result = vec![];
+        for part in self {
+            result.push(part.get_shapes());
         }
+        result
     }
 }
 
-impl Default for Shape {
-    fn default() -> Self { 
-        Shape::Point(Vec3::ZERO) 
-    }
+// pub trait Reshapes {
+//     fn reshape(&mut self, mat4: Mat4) -> &mut Vec<CurveShape>;
+// }
+
+// impl Reshapes for Vec<CurveShape> {
+//     fn reshape(&mut self, mat4: Mat4) -> &mut Vec<CurveShape> {
+//         for shape in self {
+//             shape.reshape(mat4);
+//         }
+//         self
+//     }
+// }
+
+// pub trait Reshapes {
+//     fn reshapes(&self, mat4: Mat4) -> Vec<CurveShape>;
+// }
+
+// impl Reshapes for Vec<CurveShape> {
+//     fn reshapes(&self, mat4: Mat4) -> Vec<CurveShape> {
+//         let mut result = vec![];
+//         for shape in self {
+//             result.push(shape.get_reshape(mat4));
+//         }
+//         result
+//     }
+// }
+
+pub fn get_vector_hash(vecf32: &Vec<f32>) -> u64 {
+    let veci32: Vec<u64> = vecf32.iter().enumerate().map(|(i, v)| i as u64 * (v * 10000.).floor() as u64).collect();
+    veci32.iter().sum()
+    // let mut hasher = DefaultHasher::new();
+    // veci32.hash(&mut hasher);
+    // hasher.finish()
 }
 
-pub fn get_shapes(parts: &Vec<Model>) -> Vec<Shape> {
-    let mut result = vec![];
-    for part in parts {
-        result.extend(part.get_shapes());
-    }
-    result
-}
-
-pub fn get_reshapes(parts: &Vec<Shape>, mat4: Mat4) -> Vec<Shape> {
-    let mut result = vec![];
-    for shape in parts {
-        result.push(shape.get_reshape(mat4));
-    }
-    result
-}
-
-// pub fn get_reshapes(parts: &Vec<Model>, mat4: Mat4) -> Vec<Shape> {
+// pub fn get_points(parts: &Vec<Model>) -> Vec<Vec3> {
 //     let mut result = vec![];
 //     for part in parts {
 //         for shape in part.get_shapes() {
-//             result.push(shape.get_reshape(mat4));
+//             if let Shape::Point(point) = shape {
+//                 result.push(point);
+//             }
 //         }
 //     }
 //     result
 // }
 
-pub fn get_points(parts: &Vec<Model>) -> Vec<Vec3> {
-    let mut result = vec![];
-    for part in parts {
-        for shape in part.get_shapes() {
-            if let Shape::Point(point) = shape {
-                result.push(point);
-            }
-        }
-    }
-    result
-}
+// pub fn get_curves(parts: &Vec<Model>) -> Vec<CurveShape> {
+//     let mut result = vec![];
+//     for part in parts {
+//         for shape in part.get_shapes() {
+//             if let Shape::Curve(curve) = shape {
+//                 result.push(curve);
+//             }
+//         }
+//     }
+//     result
+// }
 
-pub fn get_curves(parts: &Vec<Model>) -> Vec<CurveShape> {
-    let mut result = vec![];
-    for part in parts {
-        for shape in part.get_shapes() {
-            if let Shape::Curve(curve) = shape {
-                result.push(curve);
-            }
-        }
-    }
-    result
-}
+// pub fn get_facets(parts: &Vec<Model>) -> Vec<FacetShape> {
+//     let mut result = vec![];
+//     for part in parts {
+//         for shape in part.get_shapes() {
+//             if let Shape::Facet(facet) = shape {
+//                 result.push(facet);
+//             }
+//         }
+//     }
+//     result
+// }
 
-pub fn get_facets(parts: &Vec<Model>) -> Vec<FacetShape> {
-    let mut result = vec![];
-    for part in parts {
-        for shape in part.get_shapes() {
-            if let Shape::Facet(facet) = shape {
-                result.push(facet);
-            }
-        }
-    }
-    result
-}
+// pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>, Vec<Vec<CurveShape>>, Vec<Vec<FacetShape>>) {
+//     let mut curves = vec![];
+//     let mut facets = vec![];
+//     let mut curve_groups = vec![];
+//     let mut facet_groups = vec![];
+//     for part in parts {
+//         let mut curve_group = vec![];
+//         let mut facet_group = vec![];
+//         for shape in part.get_shapes() {
+//             match shape {
+//                 Shape::Curve(s) => curve_group.push(s),
+//                 Shape::Facet(s) => facet_group.push(s),
+//                 _ => (),
+//             }
+//         }
+//         curve_groups.push(curve_group.clone());
+//         facet_groups.push(facet_group.clone());
+//         curves.extend(curve_group);
+//         facets.extend(facet_group);
+//     }
+//     (curves, facets, curve_groups, facet_groups)
+// }
 
-pub fn get_grouped_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>, Vec<Vec<CurveShape>>, Vec<Vec<FacetShape>>) {
-    let mut curves = vec![];
-    let mut facets = vec![];
-    let mut curve_groups = vec![];
-    let mut facet_groups = vec![];
-    for part in parts {
-        let mut curve_group = vec![];
-        let mut facet_group = vec![];
-        for shape in part.get_shapes() {
-            match shape {
-                Shape::Curve(s) => curve_group.push(s),
-                Shape::Facet(s) => facet_group.push(s),
-                _ => (),
-            }
-        }
-        curve_groups.push(curve_group.clone());
-        facet_groups.push(facet_group.clone());
-        curves.extend(curve_group);
-        facets.extend(facet_group);
-    }
-    (curves, facets, curve_groups, facet_groups)
-}
 
-pub fn get_reshaped_point(point: &Vec3, mat4: Mat4) -> Vec3 { // [f32; 3] {
-    mat4.mul_vec4(point.extend(1.)).truncate() //mat4.mul_vec4(Vec3::from_slice(point).extend(1.)).truncate().to_array()
-}
+
+
+
 
 // pub fn get_line_intersection2(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2) -> Option<Vec2> {
 //     // let t = ((p1.x - p3.x)*(p3.y - p4.y) - (p1.y - p3.y)*(p3.x - p4.x)) 
@@ -243,14 +245,6 @@ pub fn get_reshaped_point(point: &Vec3, mat4: Mat4) -> Vec3 { // [f32; 3] {
 //     }
 //     Some(vec2(x, y))
 // }
-
-pub fn get_vector_hash(vecf32: &Vec<f32>) -> u64 {
-    let veci32: Vec<u64> = vecf32.iter().enumerate().map(|(i, v)| i as u64 * (v * 10000.).floor() as u64).collect();
-    veci32.iter().sum()
-    // let mut hasher = DefaultHasher::new();
-    // veci32.hash(&mut hasher);
-    // hasher.finish()
-}
 
 // pub fn get_curves_and_facets(parts: &Vec<Model>) -> (Vec<CurveShape>, Vec<FacetShape>) {
 //     let mut curves = vec![];

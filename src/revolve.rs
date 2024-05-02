@@ -1,5 +1,5 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{get_reshaped_point, get_shapes, nurbs::Nurbs, CurveShape, FacetShape, Reshape, Model, Rectangle, Shape};
+use crate::{log, nurbs::Nurbs, CurveShape, Model, ModelsToShapes, Reshape, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -12,8 +12,8 @@ use glam::*;
 pub struct Revolve {
     pub parts:  Vec<Model>,
     pub reshape: Reshape,
-    pub center: Vec3,//[f32; 3],
-    pub axis:   Vec3,//[f32; 3],
+    pub center: Vec3,
+    pub axis:   Vec3,
     pub angle:  f32,
 }
 
@@ -30,65 +30,46 @@ impl Default for Revolve {
 }
 
 impl Revolve {
-    pub fn get_shapes(&self) -> Vec<Shape> { // , query: &DiscreteQuery
-        let mut angle = self.angle;
-        if angle == 0. {angle = PI*2.};
-        let mut basis = RevolveBasis::new(self.center, self.axis, angle);
-        basis.add_intermediate_turn_if_needed(FRAC_PI_2,    FRAC_PI_4,    angle);
-        basis.add_intermediate_turn_if_needed(PI,           FRAC_PI_4*3., angle);
-        basis.add_intermediate_turn_if_needed(FRAC_PI_2*3., FRAC_PI_4*5., angle);
-        basis.add_second_to_last_turn(angle);
-        basis.nurbs.normalize_knots();
-        let final_turn = basis.get_matrix(angle, 1.);
-        let mut shapes = vec![];
-        for shape in get_shapes(&self.parts) {
-            if angle.abs() < PI*2. {
-                shapes.push(shape.clone());
+    pub fn get_shapes(&self) -> Vec<CurveShape> { // , query: &DiscreteQuery
+        let shapes0 = self.parts.shapes();
+        if self.angle == 0. {
+            return shapes0;
+        }
+        console_log!("revolve center, axis, angle {:?}, {:?}, {}", self.center, self.axis, self.angle);
+        let mut basis = RevolveBasis::new(self.center, self.axis, self.angle);
+        basis.add_intermediate_turn_if_needed(FRAC_PI_2,    FRAC_PI_4,    self.angle);
+        basis.add_intermediate_turn_if_needed(PI,           FRAC_PI_4*3., self.angle);
+        basis.add_intermediate_turn_if_needed(FRAC_PI_2*3., FRAC_PI_4*5., self.angle);
+        basis.add_second_to_last_turn(self.angle);
+        basis.nurbs.normalize();
+        let final_turn = basis.get_matrix(self.angle, 1.);
+        let high_rank = shapes0.high_rank();
+        let mut shapes1 = vec![];
+        //let mut cap_shapes = vec![];
+        if self.angle < PI*2. {
+            shapes1 = shapes0.clone(); // + cap_shapes; overload + operator to combine shapes
+            //cap_shapes = shapes0.invert().reshape(final_turn);
+            //shapes1.extend(cap_shapes);
+        }
+        for shape0 in shapes0 {
+            let mut shape1 = shape0.clone();
+            shape1.invert().reshaped(final_turn);
+            if self.angle.abs() < PI*2. {
+                shapes1.push(shape1.clone());
             }
-            match &shape {
-                Shape::Point(point) => {
-                    // let mut curve = CurveShape {
-                    //     nurbs: basis.nurbs.clone(),
-                    //     controls: vec![*point], 
-                    //     min: 0.,
-                    //     max: 1.,
-                    // };
-                    let mut curve = CurveShape::from_nurbs_and_controls(
-                        basis.nurbs.clone(), 
-                        vec![*point]
-                    );
-                    for &mat4 in &basis.transforms {
-                        curve.controls.push(get_reshaped_point(point, mat4)); 
-                    }
-                    curve.controls.push(get_reshaped_point(point, final_turn)); 
-                    //curve.controls.reverse();
-                    shapes.push(Shape::Curve(curve));
-                    //if angle.abs() < PI*2. {
-                        shapes.push(shape.clone().get_reshape(final_turn));
-                    //}
-                },
-                Shape::Curve(curve) => {
-                    let mut facet = FacetShape {
-                        nurbs: basis.nurbs.clone(),
-                        controls:   vec![curve.clone()], 
-                        boundaries: Rectangle::unit(),
-                    };
-                    for &mat4 in &basis.transforms {
-                        facet.controls.push(curve.get_reshape(mat4)); 
-                    }
-                    facet.controls.push(curve.get_reshape(final_turn)); 
-                    facet.controls.reverse();
-                    shapes.push(Shape::Facet(facet));
-                    if angle.abs() < PI*2. {
-                        shapes.push(shape.clone().get_reshape(final_turn));
-                    }
-                },
-                Shape::Facet(facet) => {
-                    shapes.push(Shape::Facet(facet.get_reverse_reshape(final_turn)));
-                },
+            if high_rank == 0 || shape0.rank < high_rank {
+                let mut shape2 = basis.nurbs.shape(); 
+                shape2.controls = vec![shape0.clone()];
+                for &mat4 in &basis.transforms { // TODO: rename to turns
+                    log("turn");
+                    shape2.controls.push(shape1.reshaped(mat4)); 
+                }
+                shape2.controls.push(shape1);
+                shape2.validate(); 
+                shapes1.push(shape2);
             }
         }
-        self.reshape.get_reshapes(shapes) 
+        self.reshape.get_reshapes(shapes1) 
     }
 }
 
@@ -155,3 +136,51 @@ impl RevolveBasis {
     }
 }
 
+
+
+
+
+// match &shape {
+//     Shape::Point(point) => {
+//         // let mut curve = CurveShape {
+//         //     nurbs: basis.nurbs.clone(),
+//         //     controls: vec![*point], 
+//         //     min: 0.,
+//         //     max: 1.,
+//         // };
+//         let mut curve = CurveShape::from_nurbs_and_controls(
+//             basis.nurbs.clone(), 
+//             vec![*point]
+//         );
+//         for &mat4 in &basis.transforms {
+//             curve.controls.push(get_reshaped_point(point, mat4)); 
+//         }
+//         curve.controls.push(get_reshaped_point(point, final_turn)); 
+//         //curve.controls.reverse();
+//         shapes.push(Shape::Curve(curve));
+//         //if angle.abs() < PI*2. {
+//             shapes.push(shape.clone().get_reshape(final_turn));
+//         //}
+//     },
+//     Shape::Curve(curve) => {
+//         let mut facet = FacetShape {
+//             nurbs: basis.nurbs.clone(),
+//             controls:   vec![curve.clone()], 
+//             boundaries: Rectangle::unit(),
+//         };
+//         for &mat4 in &basis.transforms {
+//             facet.controls.push(curve.reshaped(mat4)); 
+//         }
+//         facet.controls.push(curve.reshaped(final_turn)); 
+//         facet.controls.reverse();
+//         shapes.push(Shape::Facet(facet));
+//         if angle.abs() < PI*2. {
+//             shapes.push(shape.clone().get_reshape(final_turn));
+//         }
+//     },
+//     Shape::Facet(facet) => {
+//         shapes.push(Shape::Facet(facet.get_reverse_reshape(final_turn)));
+//     },
+// }
+// }
+// self.reshape.get_reshapes(shapes) 

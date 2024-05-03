@@ -108,9 +108,7 @@ impl SketchShape {
     }
     fn turn(&mut self, angle: f32, radius: f32) -> &mut Self {
         let center = self.turtle.pos + self.turtle.dir.perp() * radius * angle.signum(); 
-        //console_log!("turtle pos and center {:?}, {:?}", self.turtle.pos, center);
         if radius > 0. {
-            //console_log!("angle {}", angle);
             let revolve = Revolve {
                 parts: vec![Model::Point(self.turtle.pos.extend(0.))], 
                 center: center.extend(0.),
@@ -118,17 +116,7 @@ impl SketchShape {
                 angle: angle.abs(),
                 ..Default::default()
             };
-            let shapes = revolve.get_shapes();
-            // let shape = &shapes[2];
-            // let points: Vec<Vec3> = shape.controls.iter().map(|x| x.vector.unwrap()).collect();
-            // console_log!("points {:?}", points);
-            // console_log!("rank {}", shape.rank);
-            // console_log!("vector {:?}", shape.vector);
-            // console_log!("order {}", shape.nurbs.order);
-            // console_log!("knots {:?}", shape.nurbs.knots);
-            // console_log!("weights {:?}", shape.nurbs.weights);
-            // console_log!("control len {}", shape.controls.len());
-            self.shapes.extend(shapes);
+            self.shapes.extend(revolve.get_shapes());
         }
         self.turtle.turn(center, angle);
         self
@@ -189,7 +177,8 @@ impl Circle {
                     let arrow = shapes[0].get_arrow(&[i as f32 / (self.arrows - 1) as f32]);
                     curve.controls.push(CurveShape::from_point(arrow.point));
                     curve.controls.push(CurveShape::from_point(arrow.point + arrow.delta));
-                    shapes.push(curve.get_valid());
+                    curve.validate();
+                    shapes.push(curve);
                 }
             //}
         }

@@ -41,7 +41,7 @@ impl Default for Curve {
 
 impl Curve {
     pub fn get_shapes(&self) -> Vec<CurveShape> {
-        let mut shapes = vec![CurveShape{
+        let mut curve = CurveShape{
             nurbs: self.nurbs.clone(),
             controls: self.controls.shapes(),
             boundaries: vec![],
@@ -50,18 +50,20 @@ impl Curve {
             rectifier: None,
             vector: None,
             rank: 1,
-        }.get_valid()];
-        //let mut shapes = revolve.get_shapes();
+        };
+        curve.validate();
+        let mut shapes = vec![];
         if self.arrows > 0 {
-            //let count = 30;
             for i in 0..self.arrows {
-                let mut curve = CurveShape::default();
-                let arrow = shapes[0].get_arrow(&[i as f32 / (self.arrows - 1) as f32]);
-                curve.controls.push(CurveShape::from_point(arrow.point));
-                curve.controls.push(CurveShape::from_point(arrow.point + arrow.delta));
-                shapes.push(curve.get_valid());
+                let mut arrow_curve = CurveShape::default();
+                let arrow = curve.get_arrow(&[i as f32 / (self.arrows - 1) as f32]);
+                arrow_curve.controls.push(CurveShape::from_point(arrow.point));
+                arrow_curve.controls.push(CurveShape::from_point(arrow.point + arrow.delta));
+                arrow_curve.validate();
+                shapes.push(arrow_curve);
             }
         }
+        shapes.push(curve);
         shapes
     }
 }
@@ -126,16 +128,12 @@ impl CurveShape {
     //     curve
     // }
 
-    // pub fn rank(&self) -> u8 {
-    //     self.get_rank(0)
-    // }
-
     fn get_rank(&self, rank0: u8) -> u8 {
-        let mut rank1 = 0;
+        let mut rank1 = rank0;
         for control in &self.controls {
             rank1 = control.get_rank(rank0 + 1).max(rank1);
         }
-        return rank0 + rank1;
+        return rank1;
     }
 
     pub fn negate(&mut self) -> &mut Self {
@@ -239,10 +237,18 @@ impl CurveShape {
     }
 
     pub fn get_polyline_vector(&self, query: &DiscreteQuery) -> Vec<f32> {
-        let curve = self.get_valid();
-        let count = curve.nurbs.get_sample_count(query.count);
+        //let curve = self.get_valid();
+        // let mut shape = self.clone();
+        // shape.validate();
+        // console_log!("rank {}", shape.rank);
+        // console_log!("vector {:?}", shape.vector);
+        // console_log!("order {}", shape.nurbs.order);
+        // console_log!("knots {:?}", shape.nurbs.knots);
+        // console_log!("weights {:?}", shape.nurbs.weights);
+        // console_log!("control len {}", shape.controls.len());
+        let count = self.nurbs.get_sample_count(query.count);
         (0..count).into_iter()
-            .map(|u| curve.get_point(&[u as f32 / (count-1) as f32]).to_array()) 
+            .map(|u| self.get_point(&[u as f32 / (count-1) as f32]).to_array()) 
             .flatten().collect()
     }
 
@@ -314,21 +320,21 @@ impl CurveShape {
         self
     }
 
-    pub fn get_valid(&self) -> CurveShape {
-        CurveShape {
-            nurbs: self.nurbs.get_valid(self.controls.len()),
-            controls: self.controls.clone(), 
-            boundaries: self.boundaries.clone(),
-            min: self.min,
-            max: self.max,
-            rank: self.rank,
-            rectifier: self.rectifier.clone(),
-            vector: self.vector,
-        }
-    }
+    // pub fn get_valid(&self) -> CurveShape {
+    //     CurveShape {
+    //         nurbs: self.nurbs.get_valid(self.controls.len()),
+    //         controls: self.controls.clone(), 
+    //         boundaries: self.boundaries.clone(),
+    //         min: self.min,
+    //         max: self.max,
+    //         rank: self.rank,
+    //         rectifier: self.rectifier.clone(),
+    //         vector: self.vector,
+    //     }
+    // }
 
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { 
-        let facet = self.get_valid();
+        let facet = self;
         let mut u_count = 0;
         for curve in &facet.controls {
             let sample_count = curve.nurbs.get_sample_count(query.count);

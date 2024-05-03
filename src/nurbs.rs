@@ -36,7 +36,7 @@ impl Nurbs {
             max: 1.,  
             rank: 0,
             rectifier: None,
-            vector: None, // Some(Vec3::ZERO)
+            vector: None, 
         }
     }
 
@@ -66,7 +66,7 @@ impl Nurbs {
 
     fn make_knots(&mut self, control_len: usize) {
         let repeats = self.order - 1; 
-        let max = control_len - 1;
+        let max = control_len - self.order + 1;
         self.knots = vec![0.; repeats];
         self.knots.extend((0..=max).map(|k| k as f32 / max as f32));
         self.knots.extend(vec![1.; repeats]);
@@ -78,46 +78,6 @@ impl Nurbs {
         }
     }
 
-    fn get_valid(&self, control_count: usize) -> Self {
-        let order = self.order.min(control_count); // .max(2)
-        let mut sign = self.sign;
-        if sign.abs() != 1. {sign = 1.;}
-        Nurbs {
-            sign,
-            order,//:   self.get_valid_order(control_count),
-            knots:   self.get_valid_knots(control_count, order),
-            weights: self.get_valid_weights(control_count),
-        }
-    }
-
-    fn get_valid_weights(&self, control_count: usize) -> Vec<f32> {
-        if self.weights.len() == control_count {
-            self.weights.clone()
-        } else {
-            vec![1.; control_count]
-        }
-    }
-
-    fn get_valid_knots(&self, control_len: usize, order: usize) -> Vec<f32> {
-        if self.knots.len() == control_len + order { 
-            let last_knot = self.knots.last().unwrap();
-            self.knots.iter().map(|k| k / last_knot).collect()
-        } else {
-            self.get_open_knots(control_len, order)
-        }
-    }
-
-    fn get_open_knots(&self, control_count: usize, order: usize) -> Vec<f32> {
-        let repeats = order - 1; // knot multiplicity = order for ends of knot vector
-        let max_knot = control_count + order - (repeats * 2) - 1;
-        let mut knots = vec![0_f32; repeats];
-        knots.extend((0..=max_knot).map(|k| k as f32));
-        knots.extend(vec![max_knot as f32; repeats]);
-        let last_knot = knots.last().unwrap();
-        knots = knots.iter().map(|k| k / last_knot).collect();
-        knots
-    }
-
     fn get_knot_index(&self, u: f32) -> usize {
         for i in 0..self.knots.len()-1 { 
             if u >= self.knots[i] && u < self.knots[i+1] { 
@@ -126,15 +86,6 @@ impl Nurbs {
         }
         return self.knots.len() - self.order - 1;
     }
-
-    // fn get_knot_index(&self, u: f32) -> Option<usize> {
-    //     for i in 0..self.knots.len()-1 { 
-    //         if u >= self.knots[i] && u < self.knots[i+1] { 
-    //             return Some(i)
-    //         }
-    //     }
-    //     None
-    // }
 
     fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
         let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);
@@ -188,6 +139,47 @@ impl Nurbs {
         basis
     }
 }
+
+
+// fn get_valid(&self, control_count: usize) -> Self {
+//     let order = self.order.min(control_count); // .max(2)
+//     let mut sign = self.sign;
+//     if sign.abs() != 1. {sign = 1.;}
+//     Nurbs {
+//         sign,
+//         order,//:   self.get_valid_order(control_count),
+//         knots:   self.get_valid_knots(control_count, order),
+//         weights: self.get_valid_weights(control_count),
+//     }
+// }
+
+// fn get_valid_weights(&self, control_count: usize) -> Vec<f32> {
+//     if self.weights.len() == control_count {
+//         self.weights.clone()
+//     } else {
+//         vec![1.; control_count]
+//     }
+// }
+
+// fn get_valid_knots(&self, control_len: usize, order: usize) -> Vec<f32> {
+//     if self.knots.len() == control_len + order { 
+//         let last_knot = self.knots.last().unwrap();
+//         self.knots.iter().map(|k| k / last_knot).collect()
+//     } else {
+//         self.get_open_knots(control_len, order)
+//     }
+// }
+
+// fn get_open_knots(&self, control_count: usize, order: usize) -> Vec<f32> {
+//     let repeats = order - 1; // knot multiplicity = order for ends of knot vector
+//     let max_knot = control_count + order - (repeats * 2) - 1;
+//     let mut knots = vec![0_f32; repeats];
+//     knots.extend((0..=max_knot).map(|k| k as f32));
+//     knots.extend(vec![max_knot as f32; repeats]);
+//     let last_knot = knots.last().unwrap();
+//     knots = knots.iter().map(|k| k / last_knot).collect();
+//     knots
+// }
 
 
 //((k1-u)/(k1-k0)*(k1-u)/(k1-r1)*a) / k1u/k1k0*k1u/k1r1*a + 

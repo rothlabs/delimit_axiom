@@ -44,9 +44,9 @@ impl Area {
             boundary.controls = normalized_points;
             facet.boundaries.push(boundary); 
         }
-        let valid_facet = facet.get_valid();
+        facet.validate();
         //console_log!("face boundary count: {}", valid_facet.boundaries.len());
-        shapes.push(valid_facet);
+        shapes.push(facet);
         self.reshape.get_reshapes(shapes)
     }
     pub fn from_parts(parts: Vec<Model>) -> Self {

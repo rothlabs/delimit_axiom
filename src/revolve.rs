@@ -35,7 +35,6 @@ impl Revolve {
         if self.angle == 0. {
             return shapes0;
         }
-        console_log!("revolve center, axis, angle {:?}, {:?}, {}", self.center, self.axis, self.angle);
         let mut basis = RevolveBasis::new(self.center, self.axis, self.angle);
         basis.add_intermediate_turn_if_needed(FRAC_PI_2,    FRAC_PI_4,    self.angle);
         basis.add_intermediate_turn_if_needed(PI,           FRAC_PI_4*3., self.angle);
@@ -45,24 +44,20 @@ impl Revolve {
         let final_turn = basis.get_matrix(self.angle, 1.);
         let high_rank = shapes0.high_rank();
         let mut shapes1 = vec![];
-        //let mut cap_shapes = vec![];
         if self.angle < PI*2. {
             shapes1 = shapes0.clone(); // + cap_shapes; overload + operator to combine shapes
-            //cap_shapes = shapes0.invert().reshape(final_turn);
-            //shapes1.extend(cap_shapes);
         }
         for shape0 in shapes0 {
             let mut shape1 = shape0.clone();
-            shape1.invert().reshaped(final_turn);
+            shape1 = shape1.invert().reshaped(final_turn);
             if self.angle.abs() < PI*2. {
                 shapes1.push(shape1.clone());
             }
             if high_rank == 0 || shape0.rank < high_rank {
                 let mut shape2 = basis.nurbs.shape(); 
                 shape2.controls = vec![shape0.clone()];
-                for &mat4 in &basis.transforms { // TODO: rename to turns
-                    log("turn");
-                    shape2.controls.push(shape1.reshaped(mat4)); 
+                for &mat4 in &basis.turns { 
+                    shape2.controls.push(shape0.reshaped(mat4)); 
                 }
                 shape2.controls.push(shape1);
                 shape2.validate(); 
@@ -78,7 +73,7 @@ struct RevolveBasis {
     axis: Vec3,
     direction: f32,
     base_angle: f32,
-    transforms: Vec<Mat4>,
+    turns: Vec<Mat4>,
     translation: Mat4,
     reverse_translation: Mat4,
 }
@@ -95,7 +90,7 @@ impl RevolveBasis {
             axis,
             direction: angle.signum(),
             base_angle: 0.,
-            transforms: vec![],
+            turns: vec![],
             translation: Mat4::from_translation(center),
             reverse_translation: Mat4::from_translation(-center),
         }
@@ -120,7 +115,7 @@ impl RevolveBasis {
 
     fn add_transform(&mut self, angle: f32, weight: f32) {
         let mat4 = self.get_matrix(angle, weight);
-        self.transforms.push(mat4);
+        self.turns.push(mat4);
     }
 
     // TODO: fix skew/warp from diagonal axis!!!

@@ -223,11 +223,12 @@ pub fn get_traced_curves(
         // let mut curve0 = rays0a.to_curve();
         // let mut curve1 = rays1a.to_curve();
         // let mut curve2 = rays2a.to_curve();
-        curve0.negate();
-        curve1.negate();
-        curve0 = curve0.get_valid();
-        curve1 = curve1.get_valid();
-        curve2 = curve2.get_valid();
+        curve0.negate().validate();
+        curve1.negate().validate();
+        curve2.validate();
+        // curve0 = curve0.get_valid();
+        // curve1 = curve1.get_valid();
+        // curve2 = curve2.get_valid();
         traced_curves.push(HitPair3{
             pair: hit_pairs[i].clone(),
             curve0,

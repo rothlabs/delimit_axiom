@@ -3,12 +3,9 @@ use crate::{log, nurbs::Nurbs, CurveShape, Model, ModelsToShapes, Reshape, Shape
 use serde::{Deserialize, Serialize};
 use glam::*;
 
-// macro_rules! console_log {
-//     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-// }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(default)] //  = "Revolve::default"
+#[serde(default)] 
 pub struct Revolve {
     pub parts:  Vec<Model>,
     pub reshape: Reshape,
@@ -48,20 +45,20 @@ impl Revolve {
             shapes1 = shapes0.clone(); // + cap_shapes; overload + operator to combine shapes
         }
         for shape0 in shapes0 {
-            let mut shape1 = shape0.clone();
-            shape1 = shape1.invert().reshaped(final_turn);
+            let shape1 = shape0.inverted();
+            let shape2 = shape1.reshaped(final_turn);
             if self.angle.abs() < PI*2. {
-                shapes1.push(shape1.clone());
+                shapes1.push(shape2.clone());
             }
             if high_rank == 0 || shape0.rank < high_rank {
-                let mut shape2 = basis.nurbs.shape(); 
-                shape2.controls = vec![shape0.clone()];
+                let mut shape3 = basis.nurbs.shape(); 
+                shape3.controls = vec![shape1.clone()];
                 for &mat4 in &basis.turns { 
-                    shape2.controls.push(shape0.reshaped(mat4)); 
+                    shape3.controls.push(shape1.reshaped(mat4)); 
                 }
-                shape2.controls.push(shape1);
-                shape2.validate(); 
-                shapes1.push(shape2);
+                shape3.controls.push(shape2);
+                shape3.validate(); 
+                shapes1.push(shape3);
             }
         }
         self.reshape.get_reshapes(shapes1) 
@@ -130,52 +127,3 @@ impl RevolveBasis {
         * self.reverse_translation
     }
 }
-
-
-
-
-
-// match &shape {
-//     Shape::Point(point) => {
-//         // let mut curve = CurveShape {
-//         //     nurbs: basis.nurbs.clone(),
-//         //     controls: vec![*point], 
-//         //     min: 0.,
-//         //     max: 1.,
-//         // };
-//         let mut curve = CurveShape::from_nurbs_and_controls(
-//             basis.nurbs.clone(), 
-//             vec![*point]
-//         );
-//         for &mat4 in &basis.transforms {
-//             curve.controls.push(get_reshaped_point(point, mat4)); 
-//         }
-//         curve.controls.push(get_reshaped_point(point, final_turn)); 
-//         //curve.controls.reverse();
-//         shapes.push(Shape::Curve(curve));
-//         //if angle.abs() < PI*2. {
-//             shapes.push(shape.clone().get_reshape(final_turn));
-//         //}
-//     },
-//     Shape::Curve(curve) => {
-//         let mut facet = FacetShape {
-//             nurbs: basis.nurbs.clone(),
-//             controls:   vec![curve.clone()], 
-//             boundaries: Rectangle::unit(),
-//         };
-//         for &mat4 in &basis.transforms {
-//             facet.controls.push(curve.reshaped(mat4)); 
-//         }
-//         facet.controls.push(curve.reshaped(final_turn)); 
-//         facet.controls.reverse();
-//         shapes.push(Shape::Facet(facet));
-//         if angle.abs() < PI*2. {
-//             shapes.push(shape.clone().get_reshape(final_turn));
-//         }
-//     },
-//     Shape::Facet(facet) => {
-//         shapes.push(Shape::Facet(facet.get_reverse_reshape(final_turn)));
-//     },
-// }
-// }
-// self.reshape.get_reshapes(shapes) 

@@ -38,10 +38,28 @@ pub trait UnionBatchTrait { // TODO: rename to Union in different module from "M
 
 impl UnionBatchTrait for Vec<Vec<Vec<CurveShape>>> { // jobs, groups, curves
     fn union(self) -> Vec<Vec<CurveShape>> { 
-        let batch = UnionIndexBatch::new(&self);
-        let shapes: Vec<CurveShape> = self.clone().into_iter().flatten().flatten().collect();
-        if shapes.high_rank() < 2 {
-            get_union2_shapes(self, shapes, batch)
+        let shapes0: Vec<CurveShape> = self.clone().into_iter().flatten().flatten().collect();
+        if shapes0.high_rank() < 2 {
+            let mut result = vec![];
+            for groups in &self {
+                result.push(groups[0].clone());
+            }
+            let mut gi = 1;
+            loop {
+                let mut jobs = vec![];
+                let mut done = true;
+                for (ji, groups) in self.iter().enumerate() {
+                    jobs.push(vec![result[ji].clone()]);
+                    if gi < groups.len() {
+                        jobs[ji].push(groups[gi].clone());
+                        done = false
+                    }
+                }
+                if done { break }
+                result = get_union2_shapes(jobs);
+                gi += 1;
+            }
+            result
         }else{
             vec![UnionBasis3::get_shapes(self)]
         }
@@ -58,7 +76,7 @@ pub struct UnionIndexBatch {
 }
 
 impl UnionIndexBatch {
-    pub fn new<T>(jobs: &Vec<Vec<Vec<T>>>) -> Self {
+    pub fn new(jobs: &Vec<Vec<Vec<CurveShape>>>) -> Self {
         let (starts, indexes) = job_indexes(jobs);
         UnionIndexBatch {
             pairs: job_pairs(&starts, jobs),
@@ -75,18 +93,20 @@ impl UnionIndexBatch {
     }
 }
 
-pub fn job_pairs<T>(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<T>>>) -> Vec<TestPair> {
+pub fn job_pairs(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<CurveShape>>>) -> Vec<TestPair> {
     let mut pairs = vec![];
     for (ji, groups) in jobs.iter().enumerate() {
         for g1 in 1..groups.len(){
             for g0 in 0..g1 {
                 for c0 in 0..groups[g0].len(){
                     for c1 in 0..groups[g1].len(){
-                        pairs.push(TestPair{
-                            i0: starts[0][ji] + starts[1][g0] + c0, 
-                            i1: starts[0][ji] + starts[1][g1] + c1,
-                            reverse: false,
-                        });
+                        //if groups[g0][c0].rank == 1 && groups[g1][c1].rank == 1 {
+                            pairs.push(TestPair{
+                                i0: starts[0][ji] + starts[1][g0] + c0, 
+                                i1: starts[0][ji] + starts[1][g1] + c1,
+                                reverse: false,
+                            });
+                        //}
                     }  
                 }   
             }
@@ -96,6 +116,44 @@ pub fn job_pairs<T>(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<T>>>) -> Vec<Te
 }
 
 
+
+// impl UnionIndexBatch {
+//     pub fn new<T>(jobs: &Vec<Vec<Vec<T>>>) -> Self {
+//         let (starts, indexes) = job_indexes(jobs);
+//         UnionIndexBatch {
+//             pairs: job_pairs(&starts, jobs),
+//             indexes,
+//         }
+//     }
+//     // pub fn hit_miss(&self) {
+        
+//     // }
+//     pub fn index(&self, pair: &TestPair) -> (usize, usize, usize, usize, usize) {
+//         let (_,  g0, i0) = self.indexes[pair.i0];
+//         let (ji, g1, i1) = self.indexes[pair.i1];
+//         (ji, g0, i0, g1, i1)
+//     }
+// }
+
+// pub fn job_pairs<T>(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<T>>>) -> Vec<TestPair> {
+//     let mut pairs = vec![];
+//     for (ji, groups) in jobs.iter().enumerate() {
+//         for g1 in 1..groups.len(){
+//             for g0 in 0..g1 {
+//                 for c0 in 0..groups[g0].len(){
+//                     for c1 in 0..groups[g1].len(){
+//                         pairs.push(TestPair{
+//                             i0: starts[0][ji] + starts[1][g0] + c0, 
+//                             i1: starts[0][ji] + starts[1][g1] + c1,
+//                             reverse: false,
+//                         });
+//                     }  
+//                 }   
+//             }
+//         }
+//     }
+//     pairs
+// }
 
 
 

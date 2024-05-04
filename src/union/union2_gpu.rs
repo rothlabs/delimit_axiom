@@ -1,34 +1,12 @@
 use crate::{log, CurveShape, UnionIndexBatch};
 use crate::hit::{hit2_gpu::HitTest2, Miss, HitMiss2, Hit2};
 
-// pub trait UnionCurves2 {
-//     fn union(self) -> Vec<CurveShape>;
-// }
-
-// impl UnionCurves2 for [Vec<CurveShape>; 2] { 
-//     fn union(self) -> Vec<CurveShape> {
-//         let mut shapes0 = vec![];
-//         for curve in self[0].clone() {
-//                 shapes0.push(Shape::Curve(curve));
-//         }
-//         let mut shapes1 = vec![];
-//         for curve in self[1].clone() {
-//             shapes1.push(Shape::Curve(curve));
-//         }
-//         let mut curves = vec![];
-//         for shape in vec![vec![shapes0, shapes1]].union()[0].clone() {
-//             if let Shape::Curve(curve) = shape {
-//                 curves.push(curve);
-//             }
-//         }
-//         curves
-//     }
-// }
-
-pub fn get_union2_shapes(job: Vec<Vec<Vec<CurveShape>>>, shapes: Vec<CurveShape>, batch: UnionIndexBatch) -> Vec<Vec<CurveShape>> {
+pub fn get_union2_shapes(jobs: Vec<Vec<Vec<CurveShape>>>) -> Vec<Vec<CurveShape>> { // , shapes: Vec<CurveShape>, batch: UnionIndexBatch
+    let batch = UnionIndexBatch::new(&jobs);
+    let shapes: Vec<CurveShape> = jobs.clone().into_iter().flatten().flatten().collect();
     let (hits2, misses) = shapes.hit2(&batch.pairs);
-    let mut hits:   Vec<[Vec<HitMiss2>; 2]> = vec![[vec![], vec![]]; job.len()];
-    for (ji, groups) in job.iter().enumerate() {
+    let mut hits:   Vec<[Vec<HitMiss2>; 2]> = vec![[vec![], vec![]]; jobs.len()];
+    for (ji, groups) in jobs.iter().enumerate() {
         hits[ji][0].extend(vec![HitMiss2::default(); groups[0].len()]);
         hits[ji][1].extend(vec![HitMiss2::default(); groups[1].len()]);
     }
@@ -43,7 +21,7 @@ pub fn get_union2_shapes(job: Vec<Vec<Vec<CurveShape>>>, shapes: Vec<CurveShape>
         hits[ji][g1][i1].misses.push(Miss{dot:miss.dot1, distance:miss.distance});
     }
     let mut results = vec![];
-    for (ji, groups) in job.iter().enumerate() {
+    for (ji, groups) in jobs.iter().enumerate() {
         let curves = UnionBasis2::shape([&groups[0], &groups[1]], &hits[ji]); 
         results.push(curves);
     }
@@ -112,6 +90,34 @@ impl UnionBasis2 {
         }
     }
 }
+
+
+
+
+// pub trait UnionCurves2 {
+//     fn union(self) -> Vec<CurveShape>;
+// }
+
+// impl UnionCurves2 for [Vec<CurveShape>; 2] { 
+//     fn union(self) -> Vec<CurveShape> {
+//         let mut shapes0 = vec![];
+//         for curve in self[0].clone() {
+//                 shapes0.push(Shape::Curve(curve));
+//         }
+//         let mut shapes1 = vec![];
+//         for curve in self[1].clone() {
+//             shapes1.push(Shape::Curve(curve));
+//         }
+//         let mut curves = vec![];
+//         for shape in vec![vec![shapes0, shapes1]].union()[0].clone() {
+//             if let Shape::Curve(curve) = shape {
+//                 curves.push(curve);
+//             }
+//         }
+//         curves
+//     }
+// }
+
 
 
 

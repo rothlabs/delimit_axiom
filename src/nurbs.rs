@@ -46,7 +46,10 @@ impl Nurbs {
     }
 
     fn validate(&mut self, control_len: usize) {
-        self.order = self.order.min(control_len);
+        self.order = self.order.min(control_len).max(2);
+        if control_len < 2 {
+            self.order = 1;
+        }
         self.validate_knots(control_len);
         if self.weights.len() != control_len {
             self.weights = vec![1.; control_len];

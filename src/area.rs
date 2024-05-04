@@ -1,5 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{CurveShape, Model, ModelsToShapes, Reshape, Shapes};
+use crate::{log, CurveShape, Model, ModelsToShapes, Reshape, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -24,12 +24,12 @@ impl Area {
         let mut facet  = CurveShape::default();
         let mut curve0 = CurveShape::default();
         let mut curve1 = CurveShape::default();
-
         curve0.controls.push(CurveShape::from_point(vec3(min.x, min.y, 0.)));
         curve0.controls.push(CurveShape::from_point(vec3(max.x, min.y, 0.)));
         curve1.controls.push(CurveShape::from_point(vec3(min.x, max.y, 0.)));
         curve1.controls.push(CurveShape::from_point(vec3(max.x, max.y, 0.)));
-        
+        curve0.validate();
+        curve1.validate();
         facet.controls.extend([curve0, curve1]);
         for curve in shapes.of_rank(1) {
             let mut boundary = curve.clone();
@@ -45,7 +45,6 @@ impl Area {
             facet.boundaries.push(boundary); 
         }
         facet.validate();
-        //console_log!("face boundary count: {}", valid_facet.boundaries.len());
         shapes.push(facet);
         self.reshape.get_reshapes(shapes)
     }

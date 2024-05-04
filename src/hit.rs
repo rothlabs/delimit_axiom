@@ -31,7 +31,7 @@ pub fn job_indexes<T>(jobs: &Vec<Vec<Vec<T>>>) -> ([Vec<usize>; 2], Vec<(usize, 
     (starts, indexes)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TestPair {
     pub i0: usize,
     pub i1: usize,

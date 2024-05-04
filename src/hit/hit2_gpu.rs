@@ -143,7 +143,7 @@ impl HitBasis2 {
     }
 }
 
-
+#[derive(Clone, Debug)]
 struct IndexedU {
     texel_index: usize,
     u: f32
@@ -163,39 +163,42 @@ impl HoneBasis2 {
     pub fn new(shapes: &Vec<CurveShape>, pairs: &Vec<TestPair>) -> Self{
         let mut max_knot_count = 0;
         let mut index_pairs: Vec<TestPair> = vec![];
-        let mut u_groups: Vec<Vec<IndexedU>> = vec![];
+        let mut u_groups: Vec<Vec<IndexedU>> = vec![]; // vec![]; shapes.len()
         let mut curve_texels: Vec<f32> = vec![];
         let mut pair_texels: Vec<i32> = vec![];
         let mut u_texels: Vec<f32> = vec![];
-        for curve in shapes.of_rank(1) {
+        //for (ci, curve) in shapes.of_rank(1).iter().enumerate() {
+        for curve in shapes {
             let mut u_indexes: Vec<IndexedU> = vec![];
-            if curve.nurbs.knots.len() > max_knot_count { 
-                max_knot_count = curve.nurbs.knots.len(); 
-            }
-            let texel_index = curve_texels.len();
-            curve_texels.extend([
-                9000000., // + ci as f32,
-                curve.controls.len() as f32,
-                curve.nurbs.order as f32,
-                curve.min,
-                curve.max,
-            ]); 
-            for i in 0..curve.nurbs.knots.len()-1 {
-                if curve.nurbs.knots[i] < curve.nurbs.knots[i+1] || i == curve.nurbs.knots.len() - curve.nurbs.order {
-                    // if curve.nurbs.knots[i] > 1. {
-                    //     log("what?!?????????");
-                    // }
-                    u_indexes.push(IndexedU{
-                        texel_index, 
-                        u: curve.nurbs.knots[i],
-                    }); 
+            if curve.rank == 1 {
+                if curve.nurbs.knots.len() > max_knot_count { 
+                    max_knot_count = curve.nurbs.knots.len(); 
                 }
-                curve_texels.push(curve.nurbs.knots[i]);
-            }  
-            curve_texels.push(curve.nurbs.knots[curve.nurbs.knots.len()-1]);
-            curve_texels.extend(&curve.nurbs.weights);
-            for control in &curve.controls {
-                curve_texels.extend(control.get_point(&[]).to_array());
+                let texel_index = curve_texels.len();
+                curve_texels.extend([
+                    9000000., // + ci as f32,
+                    curve.controls.len() as f32,
+                    curve.nurbs.order as f32,
+                    curve.min,
+                    curve.max,
+                ]); 
+                for i in 0..curve.nurbs.knots.len()-1 {
+                    if curve.nurbs.knots[i] < curve.nurbs.knots[i+1] || i == curve.nurbs.knots.len() - curve.nurbs.order {
+                        // if curve.nurbs.knots[i] > 1. {
+                        //     log("what?!?????????");
+                        // }
+                        u_indexes.push(IndexedU{
+                            texel_index, 
+                            u: curve.nurbs.knots[i],
+                        }); 
+                    }
+                    curve_texels.push(curve.nurbs.knots[i]);
+                }  
+                curve_texels.push(curve.nurbs.knots[curve.nurbs.knots.len()-1]);
+                curve_texels.extend(&curve.nurbs.weights);
+                for control in &curve.controls {
+                    curve_texels.extend(control.get_point(&[]).to_array());
+                }
             }
             u_groups.push(u_indexes);
         }
@@ -209,6 +212,10 @@ impl HoneBasis2 {
                 }  
             }  
         }
+        // console_log!("u_groups {:?}", u_groups);
+        // console_log!("index_pairs {:?}", index_pairs);
+        // console_log!("pair_texels {:?}", pair_texels);
+        // console_log!("u_texels {:?}", u_texels);
         HoneBasis2 {
             pairs: index_pairs,
             pair_texels,

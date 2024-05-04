@@ -263,6 +263,7 @@ impl CurveShape {
                     self.controls[ki + i - 3].get_point(params)  * basis.0[i]
                 }).sum()
             }else{
+                self.log();
                 self.vector.expect("There should be a vector if order is 1 or less")
             }
         }else{
@@ -310,6 +311,9 @@ impl CurveShape {
     }
 
     pub fn validate(&mut self) -> &Self {
+        if self.controls.len() == 1 {
+            self.controls.clear();
+        }
         self.nurbs.validate(self.controls.len());
         self.rank = self.get_rank(0);
         if self.boundaries.is_empty() {
@@ -318,6 +322,16 @@ impl CurveShape {
             }
         }
         self
+    }
+
+    pub fn log(&self) {
+        console_log!("rank {}", self.rank);
+        console_log!("vector {:?}", self.vector);
+        console_log!("control len {}", self.controls.len());
+        console_log!("boundary len: {}", self.boundaries.len());
+        console_log!("order {}", self.nurbs.order);
+        console_log!("knots {:?}", self.nurbs.knots);
+        console_log!("weights {:?}", self.nurbs.weights);
     }
 
     // pub fn get_valid(&self) -> CurveShape {
@@ -357,6 +371,7 @@ impl CurveShape {
         let mut bndry_i = 0;
         let mut start_bndry_i = bndry_i;
         let mut used_boundaries = vec![];
+        
         for _ in 0..facet.boundaries.len() {
             let bndry = &facet.boundaries[bndry_i];
             for p in bndry.get_polyline_vector(query).chunks(3) {
@@ -370,6 +385,7 @@ impl CurveShape {
                     loop_open = true;
                 }
             }
+            
             bndry_i = facet.get_next_boundary_index(&bndry.get_point(&[1.]), &mut used_boundaries);
             used_boundaries.push(bndry_i);
             if bndry_i == start_bndry_i {
@@ -392,8 +408,8 @@ impl CurveShape {
         let mut tessellator = FillTessellator::new();
         tessellator.tessellate_path(&path, &options, &mut buffer_builder).expect("Tessellation failed");
         let mut vector = vec![];
-        for [u, v] in geometry.vertices.into_iter(){
-            vector.extend(facet.get_point(&[u, v]).to_array());
+        for uv in geometry.vertices { // .into_iter()
+            vector.extend(facet.get_point(&uv).to_array());
         }
         let mut trivec = geometry.indices;
         for k in 0..trivec.len()/3 {

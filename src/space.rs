@@ -1,51 +1,44 @@
-pub mod curve;
-pub mod facet;
-
 use glam::*;
 use serde::{Deserialize, Serialize};
-
 use crate::Shape;
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
-pub struct Nurbs {
-    pub sign:     f32,
-    pub order:    usize,       // order = polynomial_degree + 1
-    pub knots:    Vec<f32>,    // knot_count = order + control_count
-    pub weights:  Vec<f32>,    // weight_count = control_count
+pub struct Space {
+    pub sign:    f32,
+    pub order:   usize,       // order = polynomial_degree + 1
+    pub min:     f32,
+    pub max:     f32,
+    pub knots:   Vec<f32>,    // knot_count = order + control_count
+    pub weights: Vec<f32>,    // weight_count = control_count
 }
 
-impl Default for Nurbs {
+impl Default for Space {
     fn default() -> Self {
-        Nurbs {
+        Space {
             sign:    1.,
             order:   1,
+            min:     0.,
+            max:     1.,
             knots:   vec![],
-            weights: vec![],    
+            weights: vec![],  
         }
     }
 }
 
-impl Nurbs {
+impl Space {
     pub fn shape(&self) -> Shape {
         Shape {
-            nurbs: self.clone(),
-            controls: vec![],  
-            boundaries: vec![],
-            min: 0.,
-            max: 1.,  
-            rank: 0,
-            rectifier: None,
-            vector: None, 
+            rank:       0,
+            space:      self.clone(),
+            controls:   vec![],  
+            boundaries: vec![], 
+            rectifier:  None,
+            vector:     None, 
         }
     }
 
-    pub fn get_sample_count(&self, count: usize) -> usize { 
-        let mul = self.weights.len()-1;
-        self.weights.len() + count * (self.order - 2) * mul
-    }
-
-    fn validate(&mut self, control_len: usize) {
+    pub fn validate(&mut self, control_len: usize) {
         self.order = self.order.min(control_len).max(2);
         if control_len < 2 {
             self.order = 1;
@@ -67,6 +60,12 @@ impl Nurbs {
         }
     }
 
+    pub fn normalize(&mut self) {
+        if let Some(last) = self.knots.last() {
+            self.knots = self.knots.iter().map(|k| k / last).collect();
+        }
+    }
+
     fn make_knots(&mut self, control_len: usize) {
         let repeats = self.order - 1; 
         let max = control_len - self.order + 1;
@@ -75,14 +74,8 @@ impl Nurbs {
         self.knots.extend(vec![1.; repeats]);
     }
 
-    pub fn normalize(&mut self) {
-        if let Some(last) = self.knots.last() {
-            self.knots = self.knots.iter().map(|k| k / last).collect();
-        }
-    }
-
-    fn get_knot_index(&self, u: f32) -> usize {
-        for i in 0..self.knots.len()-1 { 
+    pub fn knot_index(&self, u: f32) -> usize {
+        for i in 0..self.knots.len() - 1 { 
             if u >= self.knots[i] && u < self.knots[i+1] { 
                 return i;
             }
@@ -90,7 +83,34 @@ impl Nurbs {
         return self.knots.len() - self.order - 1;
     }
 
-    fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
+    pub fn reverse(&mut self) {
+        let min0 = self.min;
+        self.min = 1. - self.max;
+        self.max = 1. - min0;
+        self.knots.reverse();
+        for i in 0..self.knots.len() {
+            self.knots[i] = 1. - self.knots[i];
+        }
+        self.weights.reverse();
+    }
+
+    pub fn u(&self, u: &f32) -> f32 {
+        self.min * (1.-u) + self.max * u
+    }
+
+    pub fn range(&self) -> f32 {
+        self.max - self.min
+    }
+
+    pub fn set_min(&mut self, u: f32) {
+        self.min = self.min*(1.-u) + self.max*u;
+    }
+
+    pub fn set_max(&mut self, min_basis: f32, u: f32) {
+        self.max = min_basis*(1.-u) + self.max*u;
+    }
+
+    pub fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
         let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);
         let k0 = self.knots[knot_index];
         let k1 = self.knots[knot_index + 1];
@@ -131,17 +151,26 @@ impl Nurbs {
             let d0 = a1 + w2xuk0 * uk0 * k1r1;
             let d1 = a1 + w2 * k0u * k0u * k1r1;
             basis.1 = [0., n0/d0/d0, n1/d0/d0, n2/d1/d1];
-            // let d0 = 2. * k1u / k0k1 / k1r1;
-            // let d1 = (2. * (k0 * ur1 + k1 * k2u + u * r1k2)) / (k0k1 * k0k2 * k1r1);
-            // let d2 = (2. * uk0) / (k0k1 * k0k2);
-            // basis.1 = [0., d0, d1, d2];
         } else { // linear
             basis.0 = [0., 0., k1u_d_k1k0, uk0_d_k1k0];
             basis.1 = [0., 0., 1./k0k1, 1./k1k0];
         }
         basis
     }
+
+    pub fn sample_count(&self, count: usize) -> usize { 
+        let mul = self.weights.len() - 1;
+        self.weights.len() + count * (self.order - 2) * mul
+    }
 }
+
+
+
+            // let d0 = 2. * k1u / k0k1 / k1r1;
+            // let d1 = (2. * (k0 * ur1 + k1 * k2u + u * r1k2)) / (k0k1 * k0k2 * k1r1);
+            // let d2 = (2. * uk0) / (k0k1 * k0k2);
+            // basis.1 = [0., d0, d1, d2];
+
 
 
 // fn get_valid(&self, control_count: usize) -> Self {

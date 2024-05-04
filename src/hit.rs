@@ -6,7 +6,6 @@ mod shaders3;
 mod shader_parts3;
 mod traced;
 pub mod hit2;
-pub mod hit2_gpu;
 pub mod hit3;
 
 use glam::*;

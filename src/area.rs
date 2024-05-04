@@ -1,5 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{log, Shape, Model, ModelsToShapes, Reshape, Shapes};
+use crate::{log, Shape, Model, Models, Reshape, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -11,14 +11,14 @@ pub struct Area {
 }
 
 impl Area { 
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn shapes(&self) -> Vec<Shape> {
         let mut shapes = self.parts.shapes();
         let mut min = Vec3::new(INFINITY, INFINITY, INFINITY);
         let mut max = Vec3::new(NEG_INFINITY, NEG_INFINITY, NEG_INFINITY);
         for curve in shapes.of_rank(1) {
             for control in &curve.controls {
-                min = min.min(control.get_point(&[]));
-                max = max.max(control.get_point(&[]));
+                min = min.min(control.point(&[]));
+                max = max.max(control.point(&[]));
             }
         }
         let mut facet  = Shape::default();
@@ -36,8 +36,8 @@ impl Area {
             let mut normalized_points = vec![];
             for bndry in boundary.controls {
                 normalized_points.push(Shape::from_point(vec3(
-                    (bndry.get_point(&[]).x - min.x) / (max.x - min.x), 
-                    (bndry.get_point(&[]).y - min.y) / (max.y - min.y), //1. - (p.y - min.y) / (max.y - min.y), 
+                    (bndry.point(&[]).x - min.x) / (max.x - min.x), 
+                    (bndry.point(&[]).y - min.y) / (max.y - min.y), //1. - (p.y - min.y) / (max.y - min.y), 
                     0.
                 )));
             }

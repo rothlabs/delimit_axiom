@@ -30,9 +30,9 @@ pub fn get_scene(val: JsValue) -> Result<JsValue, JsValue> {
     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
     let query = query.get_valid();
     let mut scene = Scene::default();
-    for shape in query.model.get_shapes() {
+    for shape in query.model.shapes() {
         match shape.rank {
-            0 => scene.points.push(shape.get_point(&[]).to_array()),
+            0 => scene.points.push(shape.point(&[]).to_array()),
             1 => scene.polylines.push(shape.get_polyline(&query)),
             2 => scene.meshes.push(shape.get_mesh(&query)),
             _ => ()
@@ -46,7 +46,7 @@ pub fn get_curve_scene(val: JsValue) -> Result<JsValue, JsValue> {
     let query: DiscreteQuery = serde_wasm_bindgen::from_value(val)?;
     let query = query.get_valid();
     let mut polylines = vec![];
-    for shape in query.model.get_shapes() {
+    for shape in query.model.shapes() {
         match shape.rank {
             1 => polylines.push(shape.get_polyline(&query)),
             _ => ()
@@ -61,7 +61,7 @@ pub fn get_facet_scene(val: JsValue) -> Result<JsValue, JsValue> {
     let query = query.get_valid();
     let mut mesh = Mesh::default();
     let mut offset = 0;
-    for shape in query.model.get_shapes() {
+    for shape in query.model.shapes() {
         if shape.rank == 2 {
             let facet_mesh = shape.get_mesh(&query);
             mesh.vector.extend(&facet_mesh.vector);

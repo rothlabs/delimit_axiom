@@ -19,7 +19,9 @@ mod tolerance;
 mod query;
 mod scene;
 mod gpu;
-mod nurbs;
+mod space;
+mod facet;
+mod shape;
 mod spatial;
 mod hit;
 mod union;
@@ -36,7 +38,9 @@ mod arrow;
 
 use utils::*;
 use tolerance::*;
-use nurbs::{curve::*, facet::*};
+use space::*;
+use shape::*;
+use facet::*;
 use spatial::spatial3::*;
 use hit::{hit2::*, hit3::*};
 use union::*;
@@ -80,26 +84,26 @@ pub enum Model {
 }
 
 impl Model {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn shapes(&self) -> Vec<Shape> {
         match self {
             Model::Point(m)     => vec![Shape::from_point(*m)], 
-            Model::Curve(m)     => m.get_shapes(),
-            Model::Facet(m)     => m.get_shapes(),
-            Model::Sketch(m)    => m.get_shapes(),
-            Model::Arc(m)       => m.get_shapes(),
-            Model::Circle(m)    => m.get_shapes(),
-            Model::Rectangle(m) => m.get_shapes(),
-            Model::Slot(m)      => m.get_shapes(),
-            Model::Reshape(m)   => m.get_shapes(),
-            Model::Area(m)      => m.get_shapes(),
-            Model::Extrude(m)   => m.get_shapes(),
-            Model::Cuboid(m)    => m.get_shapes(),
-            Model::Cylinder(m)  => m.get_shapes(),
-            Model::Revolve(m)   => m.get_shapes(),
-            Model::Union(m)     => m.get_shapes(),
-            Model::GridPattern(m)   => m.get_shapes(),
-            Model::RadialPattern(m) => m.get_shapes(),
-            Model::Mirror(m)        => m.get_shapes(),
+            Model::Curve(m)     => m.shapes(),
+            Model::Facet(m)     => m.shapes(),
+            Model::Sketch(m)    => m.shapes(),
+            Model::Arc(m)       => m.shapes(),
+            Model::Circle(m)    => m.shapes(),
+            Model::Rectangle(m) => m.shapes(),
+            Model::Slot(m)      => m.shapes(),
+            Model::Reshape(m)   => m.shapes(),
+            Model::Area(m)      => m.shapes(),
+            Model::Extrude(m)   => m.shapes(),
+            Model::Cuboid(m)    => m.shapes(),
+            Model::Cylinder(m)  => m.shapes(),
+            Model::Revolve(m)   => m.shapes(),
+            Model::Union(m)     => m.shapes(),
+            Model::GridPattern(m)   => m.shapes(),
+            Model::RadialPattern(m) => m.shapes(),
+            Model::Mirror(m)        => m.shapes(),
         }
     }
 }
@@ -110,23 +114,23 @@ impl Default for Model {
     }
 }
 
-pub trait ModelsToShapes {
+pub trait Models {
     fn shapes(&self) -> Vec<Shape>;
     fn shape_groups(&self) -> Vec<Vec<Shape>>;
 }
 
-impl ModelsToShapes for Vec<Model> {
+impl Models for Vec<Model> {
     fn shapes(&self) -> Vec<Shape> {
         let mut result = vec![];
         for part in self {
-            result.extend(part.get_shapes());
+            result.extend(part.shapes());
         }
         result
     }
     fn shape_groups(&self) -> Vec<Vec<Shape>> {
         let mut result = vec![];
         for part in self {
-            result.push(part.get_shapes());
+            result.push(part.shapes());
         }
         result
     }

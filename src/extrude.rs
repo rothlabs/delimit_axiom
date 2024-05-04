@@ -1,4 +1,4 @@
-use crate::{nurbs::Nurbs, Area, Circle, Shape, Shapes, Model, ModelsToShapes, Rectangle, Reshape
+use crate::{space::Space, Area, Circle, Shape, Shapes, Model, Models, Rectangle, Reshape
 };
 use serde::{Deserialize, Serialize};
 use glam::*;
@@ -27,7 +27,7 @@ impl Default for Extrude {
 // TODO: two types of extrude: 1. reshape all with translation by length and invert originals and increament lower ranks up one over length. 
 //                     2. Same as 1 but also create new shape with highest ranking plus one and remaining one lower ranks copied into its boundaries 
 impl Extrude {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn shapes(&self) -> Vec<Shape> {
         let shapes0 = self.parts.shapes();
         if self.length == 0. {
             return shapes0;
@@ -59,16 +59,18 @@ impl Extrude {
 }
 
 struct ExtrudeBasis {
-    nurbs: Nurbs,
+    nurbs: Space,
     mat4: Mat4,
 }
 
 impl ExtrudeBasis {
     fn new(translation: Vec3) -> Self {
         Self {
-            nurbs: Nurbs {
+            nurbs: Space {
                 sign:    1.,
                 order:   2,
+                min: 0.,
+                max: 1.,
                 knots:   vec![0., 0., 1., 1.],
                 weights: vec![1., 1.],
             },
@@ -86,11 +88,11 @@ pub struct Cuboid {
 }
 
 impl Cuboid {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn shapes(&self) -> Vec<Shape> {
         let mut rect = Rectangle::default();
         rect.lengths = [self.lengths[0], self.lengths[1]];
         let area = Area::from_part(Model::Rectangle(rect));
-        Extrude::from_area(area, self.lengths[2], &self.reshape).get_shapes()
+        Extrude::from_area(area, self.lengths[2], &self.reshape).shapes()
     }
 }
 
@@ -104,12 +106,12 @@ pub struct Cylinder {
 }
 
 impl Cylinder {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn shapes(&self) -> Vec<Shape> {
         let mut circle = Circle::default();
         circle.radius = self.radius;
         circle.center = self.center;
         let area = Area::from_part(Model::Circle(circle));
-        Extrude::from_area(area, self.length, &self.reshape).get_shapes()
+        Extrude::from_area(area, self.length, &self.reshape).shapes()
     }
 }
 

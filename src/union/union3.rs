@@ -101,7 +101,7 @@ impl UnionBasis3 {
                     if self.hit_groups[gi][fi].is_empty() {
                         //self.move_misses_in_bounds(gi, fi, hi); 
                         miss_groups[gi][fi].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                        if !miss_groups[gi][fi].is_empty() && miss_groups[gi][fi][0].dot * self.facet_groups[gi][fi].nurbs.sign > 0. {   
+                        if !miss_groups[gi][fi].is_empty() && miss_groups[gi][fi][0].dot * self.facet_groups[gi][fi].space.sign > 0. {   
                             collect_groups[gi][fi] = false;
                         }
                     }else{
@@ -124,7 +124,7 @@ impl UnionBasis3 {
             for fi in 0..self.facet_groups[gi].len() {
                 if collect_groups[gi][fi] {
                     let mut facet = self.facet_groups[gi][fi].clone();
-                    if facet.nurbs.sign < 0. {facet.reverse().negate();}
+                    if facet.space.sign < 0. {facet.reverse().negate();}
                     self.shapes.push(facet);
                 }
             }
@@ -138,7 +138,7 @@ impl UnionBasis3 {
 
     fn union_facet_with_hits(&mut self, gi: usize, fi: usize) {
         let facet = self.facet_groups[gi].get_mut(fi).expect("Should be a facet at this index.");
-        if facet.nurbs.sign < 0. {
+        if facet.space.sign < 0. {
             for curve in &mut facet.boundaries {
                 curve.negate();
             }
@@ -188,7 +188,7 @@ impl UnionBasis3 {
                 let mut bndry = facet.boundaries[j].clone();
                 bndry.controls.clear();
                 for k in 0..facet.boundaries[j].controls.len() {
-                    bndry.controls.push(Shape::from_point(facet.boundaries[j].controls[k].get_point(&[]) + vec3(
+                    bndry.controls.push(Shape::from_point(facet.boundaries[j].controls[k].point(&[]) + vec3(
                         100. + fi as f32 * 2.,// + (j as f32)*0.005,  
                         gi as f32 * 2.,// + (j as f32)*0.01, 
                         0.

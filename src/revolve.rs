@@ -1,5 +1,5 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{log, nurbs::Nurbs, Shape, Model, ModelsToShapes, Reshape, Shapes};
+use crate::{log, space::Space, Shape, Model, Models, Reshape, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -27,7 +27,7 @@ impl Default for Revolve {
 }
 
 impl Revolve {
-    pub fn get_shapes(&self) -> Vec<Shape> { // , query: &DiscreteQuery
+    pub fn shapes(&self) -> Vec<Shape> { // , query: &DiscreteQuery
         let shapes0 = self.parts.shapes();
         if self.angle == 0. {
             return shapes0;
@@ -66,7 +66,7 @@ impl Revolve {
 }
 
 struct RevolveBasis {
-    nurbs: Nurbs,
+    nurbs: Space,
     axis: Vec3,
     direction: f32,
     base_angle: f32,
@@ -78,9 +78,11 @@ struct RevolveBasis {
 impl RevolveBasis {
     fn new(center: Vec3, axis: Vec3, angle: f32) -> Self {
         Self {
-            nurbs: Nurbs {
+            nurbs: Space {
                 sign: 1.,
                 order:   3,
+                min: 0.,
+                max: 1.,
                 knots:   vec![0.; 3],
                 weights: vec![1.],
             },

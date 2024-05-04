@@ -1,12 +1,12 @@
+//mod union2;
 mod union2;
-mod union2_gpu;
 mod union3;
 
-use crate::{hit::{job_indexes, TestPair}, log, Shape, Model, ModelsToShapes, Reshape, ShapeGroups, Shapes};
+use crate::{hit::{job_indexes, TestPair}, log, Shape, Model, Models, Reshape, ShapeGroups, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
-use self::{union2_gpu::get_union2_shapes, union3::UnionBasis3};
+use self::{union2::get_union2_shapes, union3::UnionBasis3};
 
 
 
@@ -20,7 +20,7 @@ pub struct Union {
 
 
 impl Union {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn shapes(&self) -> Vec<Shape> {
         // let (_, facets, curve_groups_basis, facet_groups_basis) = get_grouped_curves_and_facets(&self.parts);
         // let (_, neg_facets, neg_curve_groups, neg_facet_groups) = get_grouped_curves_and_facets(&self.negated_parts);
         let mut shape_groups = self.parts.shape_groups();

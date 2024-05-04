@@ -1,133 +1,227 @@
-use std::f32::EPSILON;
 use glam::*;
-use crate::{log, Shape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, DUP_1_TOL, HIT_TOL, MISS_PADDING};
+use web_sys::WebGlProgram;
+use crate::gpu::framebuffer::Framebuffer;
+use crate::Shapes;
+use crate::{gpu::GPU, log, Shape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, HIT_TOL, MISS_PADDING};
+use super::{HitPair2, HoneBuffer, MissPair, TestPair};
+use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
-use super::Miss;
+pub trait HitTest2 {
+    fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>);
+}
 
-pub struct HitTester2 {
-    pub curves: (Shape, Shape),
+impl HitTest2 for Vec<Shape> {
+    fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>) {
+        let gpu = GPU::new().unwrap();
+        let mut basis = HoneBasis2::new(&self, &pairs);
+        gpu.texture.make_r32f(0, &mut basis.curve_texels).unwrap();
+        let (_, pair_buf_size) = gpu.texture.make_rg32i(1, &mut basis.pair_texels).unwrap();
+        let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
+        let buffer = HoneBuffer{
+            io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.u_texels, 2).unwrap(),
+            palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_buf_size, 2).unwrap(),
+            palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_buf_size, 2).unwrap(),
+        };
+        HitBasis2 {
+            //curves:self, 
+            //pairs: pairs.clone(), 
+            basis, 
+            buffer, 
+            init_palette:     gpu.get_quad_program_from_source(INIT_PALETTE_SOURCE).unwrap(),
+            hone_palette:     gpu.get_quad_program_from_source(HONE_SOURCE).unwrap(),
+            hit_miss_program: gpu.get_quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
+            gpu,
+            spatial: Spatial3::new(0.1), 
+            points:  vec![],
+        }.make() // .expect("HitBasis2 should work for Vec<CurveShape>.hit()")
+    }
+}
+
+pub struct HitBasis2 {
+    //curves: Vec<CurveShape>,
+    //pairs:  Vec<TestPair>,
+    basis:  HoneBasis2,
+    buffer: HoneBuffer,
+    init_palette: WebGlProgram,
+    hone_palette: WebGlProgram,
+    hit_miss_program: WebGlProgram,
+    gpu: GPU,
     pub spatial:      Spatial3,
     pub points:       Vec<Vec3>,
 }
 
-#[derive(Clone)]
-pub struct Hit2 {
-    pub hit: (CurveHit, CurveHit),
-    pub center: Vec3,
-}
-
-#[derive(Clone)]
-pub struct CurveHit {
-    pub u: f32,
-    pub dot: f32,
-}
-
-pub enum HitMiss2 {
-    Hit(Hit2),
-    Miss((Miss, Miss)),
-}
-
-impl HitTester2 { 
-    pub fn test(&mut self, start_u0: f32, start_u1: f32) -> Option<HitMiss2> { 
-        let mut u0 = start_u0;
-        let mut u1 = start_u1;
-        let mut p0 = self.curves.0.get_point(&[u0]);
-        let mut p1 = self.curves.1.get_point(&[u1]);
-        for _ in 0..8 {
-            if p0.distance(p1) < EPSILON {
-                break;
-            }
-            let target = self.get_tangent_intersection(u0, u1);
-            let (u0_t0, p0_t0) = self.curves.0.get_u_and_point_from_target(u0, target - p0);
-            let (u1_t0, p1_t0) = self.curves.1.get_u_and_point_from_target(u1, target - p1);
-            let (u0_c, p0_c) = self.curves.0.get_u_and_point_from_target(u0, p1 - p0);
-            let (u1_c, p1_c) = self.curves.1.get_u_and_point_from_target(u1, p0 - p1);
-            let distances = vec![p0_t0.distance(p1_t0), p1.distance(p0_c), p0.distance(p1_c)];
-            let mut min_dist = 10000.;
-            let mut i = 3;
-            for k in 0..3 {
-                if min_dist > distances[k] {
-                    min_dist = distances[k];
-                    i = k;
-                }
-            }
-            if i < 1 {
-                p0 = p0_t0;
-                p1 = p1_t0;
-                u0 = u0_t0;
-                u1 = u1_t0;
-            } else if i < 2 {
-                p0 = p0_c;
-                u0 = u0_c;
-            } else {
-                p1 = p1_c;
-                u1 = u1_c;
-            }
-        }
-        if p0.distance(p1) < HIT_TOL  {
-            let center = (p0 + p1) / 2.;
-            (u0, p0) = self.curves.0.get_u_and_point_from_target(u0, center - p0);
-            (u1, p1) = self.curves.1.get_u_and_point_from_target(u1, center - p1);
-            let center = (p0 + p1) / 2.;
-            let mut duplicate = false;
-                for i in self.spatial.get(&center) {
-                    if self.points[i].distance(center) < DUP_0_TOL {
+impl HitBasis2 { 
+    pub fn make(&mut self) -> (Vec<HitPair2>, Vec<MissPair>) { 
+        self.hone();
+        let hit_miss = self.gpu.read(&self.buffer.io, 0);
+        //console_log!("hit_miss {:?}", hit_miss);
+        let points   = self.gpu.read(&self.buffer.io, 1);
+        let mut hits = vec![];
+        let mut misses = vec![];
+        //let mut to_prints: Vec<f32> = vec![];
+        for (i, pair) in self.basis.pairs.iter().enumerate() {
+            let j = i * 4;
+            if hit_miss[j] > -0.5 { // it's a hit
+                //to_prints.extend(&[999., hit_miss[j], hit_miss[j+1], hit_miss[j+2], hit_miss[j+3]]);
+                //log("hit!");
+                let point = vec3(points[j+0], points[j+1], points[j+2]);
+                let mut duplicate = false;
+                for i in self.spatial.get(&point) {
+                    if self.points[i].distance(point) < DUP_0_TOL { 
                         duplicate = true;
                         break;
                     }
                 }
-            if !duplicate {
-                if (u0 > DUP_1_TOL && u1 < DUP_0_TOL) || (u0 < DUP_0_TOL && u1 > DUP_1_TOL) {
-                    return None;
+                if !duplicate {
+                    self.spatial.insert(&point, self.points.len());
+                    self.points.push(point);
+                    hits.push(HitPair2{
+                        pair:     pair.clone(),
+                        u0:   hit_miss[j+0],
+                        u1:   hit_miss[j+1],
+                        dot0: hit_miss[j+2],
+                        dot1: hit_miss[j+3], 
+                        point,
+                    }); 
                 }
-                let delta0 = self.curves.0.get_arrow(&[u0]).delta.normalize();
-                let delta1 = self.curves.1.get_arrow(&[u1]).delta.normalize();
-                if delta0.dot(delta1).abs() > 0.9999 {
-                    return None;
-                }
-                self.spatial.insert(&center, self.points.len());
-                self.points.push(center);
-
-                //let delta0 = self.curves.0.get_arrow(u0).delta;
-                //let delta1 = self.curves.1.get_arrow(u1).delta;
-                let cross0 = Vec3::Z.cross(delta0).normalize();
-                let cross1 = Vec3::Z.cross(delta1).normalize();
-                return Some(HitMiss2::Hit(Hit2{
-                    center,
-                    hit: (CurveHit {u:u0, dot:cross0.dot(delta1)}, 
-                          CurveHit {u:u1, dot:cross1.dot(delta0)}),
-                }))
+            }else{
+                // if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() {
+                //     log("nan hit_miss in union3!");
+                //     continue;
+                // }
+                if hit_miss[i*4] < -5. {continue}
+                misses.push(MissPair { 
+                    pair:     pair.clone(),
+                    dot0:     hit_miss[j+1], 
+                    dot1:     hit_miss[j+2], 
+                    distance: hit_miss[j+3],
+                });
             }
-            
-        } 
-        let delta0 = self.curves.0.get_arrow(&[u0]).delta.normalize();
-        let delta1 = self.curves.1.get_arrow(&[u1]).delta.normalize();
-        let cross0 = Vec3::Z.cross(p1 - p0).normalize();
-        let cross1 = Vec3::Z.cross(p0 - p1).normalize();
-        if u0 < AT_0_TOL {
-            p0 += delta0 * MISS_PADDING;
-        } else if u0 > AT_1_TOL {
-            p0 -= delta0 * MISS_PADDING;
         }
-        if u1 < AT_0_TOL {
-            p1 += delta1 * MISS_PADDING;
-        } else if u1 > AT_1_TOL {
-            p1 -= delta1 * MISS_PADDING;
-        }
-        let distance = p0.distance(p1);
-        Some(HitMiss2::Miss((
-            Miss{distance, dot:cross0.dot(delta1)},
-            Miss{distance, dot:cross1.dot(delta0)}, 
-        )))
+        // console_log!("hits {:?}", to_prints);
+        // let wow: Vec<f32> = vec![1.234567891234567891234; 3];
+        // console_log!("wow {}", wow[0]);
+        // console_log!("f32::DIGITS {}", f32::DIGITS);
+        (hits, misses)
     }
-
-    pub fn get_tangent_intersection(&self, u0: f32, u1: f32) -> Vec3 {
-        let arrow0 = self.curves.0.get_arrow(&[u0]);
-        let arrow1 = self.curves.1.get_arrow(&[u1]);
-        if arrow1.delta.length() < 0.00001 {
-            console_log!("u1 {}", u1);
-            panic!("hi2.get_tengent_intersection arrow1.delta is 0!");
+    fn hone(&self) {
+        self.draw_init_hone_palette();
+        for _ in 0..8 {
+            self.draw_hone_palette(&self.buffer.palette1, 4);
+            self.draw_hone_palette(&self.buffer.palette0, 6);
         }
-        arrow0.middle(&arrow1)
+        self.draw_hit_miss();
+    }
+    fn draw_init_hone_palette(&self){
+        self.gpu.gl.use_program(Some(&self.init_palette));
+        self.gpu.set_uniform_1i(&self.init_palette, "pair_tex",  1);
+        self.set_curve_uniforms(&self.init_palette);
+        self.gpu.set_uniform_1i(&self.init_palette, "io_tex", 2);
+        self.gpu.draw(&self.buffer.palette0);
+    }
+    fn draw_hone_palette(&self, buff: &Framebuffer, i: i32) {
+        self.gpu.gl.use_program(Some(&self.hone_palette));
+        self.gpu.set_uniform_1i(&self.hone_palette, "pair_tex", 1);
+        self.set_curve_uniforms(&self.hone_palette);
+        self.set_arrow_uniforms(&self.hone_palette, i);
+        self.gpu.draw(buff);
+    }
+    fn draw_hit_miss(&self){
+        self.gpu.gl.use_program(Some(&self.hit_miss_program));
+        self.gpu.set_uniform_1i(&self.hit_miss_program, "pair_tex", 1);
+        self.set_curve_uniforms(&self.hit_miss_program);
+        self.set_arrow_uniforms(&self.hit_miss_program, 4);
+        self.gpu.draw(&self.buffer.io);
+    }
+    fn set_curve_uniforms(&self, program: &WebGlProgram) {
+        self.gpu.set_uniform_1i(program, "geom_tex", 0);
+        self.gpu.set_uniform_1i(program, "max_knot_count", self.basis.max_knot_count);
+    }
+    fn set_arrow_uniforms(&self, program: &WebGlProgram, i: i32) {
+        self.gpu.set_uniform_1i(program, "point_tex", i);
+        self.gpu.set_uniform_1i(program, "delta_tex", i + 1);
+    }
+}
+
+#[derive(Clone, Debug)]
+struct IndexedU {
+    texel_index: usize,
+    u: f32
+}
+
+
+#[derive(Default)]
+pub struct HoneBasis2{
+    pub pairs: Vec<TestPair>,
+    pub pair_texels: Vec<i32>,
+    pub curve_texels: Vec<f32>,
+    pub u_texels: Vec<f32>,
+    pub max_knot_count: i32,
+}
+
+impl HoneBasis2 {
+    pub fn new(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> Self{
+        let mut max_knot_count = 0;
+        let mut index_pairs: Vec<TestPair> = vec![];
+        let mut u_groups: Vec<Vec<IndexedU>> = vec![]; // vec![]; shapes.len()
+        let mut curve_texels: Vec<f32> = vec![];
+        let mut pair_texels: Vec<i32> = vec![];
+        let mut u_texels: Vec<f32> = vec![];
+        //for (ci, curve) in shapes.of_rank(1).iter().enumerate() {
+        for curve in shapes {
+            let mut u_indexes: Vec<IndexedU> = vec![];
+            if curve.rank == 1 {
+                if curve.space.knots.len() > max_knot_count { 
+                    max_knot_count = curve.space.knots.len(); 
+                }
+                let texel_index = curve_texels.len();
+                curve_texels.extend([
+                    9000000., // + ci as f32,
+                    curve.controls.len() as f32,
+                    curve.space.order as f32,
+                    curve.space.min,
+                    curve.space.max,
+                ]); 
+                for i in 0..curve.space.knots.len()-1 {
+                    if curve.space.knots[i] < curve.space.knots[i+1] || i == curve.space.knots.len() - curve.space.order {
+                        // if curve.nurbs.knots[i] > 1. {
+                        //     log("what?!?????????");
+                        // }
+                        u_indexes.push(IndexedU{
+                            texel_index, 
+                            u: curve.space.knots[i],
+                        }); 
+                    }
+                    curve_texels.push(curve.space.knots[i]);
+                }  
+                curve_texels.push(curve.space.knots[curve.space.knots.len()-1]);
+                curve_texels.extend(&curve.space.weights);
+                for control in &curve.controls {
+                    curve_texels.extend(control.point(&[]).to_array());
+                }
+            }
+            u_groups.push(u_indexes);
+        }
+        for pair in pairs {
+            for IndexedU{texel_index:t0, u:u0} in &u_groups[pair.i0]{
+                for IndexedU{texel_index:t1, u:u1} in &u_groups[pair.i1]{
+                    index_pairs.push(pair.clone());
+                    pair_texels.push(*t0 as i32);
+                    pair_texels.push(*t1 as i32);
+                    u_texels.extend(&[*u0, *u1, 0., 0.]);
+                }  
+            }  
+        }
+        // console_log!("u_groups {:?}", u_groups);
+        // console_log!("index_pairs {:?}", index_pairs);
+        // console_log!("pair_texels {:?}", pair_texels);
+        // console_log!("u_texels {:?}", u_texels);
+        HoneBasis2 {
+            pairs: index_pairs,
+            pair_texels,
+            curve_texels,
+            u_texels,
+            max_knot_count: max_knot_count as i32,
+        }
     }
 }

@@ -47,13 +47,13 @@ impl CurveTrimmer {
 
     fn add_bounded_curves(&mut self, i: usize) {
         let mut curve = self.group[i].clone();
-        let min_basis = curve.min;
+        let min_basis = curve.space.min;
         for curve_hit in self.hits[i].iter() { 
-            if curve_hit.dot * curve.nurbs.sign > 0. {
-                curve.set_min(curve_hit.u);
+            if curve_hit.dot * curve.space.sign > 0. {
+                curve.space.set_min(curve_hit.u);
             }else{
-                curve.set_max(min_basis, curve_hit.u);
-                let range = curve.max - curve.min;
+                curve.space.set_max(min_basis, curve_hit.u);
+                let range = curve.space.range();
                 if range < 0.001 {
                     console_log!("trim range: {}", range);
                 }
@@ -61,8 +61,8 @@ impl CurveTrimmer {
                 curve = self.group[i].clone();
             }
         }
-        if self.hits[i].last().expect("There should be one or more hits.").dot * curve.nurbs.sign > 0. {
-            let range = curve.max - curve.min;
+        if self.hits[i].last().expect("There should be one or more hits.").dot * curve.space.sign > 0. {
+            let range = curve.space.range();
             if range < 0.001 {
                 console_log!("trim range: {}", range);
             }

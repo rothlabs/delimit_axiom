@@ -12,7 +12,7 @@ pub struct Mirror {
 }
 
 impl Mirror {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn shapes(&self) -> Vec<Shape> {
         let mut shapes = vec![];
         // for shape in get_shapes(&self.parts) {
         //     let pos = vec3(

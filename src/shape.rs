@@ -1,11 +1,10 @@
 use std::f32::INFINITY;
 
 use crate::scene::Mesh;
-use crate::{log, ModelsToShapes, Rectangle};
+use crate::{log, Space, Models, Rectangle};
 use crate::{get_vector_hash, query::DiscreteQuery, arrow::Arrow, scene::Polyline, Model};
 use glam::*;
 use serde::{Deserialize, Serialize};
-use super::Nurbs;
 
 use lyon::tessellation::*;
 use lyon::geom::{Box2D, Point};
@@ -13,40 +12,32 @@ use lyon::path::Winding;
 
 // ((a % b) + b) % b)  ->  a modulo b
 
-const TWO_CONTROL_POINTS: &str = "There should be two control points or more.";
-
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)] 
 pub struct Curve {
-    pub nurbs: Nurbs,
+    pub nurbs: Space,
     pub controls: Vec<Model>,
     pub boundaries: Vec<Model>,
-    pub min:  f32,
-    pub max:  f32,
-    pub arrows: usize,
+    pub arrows: usize, // TEMP, for testing
 }
 
 impl Default for Curve {
     fn default() -> Self {
         Self {
-            nurbs: Nurbs::default(),
+            nurbs: Space::default(),
             controls: vec![],  
-            boundaries: vec![],
-            min: 0.,
-            max: 1.,  
+            boundaries: vec![], 
             arrows: 0,
         }
     }
 }
 
 impl Curve {
-    pub fn get_shapes(&self) -> Vec<Shape> {
+    pub fn shapes(&self) -> Vec<Shape> {
         let mut curve = Shape{
-            nurbs: self.nurbs.clone(),
+            space: self.nurbs.clone(),
             controls: self.controls.shapes(),
             boundaries: vec![],
-            min: self.min, 
-            max: self.max, 
             rectifier: None,
             vector: None,
             rank: 1,
@@ -76,27 +67,23 @@ pub struct CurveRectifier {
 
 #[derive(Clone)]
 pub struct Shape {
-    pub nurbs: Nurbs,
-    pub controls: Vec<Shape>,
+    pub rank:       u8,
+    pub vector:     Option<Vec3>,
+    pub space:      Space,
+    pub controls:   Vec<Shape>,
     pub boundaries: Vec<Shape>,
-    pub min:  f32,
-    pub max:  f32,
-    pub rank: u8,
-    pub rectifier: Option<Box<CurveRectifier>>,
-    pub vector: Option<Vec3>,
+    pub rectifier:  Option<Box<CurveRectifier>>,
 }
 
 impl Default for Shape {
     fn default() -> Self {
         Self {
-            nurbs: Nurbs::default(),
+            space: Space::default(),
             controls: vec![],  
             boundaries: vec![],
-            min: 0.,
-            max: 1.,  
             rank: 0,
             rectifier: None,
-            vector: None, // Some(Vec3::ZERO),
+            vector: None, 
         }
     }
 }
@@ -110,8 +97,8 @@ impl Shape {
 
     pub fn from_order(order: usize) -> Self {
         let mut curve = Self::default();
-        curve.nurbs.order = order;
-        curve.nurbs.knots.extend(vec![0.; order]);
+        curve.space.order = order;
+        curve.space.knots.extend(vec![0.; order]);
         curve
     }
 
@@ -137,29 +124,22 @@ impl Shape {
     }
 
     pub fn negate(&mut self) -> &mut Self {
-        self.nurbs.sign = -self.nurbs.sign;
+        self.space.sign = -self.space.sign;
         self
     }
 
     pub fn negated(&self) -> Self {
         let mut shape = self.clone();
-        shape.nurbs.sign = -shape.nurbs.sign;
+        shape.space.sign = -shape.space.sign;
         shape
     }
 
     fn reverse_main(&mut self) -> &mut Self {
-        self.nurbs.knots.reverse();
-        for i in 0..self.nurbs.knots.len() {
-            self.nurbs.knots[i] = 1. - self.nurbs.knots[i];
-        }
-        self.nurbs.weights.reverse();
+        self.space.reverse();
         self.controls.reverse();
         for bndry in &mut self.boundaries {
             bndry.reshape(Mat4::from_translation(vec3(0., 1., 0.)) * Mat4::from_scale(vec3(1., -1., 1.)));
         }
-        let min_basis = self.min;
-        self.min = 1.-self.max;
-        self.max = 1.-min_basis;
         self
     }
 
@@ -207,7 +187,7 @@ impl Shape {
 
     pub fn get_unique_knots(&self) -> Vec<f32> {
         let mut knots = vec![0.];
-        for k in self.nurbs.knots.windows(2) {
+        for k in self.space.knots.windows(2) {
             if k[0] < k[1] {
                 knots.push(k[1]);
             }
@@ -217,14 +197,14 @@ impl Shape {
 
     pub fn get_u_and_point_from_target(&self, u: f32, delta: Vec3) -> (f32, Vec3) {
         if delta.length() < 0.00001 {
-            let point = self.get_point(&[u]);
+            let point = self.point(&[u]);
             return (u, point)
         }
         let arrow = self.get_arrow(&[u]);
        //let length_ratio = delta.length() / arrow.delta.length();
         let mut u = u + arrow.delta.normalize().dot(delta) / arrow.delta.length();
         u = u.clamp(0., 1.); 
-        let point = self.get_point(&[u]);
+        let point = self.point(&[u]);
         (u, point)
     }
 
@@ -237,30 +217,21 @@ impl Shape {
     }
 
     pub fn get_polyline_vector(&self, query: &DiscreteQuery) -> Vec<f32> {
-        //let curve = self.get_valid();
-        // let mut shape = self.clone();
-        // shape.validate();
-        // console_log!("rank {}", shape.rank);
-        // console_log!("vector {:?}", shape.vector);
-        // console_log!("order {}", shape.nurbs.order);
-        // console_log!("knots {:?}", shape.nurbs.knots);
-        // console_log!("weights {:?}", shape.nurbs.weights);
-        // console_log!("control len {}", shape.controls.len());
-        let count = self.nurbs.get_sample_count(query.count);
+        let count = self.space.sample_count(query.count);
         (0..count).into_iter()
-            .map(|u| self.get_point(&[u as f32 / (count-1) as f32]).to_array()) 
+            .map(|u| self.point(&[u as f32 / (count-1) as f32]).to_array()) 
             .flatten().collect()
     }
 
-    pub fn get_point(&self, params: &[f32]) -> Vec3 {
+    pub fn point(&self, params: &[f32]) -> Vec3 {
         if let Some((u, params)) = params.split_last() {
-            if self.nurbs.order > 1 {
-                let u = self.min * (1.-u) + self.max * u;
-                let ki = self.nurbs.get_knot_index(u);      
-                let basis = self.nurbs.get_basis(ki, u);
-                return (0..self.nurbs.order).map(|k| {
-                    let i = 4 - self.nurbs.order + k;
-                    self.controls[ki + i - 3].get_point(params)  * basis.0[i]
+            if self.space.order > 1 {
+                let u = self.space.u(u); 
+                let ki = self.space.knot_index(u);      
+                let basis = self.space.get_basis(ki, u);
+                return (0..self.space.order).map(|k| {
+                    let i = 4 - self.space.order + k;
+                    self.controls[ki + i - 3].point(params)  * basis.0[i]
                 }).sum()
             }else{
                 self.log();
@@ -274,17 +245,17 @@ impl Shape {
     pub fn get_arrow(&self, params: &[f32]) -> Arrow { // should be list of arrows
         let mut arrow = Arrow::new(Vec3::ZERO, Vec3::ZERO);
         if let Some((u, params)) = params.split_last() {
-            if self.nurbs.order > 1 {
-                let u = self.min * (1.-u) + self.max * u;    
-                let ki = self.nurbs.get_knot_index(u);  
-                let basis = self.nurbs.get_basis(ki, u);
-                for k in 0..self.nurbs.order {
-                    let i = 4 - self.nurbs.order + k;
-                    let point = self.controls[ki - 3 + i].get_point(params);
+            if self.space.order > 1 {
+                let u = self.space.u(u);     
+                let ki = self.space.knot_index(u);  
+                let basis = self.space.get_basis(ki, u);
+                for k in 0..self.space.order {
+                    let i = 4 - self.space.order + k;
+                    let point = self.controls[ki - 3 + i].point(params);
                     arrow.point += point * basis.0[i];
                     arrow.delta += point * basis.1[i];
                 }
-                let range = self.max - self.min;
+                let range = self.space.range();
                 if range < 0.0001 {
                     console_log!("range: {}", range);
                     panic!("curve.get_arrow small range!");
@@ -302,19 +273,11 @@ impl Shape {
         arrow
     }
 
-    pub fn set_min(&mut self, u: f32) {
-        self.min = self.min*(1.-u) + self.max*u;
-    }
-
-    pub fn set_max(&mut self, min_basis: f32, u: f32) {
-        self.max = min_basis*(1.-u) + self.max*u;
-    }
-
     pub fn validate(&mut self) -> &Self {
         if self.controls.len() == 1 {
             self.controls.clear();
         }
-        self.nurbs.validate(self.controls.len());
+        self.space.validate(self.controls.len());
         self.rank = self.get_rank(0);
         if self.boundaries.is_empty() {
             if self.rank == 2{
@@ -329,9 +292,9 @@ impl Shape {
         console_log!("vector {:?}", self.vector);
         console_log!("control len {}", self.controls.len());
         console_log!("boundary len: {}", self.boundaries.len());
-        console_log!("order {}", self.nurbs.order);
-        console_log!("knots {:?}", self.nurbs.knots);
-        console_log!("weights {:?}", self.nurbs.weights);
+        console_log!("order {}", self.space.order);
+        console_log!("knots {:?}", self.space.knots);
+        console_log!("weights {:?}", self.space.weights);
     }
 
     // pub fn get_valid(&self) -> CurveShape {
@@ -351,10 +314,10 @@ impl Shape {
         let facet = self;
         let mut u_count = 0;
         for curve in &facet.controls {
-            let sample_count = curve.nurbs.get_sample_count(query.count);
+            let sample_count = curve.space.sample_count(query.count);
             if u_count < sample_count { u_count = sample_count; } 
         }
-        let v_count = facet.nurbs.get_sample_count(query.count);
+        let v_count = facet.space.sample_count(query.count);
         let mut builder = lyon::path::Path::builder();
         // if facet.boundaries.is_empty() { // self.nurbs.sign < 0. || 
         //     builder.add_rectangle(&Box2D{min:Point::new(0., 0.), max:Point::new(1., 1.)}, Winding::Positive);
@@ -386,7 +349,7 @@ impl Shape {
                 }
             }
             
-            bndry_i = facet.get_next_boundary_index(&bndry.get_point(&[1.]), &mut used_boundaries);
+            bndry_i = facet.get_next_boundary_index(&bndry.point(&[1.]), &mut used_boundaries);
             used_boundaries.push(bndry_i);
             if bndry_i == start_bndry_i {
                 builder.end(true);
@@ -409,7 +372,7 @@ impl Shape {
         tessellator.tessellate_path(&path, &options, &mut buffer_builder).expect("Tessellation failed");
         let mut vector = vec![];
         for uv in geometry.vertices { // .into_iter()
-            vector.extend(facet.get_point(&uv).to_array());
+            vector.extend(facet.point(&uv).to_array());
         }
         let mut trivec = geometry.indices;
         for k in 0..trivec.len()/3 {
@@ -429,7 +392,7 @@ impl Shape {
         let mut bndry_i = 0;
         let mut distance = INFINITY;
         for (i, curve) in self.boundaries.iter().enumerate() { 
-            let p1 = curve.get_point(&[0.]);
+            let p1 = curve.point(&[0.]);
             let dist = point.distance(p1);
             if !used_boundaries.contains(&i) && distance > dist {
                 distance = dist;

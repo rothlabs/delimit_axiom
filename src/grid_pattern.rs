@@ -1,4 +1,4 @@
-use crate::{CurveShape, Model, ModelsToShapes, Reshape, Shapes};
+use crate::{Shape, Model, ModelsToShapes, Reshape, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -19,7 +19,7 @@ pub struct GridPattern {
 }
 
 impl GridPattern {
-    pub fn get_shapes(&self) -> Vec<CurveShape> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         let mut x_count = self.x_count;
         let mut y_count = self.y_count;
         let mut z_count = self.z_count;
@@ -49,7 +49,7 @@ pub struct GridPatternBasis {
 }
 
 impl GridPatternBasis {
-    pub fn get_shapes(&self, parts: Vec<CurveShape>) -> Vec<CurveShape> {
+    pub fn get_shapes(&self, parts: Vec<Shape>) -> Vec<Shape> {
         let mut shapes = vec![];
         let mut div = (1., 1., 1.);
         if self.count[0] > 1 {div.0 = (self.count[0]-1) as f32;} 

@@ -1,5 +1,5 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{log, CurveShape, Model, ModelsToShapes, Reshape, Shapes};
+use crate::{log, Shape, Model, ModelsToShapes, Reshape, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -11,7 +11,7 @@ pub struct Area {
 }
 
 impl Area { 
-    pub fn get_shapes(&self) -> Vec<CurveShape> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         let mut shapes = self.parts.shapes();
         let mut min = Vec3::new(INFINITY, INFINITY, INFINITY);
         let mut max = Vec3::new(NEG_INFINITY, NEG_INFINITY, NEG_INFINITY);
@@ -21,13 +21,13 @@ impl Area {
                 max = max.max(control.get_point(&[]));
             }
         }
-        let mut facet  = CurveShape::default();
-        let mut curve0 = CurveShape::default();
-        let mut curve1 = CurveShape::default();
-        curve0.controls.push(CurveShape::from_point(vec3(min.x, min.y, 0.)));
-        curve0.controls.push(CurveShape::from_point(vec3(max.x, min.y, 0.)));
-        curve1.controls.push(CurveShape::from_point(vec3(min.x, max.y, 0.)));
-        curve1.controls.push(CurveShape::from_point(vec3(max.x, max.y, 0.)));
+        let mut facet  = Shape::default();
+        let mut curve0 = Shape::default();
+        let mut curve1 = Shape::default();
+        curve0.controls.push(Shape::from_point(vec3(min.x, min.y, 0.)));
+        curve0.controls.push(Shape::from_point(vec3(max.x, min.y, 0.)));
+        curve1.controls.push(Shape::from_point(vec3(min.x, max.y, 0.)));
+        curve1.controls.push(Shape::from_point(vec3(max.x, max.y, 0.)));
         curve0.validate();
         curve1.validate();
         facet.controls.extend([curve0, curve1]);
@@ -35,7 +35,7 @@ impl Area {
             let mut boundary = curve.clone();
             let mut normalized_points = vec![];
             for bndry in boundary.controls {
-                normalized_points.push(CurveShape::from_point(vec3(
+                normalized_points.push(Shape::from_point(vec3(
                     (bndry.get_point(&[]).x - min.x) / (max.x - min.x), 
                     (bndry.get_point(&[]).y - min.y) / (max.y - min.y), //1. - (p.y - min.y) / (max.y - min.y), 
                     0.

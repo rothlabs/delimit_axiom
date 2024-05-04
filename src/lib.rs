@@ -80,9 +80,9 @@ pub enum Model {
 }
 
 impl Model {
-    pub fn get_shapes(&self) -> Vec<CurveShape> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         match self {
-            Model::Point(m)     => vec![CurveShape::from_point(*m)], 
+            Model::Point(m)     => vec![Shape::from_point(*m)], 
             Model::Curve(m)     => m.get_shapes(),
             Model::Facet(m)     => m.get_shapes(),
             Model::Sketch(m)    => m.get_shapes(),
@@ -111,25 +111,33 @@ impl Default for Model {
 }
 
 pub trait ModelsToShapes {
-    fn shapes(&self) -> Vec<CurveShape>;
-    fn shape_groups(&self) -> Vec<Vec<CurveShape>>;
+    fn shapes(&self) -> Vec<Shape>;
+    fn shape_groups(&self) -> Vec<Vec<Shape>>;
 }
 
 impl ModelsToShapes for Vec<Model> {
-    fn shapes(&self) -> Vec<CurveShape> {
+    fn shapes(&self) -> Vec<Shape> {
         let mut result = vec![];
         for part in self {
             result.extend(part.get_shapes());
         }
         result
     }
-    fn shape_groups(&self) -> Vec<Vec<CurveShape>> {
+    fn shape_groups(&self) -> Vec<Vec<Shape>> {
         let mut result = vec![];
         for part in self {
             result.push(part.get_shapes());
         }
         result
     }
+}
+
+pub fn get_vector_hash(vecf32: &Vec<f32>) -> u64 {
+    let veci32: Vec<u64> = vecf32.iter().enumerate().map(|(i, v)| i as u64 * (v * 10000.).floor() as u64).collect();
+    veci32.iter().sum()
+    // let mut hasher = DefaultHasher::new();
+    // veci32.hash(&mut hasher);
+    // hasher.finish()
 }
 
 // pub trait Reshapes {
@@ -158,14 +166,6 @@ impl ModelsToShapes for Vec<Model> {
 //         result
 //     }
 // }
-
-pub fn get_vector_hash(vecf32: &Vec<f32>) -> u64 {
-    let veci32: Vec<u64> = vecf32.iter().enumerate().map(|(i, v)| i as u64 * (v * 10000.).floor() as u64).collect();
-    veci32.iter().sum()
-    // let mut hasher = DefaultHasher::new();
-    // veci32.hash(&mut hasher);
-    // hasher.finish()
-}
 
 // pub fn get_points(parts: &Vec<Model>) -> Vec<Vec3> {
 //     let mut result = vec![];

@@ -1,4 +1,4 @@
-use crate::{nurbs::Nurbs, Area, Circle, CurveShape, Shapes, Model, ModelsToShapes, Rectangle, Reshape
+use crate::{nurbs::Nurbs, Area, Circle, Shape, Shapes, Model, ModelsToShapes, Rectangle, Reshape
 };
 use serde::{Deserialize, Serialize};
 use glam::*;
@@ -27,7 +27,7 @@ impl Default for Extrude {
 // TODO: two types of extrude: 1. reshape all with translation by length and invert originals and increament lower ranks up one over length. 
 //                     2. Same as 1 but also create new shape with highest ranking plus one and remaining one lower ranks copied into its boundaries 
 impl Extrude {
-    pub fn get_shapes(&self) -> Vec<CurveShape> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         let shapes0 = self.parts.shapes();
         if self.length == 0. {
             return shapes0;
@@ -86,7 +86,7 @@ pub struct Cuboid {
 }
 
 impl Cuboid {
-    pub fn get_shapes(&self) -> Vec<CurveShape> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         let mut rect = Rectangle::default();
         rect.lengths = [self.lengths[0], self.lengths[1]];
         let area = Area::from_part(Model::Rectangle(rect));
@@ -104,7 +104,7 @@ pub struct Cylinder {
 }
 
 impl Cylinder {
-    pub fn get_shapes(&self) -> Vec<CurveShape> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         let mut circle = Circle::default();
         circle.radius = self.radius;
         circle.center = self.center;

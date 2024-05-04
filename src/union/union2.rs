@@ -1,21 +1,21 @@
-use crate::{hit::Miss, log, CurveHit, CurveShape, HitMiss2, HitTester2, Spatial3, DUP_0_TOL};
+use crate::{hit::Miss, log, CurveHit, Shape, HitMiss2, HitTester2, Spatial3, DUP_0_TOL};
 use glam::*;
 
 
 pub struct UnionBasis2 {
     pub tester: HitTester2,
-    pub groups: [Vec<CurveShape>; 2],
+    pub groups: [Vec<Shape>; 2],
     pub hits:   [Vec<Vec<CurveHit>>; 2], 
     pub miss:   [Vec<Vec<Miss>>; 2], 
-    pub curves: Vec<CurveShape>,
-    pub shapes: Vec<CurveShape>,
+    pub curves: Vec<Shape>,
+    pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis2 { 
-    pub fn new(curves0: Vec<CurveShape>, curves1: Vec<CurveShape>) -> Self {
+    pub fn new(curves0: Vec<Shape>, curves1: Vec<Shape>) -> Self {
         UnionBasis2 {
             tester: HitTester2 {
-                curves: (CurveShape::default(), CurveShape::default()),
+                curves: (Shape::default(), Shape::default()),
                 spatial: Spatial3::new(DUP_0_TOL), 
                 points:  vec![],
             },
@@ -27,7 +27,7 @@ impl UnionBasis2 {
         }
     }
 
-    pub fn build(&mut self) -> Vec<CurveShape> {
+    pub fn build(&mut self) -> Vec<Shape> {
         self.test_groups();
         for g in 0..2 {
             for i in 0..self.groups[g].len() {

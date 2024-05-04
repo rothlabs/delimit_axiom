@@ -2,7 +2,7 @@ use glam::*;
 use web_sys::WebGlProgram;
 use crate::gpu::framebuffer::Framebuffer;
 use crate::Shapes;
-use crate::{gpu::GPU, log, CurveShape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, HIT_TOL, MISS_PADDING};
+use crate::{gpu::GPU, log, Shape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, HIT_TOL, MISS_PADDING};
 use super::{HitPair2, HoneBuffer, MissPair, TestPair};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
@@ -10,7 +10,7 @@ pub trait HitTest2 {
     fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>);
 }
 
-impl HitTest2 for Vec<CurveShape> {
+impl HitTest2 for Vec<Shape> {
     fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>) {
         let gpu = GPU::new().unwrap();
         let mut basis = HoneBasis2::new(&self, &pairs);
@@ -160,7 +160,7 @@ pub struct HoneBasis2{
 }
 
 impl HoneBasis2 {
-    pub fn new(shapes: &Vec<CurveShape>, pairs: &Vec<TestPair>) -> Self{
+    pub fn new(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> Self{
         let mut max_knot_count = 0;
         let mut index_pairs: Vec<TestPair> = vec![];
         let mut u_groups: Vec<Vec<IndexedU>> = vec![]; // vec![]; shapes.len()

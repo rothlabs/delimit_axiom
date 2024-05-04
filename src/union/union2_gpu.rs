@@ -1,9 +1,9 @@
-use crate::{log, CurveShape, UnionIndexBatch};
+use crate::{log, Shape, UnionIndexBatch};
 use crate::hit::{hit2_gpu::HitTest2, Miss, HitMiss2, Hit2};
 
-pub fn get_union2_shapes(jobs: Vec<Vec<Vec<CurveShape>>>) -> Vec<Vec<CurveShape>> { // , shapes: Vec<CurveShape>, batch: UnionIndexBatch
+pub fn get_union2_shapes(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> { // , shapes: Vec<CurveShape>, batch: UnionIndexBatch
     let batch = UnionIndexBatch::new(&jobs);
-    let shapes: Vec<CurveShape> = jobs.clone().into_iter().flatten().flatten().collect();
+    let shapes: Vec<Shape> = jobs.clone().into_iter().flatten().flatten().collect();
     let (hits2, misses) = shapes.hit2(&batch.pairs);
     let mut hits:   Vec<[Vec<HitMiss2>; 2]> = vec![[vec![], vec![]]; jobs.len()];
     for (ji, groups) in jobs.iter().enumerate() {
@@ -30,14 +30,14 @@ pub fn get_union2_shapes(jobs: Vec<Vec<Vec<CurveShape>>>) -> Vec<Vec<CurveShape>
 
 
 pub struct UnionBasis2 {
-    pub groups: [Vec<CurveShape>; 2], // &'static 
+    pub groups: [Vec<Shape>; 2], // &'static 
     pub hits:   [Vec<HitMiss2>; 2], 
-    pub curves: Vec<CurveShape>,
-    pub shapes: Vec<CurveShape>,
+    pub curves: Vec<Shape>,
+    pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis2 { 
-    pub fn shape(groups: [&Vec<CurveShape>; 2], hits: &[Vec<HitMiss2>; 2]) -> Vec<CurveShape> { 
+    pub fn shape(groups: [&Vec<Shape>; 2], hits: &[Vec<HitMiss2>; 2]) -> Vec<Shape> { 
         UnionBasis2 {
             hits: hits.clone(),
             groups: [groups[0].clone(), groups[1].clone()], 
@@ -46,7 +46,7 @@ impl UnionBasis2 {
         }.build()
     }
 
-    pub fn build(&mut self) -> Vec<CurveShape> {
+    pub fn build(&mut self) -> Vec<Shape> {
         for g in 0..2 {
             for i in 0..self.groups[g].len() {
                 if self.hits[g][i].hits.is_empty() {

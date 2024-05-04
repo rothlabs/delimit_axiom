@@ -1,4 +1,4 @@
-use crate::{log, CurveShape};
+use crate::{log, Shape};
 use crate::gpu::{framebuffer::Framebuffer, GPU};
 use glam::*;
 use web_sys::WebGlProgram;
@@ -14,7 +14,7 @@ pub trait HitTest3 {
     fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair3>, Vec<MissPair>);
 }
 
-impl HitTest3 for Vec<CurveShape> {
+impl HitTest3 for Vec<Shape> {
     fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair3>, Vec<MissPair>) {
         let gpu = GPU::new().unwrap();
         HitBasis3 {
@@ -55,11 +55,11 @@ struct TraceBuffer {
 
 //#[derive(Clone)]
 pub struct HitBasis3 {
-    pub facets: Vec<CurveShape>,
+    pub facets: Vec<Shape>,
     pub pairs: Vec<TestPair>,
     //pub facet_hits: Vec<Hit3>, // Vec<TracedCurve>, // 
     //pub facet_miss: Vec<Miss3>, // Vec<Miss>, // 
-    pub shapes: Vec<CurveShape>,
+    pub shapes: Vec<Shape>,
     hone_basis: HoneBasis,
     trace_count: i32,
     init_hone_palette:  WebGlProgram,

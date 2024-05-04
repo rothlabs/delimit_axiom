@@ -40,8 +40,8 @@ impl Default for Curve {
 }
 
 impl Curve {
-    pub fn get_shapes(&self) -> Vec<CurveShape> {
-        let mut curve = CurveShape{
+    pub fn get_shapes(&self) -> Vec<Shape> {
+        let mut curve = Shape{
             nurbs: self.nurbs.clone(),
             controls: self.controls.shapes(),
             boundaries: vec![],
@@ -55,10 +55,10 @@ impl Curve {
         let mut shapes = vec![];
         if self.arrows > 0 {
             for i in 0..self.arrows {
-                let mut arrow_curve = CurveShape::default();
+                let mut arrow_curve = Shape::default();
                 let arrow = curve.get_arrow(&[i as f32 / (self.arrows - 1) as f32]);
-                arrow_curve.controls.push(CurveShape::from_point(arrow.point));
-                arrow_curve.controls.push(CurveShape::from_point(arrow.point + arrow.delta));
+                arrow_curve.controls.push(Shape::from_point(arrow.point));
+                arrow_curve.controls.push(Shape::from_point(arrow.point + arrow.delta));
                 arrow_curve.validate();
                 shapes.push(arrow_curve);
             }
@@ -70,15 +70,15 @@ impl Curve {
 
 #[derive(Clone)]
 pub struct CurveRectifier {
-    pub curve: CurveShape,
+    pub curve: Shape,
     //pub facet: FacetShape,
 }
 
 #[derive(Clone)]
-pub struct CurveShape {
+pub struct Shape {
     pub nurbs: Nurbs,
-    pub controls: Vec<CurveShape>,
-    pub boundaries: Vec<CurveShape>,
+    pub controls: Vec<Shape>,
+    pub boundaries: Vec<Shape>,
     pub min:  f32,
     pub max:  f32,
     pub rank: u8,
@@ -86,7 +86,7 @@ pub struct CurveShape {
     pub vector: Option<Vec3>,
 }
 
-impl Default for CurveShape {
+impl Default for Shape {
     fn default() -> Self {
         Self {
             nurbs: Nurbs::default(),
@@ -101,7 +101,7 @@ impl Default for CurveShape {
     }
 }
 
-impl CurveShape {
+impl Shape {
     pub fn from_point(point: Vec3) -> Self {
         let mut shape = Self::default();
         shape.vector = Some(point);
@@ -444,13 +444,13 @@ impl CurveShape {
 
 
 pub trait Shapes {
-    fn of_rank(&self, rank: u8) -> Vec<&CurveShape>;
+    fn of_rank(&self, rank: u8) -> Vec<&Shape>;
     fn high_rank(&self) -> u8;
-    fn reshaped(&self, mat4: Mat4) -> Vec<CurveShape>;
+    fn reshaped(&self, mat4: Mat4) -> Vec<Shape>;
 }
 
-impl Shapes for Vec<CurveShape> {
-    fn of_rank(&self, rank: u8) -> Vec<&CurveShape> {
+impl Shapes for Vec<Shape> {
+    fn of_rank(&self, rank: u8) -> Vec<&Shape> {
         let mut shapes = vec![];
         for shape in self {
             if shape.rank == rank {
@@ -466,7 +466,7 @@ impl Shapes for Vec<CurveShape> {
         }
         rank
     }
-    fn reshaped(&self, mat4: Mat4) -> Vec<CurveShape> {
+    fn reshaped(&self, mat4: Mat4) -> Vec<Shape> {
         let mut shapes = vec![];
         for shape in self {
             shapes.push(shape.reshaped(mat4));
@@ -476,11 +476,11 @@ impl Shapes for Vec<CurveShape> {
 }
 
 pub trait ShapeGroups {
-    fn negated(&self) -> Vec<Vec<CurveShape>>;
+    fn negated(&self) -> Vec<Vec<Shape>>;
 }
 
-impl ShapeGroups for Vec<Vec<CurveShape>> {
-    fn negated(&self) -> Vec<Vec<CurveShape>> {
+impl ShapeGroups for Vec<Vec<Shape>> {
+    fn negated(&self) -> Vec<Vec<Shape>> {
         let mut groups = vec![];
         for group in self {
             let mut shapes = vec![];

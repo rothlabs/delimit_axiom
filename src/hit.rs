@@ -10,7 +10,7 @@ pub mod hit2_gpu;
 pub mod hit3;
 
 use glam::*;
-use crate::{gpu::framebuffer::Framebuffer, CurveShape};
+use crate::{gpu::framebuffer::Framebuffer, Shape};
 
 pub fn job_indexes<T>(jobs: &Vec<Vec<Vec<T>>>) -> ([Vec<usize>; 2], Vec<(usize, usize, usize)>) {
     let mut indexes = vec![];
@@ -76,16 +76,16 @@ pub struct HitMiss2 {
 
 #[derive(Clone, Default)]
 pub struct HitMiss3 {
-    pub hits:   Vec<CurveShape>,
+    pub hits:   Vec<Shape>,
     pub misses: Vec<Miss>,
 }
 
 #[derive(Clone)]
 pub struct HitPair3 {
     pub pair:   TestPair,
-    pub curve0: CurveShape,
-    pub curve1: CurveShape,
-    pub curve2: CurveShape,
+    pub curve0: Shape,
+    pub curve1: Shape,
+    pub curve2: Shape,
 }
 
 struct HoneBuffer {

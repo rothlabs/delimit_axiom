@@ -2,7 +2,7 @@ use std::f32::INFINITY;
 use crate::nurbs::Nurbs;
 use crate::query::DiscreteQuery;
 use crate::scene::Mesh;
-use crate::{log, get_vector_hash, CurveShape, Model, ModelsToShapes, Rectangle};
+use crate::{log, get_vector_hash, Shape, Model, ModelsToShapes, Rectangle};
 //use euclid::{point3, Box3D, Point3D};
 use glam::*;
 use serde::{Deserialize, Serialize};
@@ -23,8 +23,8 @@ pub struct Facet {
 }
 
 impl Facet {
-    pub fn get_shapes(&self) -> Vec<CurveShape> {
-        let mut shape = CurveShape{
+    pub fn get_shapes(&self) -> Vec<Shape> {
+        let mut shape = Shape{
             controls: self.controls.shapes(),
             boundaries: self.boundaries.shapes(),
             nurbs: self.nurbs.clone(),

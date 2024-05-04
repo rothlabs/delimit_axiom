@@ -1,11 +1,11 @@
 use std::f32::EPSILON;
 use glam::*;
-use crate::{log, CurveShape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, DUP_1_TOL, HIT_TOL, MISS_PADDING};
+use crate::{log, Shape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, DUP_1_TOL, HIT_TOL, MISS_PADDING};
 
 use super::Miss;
 
 pub struct HitTester2 {
-    pub curves: (CurveShape, CurveShape),
+    pub curves: (Shape, Shape),
     pub spatial:      Spatial3,
     pub points:       Vec<Vec3>,
 }

@@ -4,7 +4,7 @@ pub mod facet;
 use glam::*;
 use serde::{Deserialize, Serialize};
 
-use crate::CurveShape;
+use crate::Shape;
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -27,8 +27,8 @@ impl Default for Nurbs {
 }
 
 impl Nurbs {
-    pub fn shape(&self) -> CurveShape {
-        CurveShape {
+    pub fn shape(&self) -> Shape {
+        Shape {
             nurbs: self.clone(),
             controls: vec![],  
             boundaries: vec![],

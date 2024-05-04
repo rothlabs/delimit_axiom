@@ -1,6 +1,6 @@
 use std::f32::consts::FRAC_PI_8;
 use glam::*;
-use crate::{log, DOT_1_TOL, CurveShape};
+use crate::{log, DOT_1_TOL, Shape};
 
 const TWO_ARROWS: &str = "There should be two arrows or more.";
 
@@ -50,13 +50,13 @@ impl Arrow {
 
 
 pub trait ToCurve {
-    fn to_curve(self) -> CurveShape;
+    fn to_curve(self) -> Shape;
 }
 
 impl ToCurve for Vec<Arrow> {
-    fn to_curve(self) -> CurveShape {
+    fn to_curve(self) -> Shape {
         ArrowsToCurve {
-            curve: CurveShape::from_order(3),
+            curve: Shape::from_order(3),
             arrow: self.first().expect(TWO_ARROWS).clone(),
             knot:  0.,
         }.make(self)
@@ -64,14 +64,14 @@ impl ToCurve for Vec<Arrow> {
 }
 
 pub struct ArrowsToCurve {
-    curve: CurveShape,
+    curve: Shape,
     arrow: Arrow,
     knot:  f32,
 }
 
 impl ArrowsToCurve {
-    fn make(&mut self, arrows: Vec<Arrow>) -> CurveShape {
-        self.curve.controls.push(CurveShape::from_point(self.arrow.point));
+    fn make(&mut self, arrows: Vec<Arrow>) -> Shape {
+        self.curve.controls.push(Shape::from_point(self.arrow.point));
         self.curve.nurbs.weights.push(1.);
         let delta = arrows.get(1).expect(TWO_ARROWS).delta;
         let mut base_angle = self.arrow.delta.angle_between(delta);
@@ -92,8 +92,8 @@ impl ArrowsToCurve {
     }
     fn add_arc(&mut self, arrow: &Arrow) { 
         let middle = self.arrow.middle(arrow);
-        self.curve.controls.push(CurveShape::from_point(middle)); 
-        self.curve.controls.push(CurveShape::from_point(arrow.point));
+        self.curve.controls.push(Shape::from_point(middle)); 
+        self.curve.controls.push(Shape::from_point(arrow.point));
         self.curve.nurbs.knots.extend(&[self.knot, self.knot]);
         let angle = self.arrow.delta.angle_between(arrow.delta);
         self.curve.nurbs.weights.extend(&[(angle / 2.).cos(), 1.]);  

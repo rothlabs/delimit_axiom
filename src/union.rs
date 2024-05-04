@@ -2,7 +2,7 @@ mod union2;
 mod union2_gpu;
 mod union3;
 
-use crate::{hit::{job_indexes, TestPair}, log, CurveShape, Model, ModelsToShapes, Reshape, ShapeGroups, Shapes};
+use crate::{hit::{job_indexes, TestPair}, log, Shape, Model, ModelsToShapes, Reshape, ShapeGroups, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -20,7 +20,7 @@ pub struct Union {
 
 
 impl Union {
-    pub fn get_shapes(&self) -> Vec<CurveShape> {
+    pub fn get_shapes(&self) -> Vec<Shape> {
         // let (_, facets, curve_groups_basis, facet_groups_basis) = get_grouped_curves_and_facets(&self.parts);
         // let (_, neg_facets, neg_curve_groups, neg_facet_groups) = get_grouped_curves_and_facets(&self.negated_parts);
         let mut shape_groups = self.parts.shape_groups();
@@ -33,12 +33,12 @@ impl Union {
 
 
 pub trait UnionBatchTrait { // TODO: rename to Union in different module from "Models" module
-    fn union(self) -> Vec<Vec<CurveShape>>;
+    fn union(self) -> Vec<Vec<Shape>>;
 }
 
-impl UnionBatchTrait for Vec<Vec<Vec<CurveShape>>> { // jobs, groups, curves
-    fn union(self) -> Vec<Vec<CurveShape>> { 
-        let shapes0: Vec<CurveShape> = self.clone().into_iter().flatten().flatten().collect();
+impl UnionBatchTrait for Vec<Vec<Vec<Shape>>> { // jobs, groups, curves
+    fn union(self) -> Vec<Vec<Shape>> { 
+        let shapes0: Vec<Shape> = self.clone().into_iter().flatten().flatten().collect();
         if shapes0.high_rank() < 2 {
             let mut result = vec![];
             for groups in &self {
@@ -76,7 +76,7 @@ pub struct UnionIndexBatch {
 }
 
 impl UnionIndexBatch {
-    pub fn new(jobs: &Vec<Vec<Vec<CurveShape>>>) -> Self {
+    pub fn new(jobs: &Vec<Vec<Vec<Shape>>>) -> Self {
         let (starts, indexes) = job_indexes(jobs);
         UnionIndexBatch {
             pairs: job_pairs(&starts, jobs),
@@ -93,7 +93,7 @@ impl UnionIndexBatch {
     }
 }
 
-pub fn job_pairs(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<CurveShape>>>) -> Vec<TestPair> {
+pub fn job_pairs(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<Shape>>>) -> Vec<TestPair> {
     let mut pairs = vec![];
     for (ji, groups) in jobs.iter().enumerate() {
         for g1 in 1..groups.len(){

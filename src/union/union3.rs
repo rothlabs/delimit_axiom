@@ -1,5 +1,5 @@
 use glam::*;
-use crate::{log, CurveShape, HitTest3, Trim, UnionIndexBatch};
+use crate::{log, Shape, HitTest3, Trim, UnionIndexBatch};
 use super::{UnionBatchTrait};
 use crate::hit::{HitPair3, Miss, MissPair};
 
@@ -44,18 +44,18 @@ use crate::hit::{HitPair3, Miss, MissPair};
 pub struct UnionBasis3 {
     hits3: Vec<HitPair3>,
     misses3: Vec<MissPair>,
-    pub facet_groups: Vec<Vec<CurveShape>>,
-    hit_groups: Vec<Vec<Vec<CurveShape>>>,
+    pub facet_groups: Vec<Vec<Shape>>,
+    hit_groups: Vec<Vec<Vec<Shape>>>,
     //indexes: Vec<(usize, usize, usize)>,
     pub batch: UnionIndexBatch,
-    pub shapes: Vec<CurveShape>,
+    pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis3 { 
-    pub fn get_shapes(jobs: Vec<Vec<Vec<CurveShape>>>) -> Vec<CurveShape> {
+    pub fn get_shapes(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Shape> {
         let batch = UnionIndexBatch::new(&jobs);
         let facet_groups = jobs[0].clone();
-        let facets: Vec<CurveShape> = facet_groups.clone().into_iter().flatten().collect();
+        let facets: Vec<Shape> = facet_groups.clone().into_iter().flatten().collect();
         let (hits3, misses3) = facets.hit(&batch.pairs); 
         UnionBasis3 {
             hits3,
@@ -67,7 +67,7 @@ impl UnionBasis3 {
         }.make_shapes()
     }
 
-    pub fn make_shapes(&mut self) -> Vec<CurveShape> {
+    pub fn make_shapes(&mut self) -> Vec<Shape> {
         //let hits = self.hit_basis.facet_hits.clone();
         //let mut misses = self.misses3.clone();
                 //self.shapes = self.basis.shapes.clone();
@@ -188,7 +188,7 @@ impl UnionBasis3 {
                 let mut bndry = facet.boundaries[j].clone();
                 bndry.controls.clear();
                 for k in 0..facet.boundaries[j].controls.len() {
-                    bndry.controls.push(CurveShape::from_point(facet.boundaries[j].controls[k].get_point(&[]) + vec3(
+                    bndry.controls.push(Shape::from_point(facet.boundaries[j].controls[k].get_point(&[]) + vec3(
                         100. + fi as f32 * 2.,// + (j as f32)*0.005,  
                         gi as f32 * 2.,// + (j as f32)*0.01, 
                         0.

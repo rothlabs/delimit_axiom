@@ -37,31 +37,12 @@ impl Default for Shape {
 }
 
 impl Shape {
-    pub fn from_point(point: Vec3) -> Self {
-        let mut shape = Self::default();
-        shape.vector = Some(point);
-        shape
-    }
-
     pub fn from_order(order: usize) -> Self {
         let mut curve = Self::default();
         curve.basis.order = order;
         curve.basis.knots.extend(vec![0.; order]);
         curve
     }
-
-    // pub fn from_nurbs(nurbs: Nurbs) -> Self {
-    //     let mut curve = Self::default();
-    //     curve.nurbs = nurbs;
-    //     curve
-    // }
-
-    // pub fn from_nurbs_and_controls(nurbs: Nurbs, controls: Vec<CurveShape>) -> Self {
-    //     let mut curve = Self::default();
-    //     curve.nurbs = nurbs;
-    //     curve.controls = controls; //points.iter().map(|p| CurveShape::from_point(*p)).collect();
-    //     curve
-    // }
 
     fn get_rank(&self, rank0: u8) -> u8 {
         let mut rank1 = rank0;
@@ -245,19 +226,6 @@ impl Shape {
         console_log!("weights {:?}", self.basis.weights);
     }
 
-    // pub fn get_valid(&self) -> CurveShape {
-    //     CurveShape {
-    //         nurbs: self.nurbs.get_valid(self.controls.len()),
-    //         controls: self.controls.clone(), 
-    //         boundaries: self.boundaries.clone(),
-    //         min: self.min,
-    //         max: self.max,
-    //         rank: self.rank,
-    //         rectifier: self.rectifier.clone(),
-    //         vector: self.vector,
-    //     }
-    // }
-
     pub fn get_mesh(&self, query: &DiscreteQuery) -> Mesh { 
         let facet = self;
         let mut u_count = 0;
@@ -366,12 +334,34 @@ pub fn rank0(vector: Vec3) -> Shape {
 
 
 
+    // pub fn from_nurbs(nurbs: Nurbs) -> Self {
+    //     let mut curve = Self::default();
+    //     curve.nurbs = nurbs;
+    //     curve
+    // }
+
+    // pub fn from_nurbs_and_controls(nurbs: Nurbs, controls: Vec<CurveShape>) -> Self {
+    //     let mut curve = Self::default();
+    //     curve.nurbs = nurbs;
+    //     curve.controls = controls; //points.iter().map(|p| Curverank0(*p)).collect();
+    //     curve
+    // }
 
 
 
 
-
-
+    // pub fn get_valid(&self) -> CurveShape {
+    //     CurveShape {
+    //         nurbs: self.nurbs.get_valid(self.controls.len()),
+    //         controls: self.controls.clone(), 
+    //         boundaries: self.boundaries.clone(),
+    //         min: self.min,
+    //         max: self.max,
+    //         rank: self.rank,
+    //         rectifier: self.rectifier.clone(),
+    //         vector: self.vector,
+    //     }
+    // }
 
 
 

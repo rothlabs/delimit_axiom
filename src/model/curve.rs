@@ -38,8 +38,8 @@ impl Curve {
             for i in 0..self.arrows {
                 let mut arrow_curve = Shape::default();
                 let arrow = curve.get_arrow(&[i as f32 / (self.arrows - 1) as f32]);
-                arrow_curve.controls.push(Shape::from_point(arrow.point));
-                arrow_curve.controls.push(Shape::from_point(arrow.point + arrow.delta));
+                arrow_curve.controls.push(rank0(arrow.point));
+                arrow_curve.controls.push(rank0(arrow.point + arrow.delta));
                 arrow_curve.validate();
                 shapes.push(arrow_curve);
             }

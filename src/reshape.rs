@@ -9,10 +9,10 @@ pub struct Reshape {
     pub parts:    Vec<Model>,
     pub negate:   bool,
     pub reverse:  bool,
-    pub position: Vec3,//[f32; 3],
-    pub rotation: Vec3,//[f32; 3],
-    pub scale:    Vec3,//[f32; 3],
-    pub axis:     Vec3,//[f32; 3],
+    pub position: Vec3,
+    pub rotation: Vec3,
+    pub scale:    Vec3,
+    pub axis:     Vec3,
     pub angle:    f32,
 }
 

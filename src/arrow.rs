@@ -1,6 +1,7 @@
 use std::f32::consts::FRAC_PI_8;
 use glam::*;
-use crate::{log, DOT_1_TOL, Shape};
+use crate::shape::*;
+use crate::{log, DOT_1_TOL};
 
 const TWO_ARROWS: &str = "There should be two arrows or more.";
 
@@ -71,7 +72,7 @@ pub struct ArrowsToCurve {
 
 impl ArrowsToCurve {
     fn make(&mut self, arrows: Vec<Arrow>) -> Shape {
-        self.curve.controls.push(Shape::from_point(self.arrow.point));
+        self.curve.controls.push(rank0(self.arrow.point));
         self.curve.basis.weights.push(1.);
         let delta = arrows.get(1).expect(TWO_ARROWS).delta;
         let mut base_angle = self.arrow.delta.angle_between(delta);
@@ -92,8 +93,8 @@ impl ArrowsToCurve {
     }
     fn add_arc(&mut self, arrow: &Arrow) { 
         let middle = self.arrow.middle(arrow);
-        self.curve.controls.push(Shape::from_point(middle)); 
-        self.curve.controls.push(Shape::from_point(arrow.point));
+        self.curve.controls.push(rank0(middle)); 
+        self.curve.controls.push(rank0(arrow.point));
         self.curve.basis.knots.extend(&[self.knot, self.knot]);
         let angle = self.arrow.delta.angle_between(arrow.delta);
         self.curve.basis.weights.extend(&[(angle / 2.).cos(), 1.]);  

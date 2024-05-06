@@ -25,10 +25,10 @@ impl Area {
         let mut facet  = Shape::default();
         let mut curve0 = Shape::default();
         let mut curve1 = Shape::default();
-        curve0.controls.push(Shape::from_point(vec3(min.x, min.y, 0.)));
-        curve0.controls.push(Shape::from_point(vec3(max.x, min.y, 0.)));
-        curve1.controls.push(Shape::from_point(vec3(min.x, max.y, 0.)));
-        curve1.controls.push(Shape::from_point(vec3(max.x, max.y, 0.)));
+        curve0.controls.push(rank0(vec3(min.x, min.y, 0.)));
+        curve0.controls.push(rank0(vec3(max.x, min.y, 0.)));
+        curve1.controls.push(rank0(vec3(min.x, max.y, 0.)));
+        curve1.controls.push(rank0(vec3(max.x, max.y, 0.)));
         curve0.validate();
         curve1.validate();
         facet.controls.extend([curve0, curve1]);
@@ -36,7 +36,7 @@ impl Area {
             let mut boundary = curve.clone();
             let mut normalized_points = vec![];
             for bndry in boundary.controls {
-                normalized_points.push(Shape::from_point(vec3(
+                normalized_points.push(rank0(vec3(
                     (bndry.point(&[]).x - min.x) / (max.x - min.x), 
                     (bndry.point(&[]).y - min.y) / (max.y - min.y), //1. - (p.y - min.y) / (max.y - min.y), 
                     0.

@@ -1,6 +1,7 @@
 use glam::*;
-use crate::{log, Shape, HitTest3, TrimJob};
-use super::{UnionJob};
+use crate::shape::*;
+use crate::{log, HitTest3, TrimJob};
+use super::UnionJob;
 use crate::hit::{CascadeGroupJob, HitPair3, Miss, MissPair};
 
 // pub trait Union3 {
@@ -147,7 +148,7 @@ impl UnionBasis3 {
         //     let mut bndry = facet.boundaries[j].clone();
         //     bndry.controls.clear();
         //     for k in 0..facet.boundaries[j].controls.len() {
-        //         bndry.controls.push(Shape::from_point(facet.boundaries[j].controls[k].point(&[]) + vec3(
+        //         bndry.controls.push(rank0(facet.boundaries[j].controls[k].point(&[]) + vec3(
         //             100. + fi as f32 * 2., // + (j as f32)*0.005,  
         //             gi as f32 * 2., // + (j as f32)*0.01, 
         //             0.
@@ -159,7 +160,7 @@ impl UnionBasis3 {
         //     let mut bndry = self.hit_groups[gi][fi][j].clone();
         //     bndry.controls.clear();
         //     for k in 0..self.hit_groups[gi][fi][j].controls.len() {
-        //         bndry.controls.push(Shape::from_point(self.hit_groups[gi][fi][j].controls[k].point(&[]) + vec3(
+        //         bndry.controls.push(rank0(self.hit_groups[gi][fi][j].controls[k].point(&[]) + vec3(
         //             100. + fi as f32 * 2.,// + (j as f32)*0.01,  
         //             gi as f32 * 2.,//  + (j as f32)*0.01, 
         //             0.
@@ -172,7 +173,7 @@ impl UnionBasis3 {
         //     let mut bndry = trimmed[j].clone();
         //     bndry.controls.clear();
         //     for k in 0..trimmed[j].controls.len() {
-        //         bndry.controls.push(Shape::from_point(trimmed[j].controls[k].point(&[]) + vec3(
+        //         bndry.controls.push(rank0(trimmed[j].controls[k].point(&[]) + vec3(
         //             100. + fi as f32 * 2., //  + (j as f32)*0.01  
         //             gi as f32 * 2., //  + (j as f32)*0.01 
         //             0.
@@ -188,7 +189,7 @@ impl UnionBasis3 {
                 let mut bndry = facet.boundaries[j].clone();
                 bndry.controls.clear();
                 for k in 0..facet.boundaries[j].controls.len() {
-                    bndry.controls.push(Shape::from_point(facet.boundaries[j].controls[k].point(&[]) + vec3(
+                    bndry.controls.push(rank0(facet.boundaries[j].controls[k].point(&[]) + vec3(
                         100. + fi as f32 * 2.,// + (j as f32)*0.005,  
                         gi as f32 * 2.,// + (j as f32)*0.01, 
                         0.

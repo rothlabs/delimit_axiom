@@ -1,6 +1,7 @@
 use glam::*;
+use crate::shape::*;
 use crate::{arrow::*, AT_0_TOL, AT_1_TOL, DELTA_0_TOL, TRACE_STEP};
-use crate::{log, Shape};
+use crate::log;
 use super::{TestPair, HitPair3};
 use std::collections::HashMap;
 
@@ -217,9 +218,9 @@ pub fn get_traced_curves(
         let mut curve0 = Shape::default();
         let mut curve1 = Shape::default();
         let mut curve2 = Shape::default();
-        curve0.controls.extend(rays0a.iter().map(|x| Shape::from_point(x.point)));
-        curve1.controls.extend(rays1a.iter().map(|x| Shape::from_point(x.point)));
-        curve2.controls.extend(rays2a.iter().map(|x| Shape::from_point(x.point)));
+        curve0.controls.extend(rays0a.iter().map(|x| rank0(x.point)));
+        curve1.controls.extend(rays1a.iter().map(|x| rank0(x.point)));
+        curve2.controls.extend(rays2a.iter().map(|x| rank0(x.point)));
         // let mut curve0 = rays0a.to_curve();
         // let mut curve1 = rays1a.to_curve();
         // let mut curve2 = rays2a.to_curve();

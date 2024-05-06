@@ -1,4 +1,5 @@
-use crate::{Model, Revolve, Shape};
+use crate::shape::*;
+use crate::{Model, Revolve};
 use glam::*;
 
 // pub trait ToSketch {
@@ -27,13 +28,13 @@ impl Sketch {
     pub fn shapes(&self) -> Vec<Shape> {
         let mut shapes = self.shapes.clone();
         if !self.closed {
-            shapes.push(Shape::from_point(self.start.extend(0.)));
+            shapes.push(rank0(self.start.extend(0.)));
         }
         shapes 
     }
     pub fn jump_to(&mut self, point: Vec2) -> &mut Self {
         if self.drawing {
-            self.shapes.push(Shape::from_point(self.start.extend(0.)));
+            self.shapes.push(rank0(self.start.extend(0.)));
         }
         self.turtle.jump_to(point);
         self.start = self.turtle.pos;
@@ -42,7 +43,7 @@ impl Sketch {
     }
     pub fn jump_forward(&mut self, length: f32) -> &mut Self {
         if self.drawing {
-            self.shapes.push(Shape::from_point(self.start.extend(0.)));
+            self.shapes.push(rank0(self.start.extend(0.)));
         }
         self.turtle.jump_forward(length);
         self.start = self.turtle.pos;
@@ -51,11 +52,11 @@ impl Sketch {
     }
     pub fn line_to(&mut self, point: Vec2) -> &mut Self {
         let mut curve = Shape::default();
-        curve.controls = vec![Shape::from_point(self.turtle.pos.extend(0.)), Shape::from_point(point.extend(0.))]; 
+        curve.controls = vec![rank0(self.turtle.pos.extend(0.)), rank0(point.extend(0.))]; 
         curve.basis.order = 2;
         curve.validate();
         self.shapes.push(curve);
-        self.shapes.push(Shape::from_point(point.extend(0.)));
+        self.shapes.push(rank0(point.extend(0.)));
         self.turtle.jump_to(point);
         self.drawing = true;
         self
@@ -65,10 +66,10 @@ impl Sketch {
         self.turtle.jump_forward(length);
         let end_point = self.turtle.pos;
         let mut curve = Shape::default();
-        curve.controls = vec![Shape::from_point(start_point.extend(0.)), Shape::from_point(end_point.extend(0.))];
+        curve.controls = vec![rank0(start_point.extend(0.)), rank0(end_point.extend(0.))];
         curve.validate(); 
         self.shapes.push(curve);
-        self.shapes.push(Shape::from_point(end_point.extend(0.)));
+        self.shapes.push(rank0(end_point.extend(0.)));
         self.drawing = true;
         self
     }

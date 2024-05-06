@@ -57,7 +57,7 @@ pub struct Circle {
 impl Circle {
     pub fn shapes(&self) -> Vec<Shape> {
         let mut shapes = actor::Revolve {
-            shapes: vec![Shape::from_point(vec3(self.center.x + self.radius, self.center.y, 0.))], 
+            shapes: vec![rank0(vec3(self.center.x + self.radius, self.center.y, 0.))], 
             center: self.center.extend(0.),
             ..Default::default()
         }.shapes();
@@ -68,8 +68,8 @@ impl Circle {
                         for i in 0..self.arrows {
                             let mut curve = Shape::default();
                             let arrow = shapes[0].get_arrow(&[i as f32 / (self.arrows - 1) as f32]);
-                            curve.controls.push(Shape::from_point(arrow.point));
-                            curve.controls.push(Shape::from_point(arrow.point + arrow.delta));
+                            curve.controls.push(rank0(arrow.point));
+                            curve.controls.push(rank0(arrow.point + arrow.delta));
                             curve.validate();
                             shapes.push(curve);
                         }

@@ -81,7 +81,7 @@ pub enum Model {
 impl Model {
     pub fn shapes(&self) -> Vec<Shape> {
         match self {
-            Model::Point(m)     => vec![Shape::from_point(*m)], 
+            Model::Point(m)     => vec![rank0(*m)], 
             Model::Curve(m)     => m.shapes(),
             Model::Facet(m)     => m.shapes(),
             Model::Sketch(m)    => m.shapes(),

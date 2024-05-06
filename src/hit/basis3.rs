@@ -31,40 +31,40 @@ impl HoneBasis {
         //for group in groups {
             for (facet_i, facet) in facets.iter().enumerate() {
                 let mut indexed_uvs: Vec<IndexedUV> = vec![];
-                if facet.space.knots.len() > max_knot_count {
-                    max_knot_count = facet.space.knots.len();
+                if facet.basis.knots.len() > max_knot_count {
+                    max_knot_count = facet.basis.knots.len();
                 }
                 let texel_i = facet_texels.len();
                 facet_texels.extend([
                     10000000., // facet.nurbs.sign, 
                     facet.controls.len() as f32,
-                    facet.space.order as f32,
+                    facet.basis.order as f32,
                 ]);
-                facet_texels.extend(&facet.space.knots);
-                facet_texels.extend(&facet.space.weights);
+                facet_texels.extend(&facet.basis.knots);
+                facet_texels.extend(&facet.basis.weights);
                 for (ci, curve) in facet.controls.iter().enumerate() {
-                    if curve.space.knots.len() > max_knot_count { 
-                        max_knot_count = curve.space.knots.len(); 
+                    if curve.basis.knots.len() > max_knot_count { 
+                        max_knot_count = curve.basis.knots.len(); 
                     }
                     facet_texels.extend([
                         9000000. + ci as f32,
                         curve.controls.len() as f32,
-                        curve.space.order as f32,
-                        curve.space.min,
-                        curve.space.max,
+                        curve.basis.order as f32,
+                        curve.basis.min,
+                        curve.basis.max,
                     ]); 
                     facet_texels.push(0.);
-                    for i in 1..curve.space.knots.len() { //-1 {
-                        if curve.space.knots[i-1] < curve.space.knots[i] || i == curve.space.order-1 { // curve.nurbs.knots.len() - curve.nurbs.order
+                    for i in 1..curve.basis.knots.len() { //-1 {
+                        if curve.basis.knots[i-1] < curve.basis.knots[i] || i == curve.basis.order-1 { // curve.nurbs.knots.len() - curve.nurbs.order
                             indexed_uvs.push(IndexedUV{
                                 texel_i, 
-                                uv:vec2(curve.space.knots[i], ci as f32 / (facet.controls.len()-1) as f32)
+                                uv:vec2(curve.basis.knots[i], ci as f32 / (facet.controls.len()-1) as f32)
                             }); 
                         }
-                        facet_texels.push(curve.space.knots[i]);
+                        facet_texels.push(curve.basis.knots[i]);
                     }  
                     //facet_texels.push(curve.nurbs.knots[curve.nurbs.knots.len()-1]);
-                    facet_texels.extend(&curve.space.weights);
+                    facet_texels.extend(&curve.basis.weights);
                     for control in &curve.controls {
                         facet_texels.extend(control.point(&[]).to_array());
                     }

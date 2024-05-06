@@ -2,12 +2,11 @@
 mod union2;
 mod union3;
 
-use crate::{hit::{TestPair}, log, Shape, Model, Models, Reshape, ShapeGroups, Shapes};
+use crate::{Shape, Model, Models, Reshape, Groups, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
-use self::{union2::get_union2_shapes, union3::UnionBasis3};
-
+use self::{union2::union_job2, union3::UnionBasis3};
 
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -18,18 +17,14 @@ pub struct Union {
     pub reshape:       Reshape,
 }
 
-
 impl Union {
     pub fn shapes(&self) -> Vec<Shape> {
-        // let (_, facets, curve_groups_basis, facet_groups_basis) = get_grouped_curves_and_facets(&self.parts);
-        // let (_, neg_facets, neg_curve_groups, neg_facet_groups) = get_grouped_curves_and_facets(&self.negated_parts);
         let mut shape_groups = self.parts.shape_groups();
         let neg_shape_groups = self.negated_parts.shape_groups().negated();
         shape_groups.extend(neg_shape_groups);
         vec![shape_groups].union()[0].clone()
     }
 }
-
 
 
 pub trait UnionJob { // TODO: rename to Union in different module from "Models" module
@@ -56,7 +51,7 @@ impl UnionJob for Vec<Vec<Vec<Shape>>> { // jobs, groups, curves
                     }
                 }
                 if done { break }
-                result = get_union2_shapes(jobs);
+                result = union_job2(jobs);
                 gi += 1;
             }
             result
@@ -66,6 +61,11 @@ impl UnionJob for Vec<Vec<Vec<Shape>>> { // jobs, groups, curves
     }
 }
 
+
+
+
+        // let (_, facets, curve_groups_basis, facet_groups_basis) = get_grouped_curves_and_facets(&self.parts);
+        // let (_, neg_facets, neg_curve_groups, neg_facet_groups) = get_grouped_curves_and_facets(&self.negated_parts);
 
 
 // impl UnionIndexBatch {

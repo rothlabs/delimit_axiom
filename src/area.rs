@@ -1,5 +1,6 @@
 use std::f32::{INFINITY, NEG_INFINITY};
-use crate::{log, Shape, Model, Models, Reshape, Shapes};
+use crate::shape::*;
+use crate::{Model, Models, Reshape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 

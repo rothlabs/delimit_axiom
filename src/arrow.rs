@@ -72,7 +72,7 @@ pub struct ArrowsToCurve {
 impl ArrowsToCurve {
     fn make(&mut self, arrows: Vec<Arrow>) -> Shape {
         self.curve.controls.push(Shape::from_point(self.arrow.point));
-        self.curve.space.weights.push(1.);
+        self.curve.basis.weights.push(1.);
         let delta = arrows.get(1).expect(TWO_ARROWS).delta;
         let mut base_angle = self.arrow.delta.angle_between(delta);
         for arrow in arrows.windows(2) {
@@ -86,17 +86,17 @@ impl ArrowsToCurve {
             self.knot += 1.; 
         }
         self.add_arc(&arrows.last().expect(TWO_ARROWS));
-        self.curve.space.knots.push(self.knot);
-        self.curve.space.normalize();
+        self.curve.basis.knots.push(self.knot);
+        self.curve.basis.normalize();
         self.curve.clone()
     }
     fn add_arc(&mut self, arrow: &Arrow) { 
         let middle = self.arrow.middle(arrow);
         self.curve.controls.push(Shape::from_point(middle)); 
         self.curve.controls.push(Shape::from_point(arrow.point));
-        self.curve.space.knots.extend(&[self.knot, self.knot]);
+        self.curve.basis.knots.extend(&[self.knot, self.knot]);
         let angle = self.arrow.delta.angle_between(arrow.delta);
-        self.curve.space.weights.extend(&[(angle / 2.).cos(), 1.]);  
+        self.curve.basis.weights.extend(&[(angle / 2.).cos(), 1.]);  
         self.arrow = arrow.clone();
     }
 }

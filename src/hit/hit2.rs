@@ -1,8 +1,8 @@
 use glam::*;
 use web_sys::WebGlProgram;
 use crate::gpu::framebuffer::Framebuffer;
-use crate::Shapes;
-use crate::{gpu::GPU, log, Shape, Spatial3, AT_0_TOL, AT_1_TOL, DOT_1_TOL, DUP_0_TOL, HIT_TOL, MISS_PADDING};
+use crate::Shape;
+use crate::{gpu::GPU, Spatial3, DUP_0_TOL};
 use super::{HitPair2, HoneBuffer, MissPair, TestPair};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
@@ -171,31 +171,31 @@ impl HoneBasis2 {
         for curve in shapes {
             let mut u_indexes: Vec<IndexedU> = vec![];
             if curve.rank == 1 {
-                if curve.space.knots.len() > max_knot_count { 
-                    max_knot_count = curve.space.knots.len(); 
+                if curve.basis.knots.len() > max_knot_count { 
+                    max_knot_count = curve.basis.knots.len(); 
                 }
                 let texel_index = curve_texels.len();
                 curve_texels.extend([
                     9000000., // + ci as f32,
                     curve.controls.len() as f32,
-                    curve.space.order as f32,
-                    curve.space.min,
-                    curve.space.max,
+                    curve.basis.order as f32,
+                    curve.basis.min,
+                    curve.basis.max,
                 ]); 
-                for i in 0..curve.space.knots.len()-1 {
-                    if curve.space.knots[i] < curve.space.knots[i+1] || i == curve.space.knots.len() - curve.space.order {
+                for i in 0..curve.basis.knots.len()-1 {
+                    if curve.basis.knots[i] < curve.basis.knots[i+1] || i == curve.basis.knots.len() - curve.basis.order {
                         // if curve.nurbs.knots[i] > 1. {
                         //     log("what?!?????????");
                         // }
                         u_indexes.push(IndexedU{
                             texel_index, 
-                            u: curve.space.knots[i],
+                            u: curve.basis.knots[i],
                         }); 
                     }
-                    curve_texels.push(curve.space.knots[i]);
+                    curve_texels.push(curve.basis.knots[i]);
                 }  
-                curve_texels.push(curve.space.knots[curve.space.knots.len()-1]);
-                curve_texels.extend(&curve.space.weights);
+                curve_texels.push(curve.basis.knots[curve.basis.knots.len()-1]);
+                curve_texels.extend(&curve.basis.weights);
                 for control in &curve.controls {
                     curve_texels.extend(control.point(&[]).to_array());
                 }

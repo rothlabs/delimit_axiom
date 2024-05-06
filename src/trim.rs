@@ -29,14 +29,14 @@ impl TrimJob for Vec<Vec<Shape>> { // jobs, shapes
     fn trim(self) -> Vec<Vec<Shape>> { 
         let shapes0: Vec<Shape> = self.clone().into_iter().flatten().collect();
         if shapes0.high_rank() < 2 {
-            trim2(self)
+            trim_job2(self)
         }else{
             vec![]
         }
     }
 }
 
-fn trim2(jobs: Vec<Vec<Shape>>) -> Vec<Vec<Shape>> { 
+fn trim_job2(jobs: Vec<Vec<Shape>>) -> Vec<Vec<Shape>> { 
     let batch = HitJob::new(&jobs);
     let shapes: Vec<Shape> = jobs.clone().into_iter().flatten().collect();
     let (hits2, misses) = shapes.hit2(&batch.pairs);
@@ -89,13 +89,13 @@ impl Trim2 {
     }
     fn add_bounded_curves(&mut self, i: usize) {
         let mut curve = self.group[i].clone();
-        let min_basis = curve.space.min;
+        let min_basis = curve.basis.min;
         for hit in self.hits[i].hits.iter() { 
-            if hit.dot * curve.space.sign > 0. {
-                curve.space.set_min(hit.u);
+            if hit.dot * curve.basis.sign > 0. {
+                curve.basis.set_min(hit.u);
             }else{
-                curve.space.set_max(min_basis, hit.u);
-                let range = curve.space.range();
+                curve.basis.set_max(min_basis, hit.u);
+                let range = curve.basis.range();
                 if range < 0.001 {
                     console_log!("trim range: {}", range);
                 }
@@ -103,8 +103,8 @@ impl Trim2 {
                 curve = self.group[i].clone();
             }
         }
-        if self.hits[i].hits.last().expect("There should be one or more hits.").dot * curve.space.sign > 0. {
-            let range = curve.space.range();
+        if self.hits[i].hits.last().expect("There should be one or more hits.").dot * curve.basis.sign > 0. {
+            let range = curve.basis.range();
             if range < 0.001 {
                 console_log!("trim range last: {}", range);
             }

@@ -1,7 +1,9 @@
-use crate::{space::Space, Area, Circle, Shape, Shapes, Model, Models, Rectangle, Reshape
-};
-use serde::{Deserialize, Serialize};
 use glam::*;
+use serde::{Deserialize, Serialize};
+use crate::shape::*;
+use crate::{Area, Circle, Model, Models, Rectangle, Reshape};
+
+
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)] //  = "Extrude::default"
@@ -60,14 +62,14 @@ impl Extrude {
 }
 
 struct ExtrudeBasis {
-    nurbs: Space,
+    nurbs: Basis,
     mat4: Mat4,
 }
 
 impl ExtrudeBasis {
     fn new(translation: Vec3) -> Self {
         Self {
-            nurbs: Space {
+            nurbs: Basis {
                 sign:    1.,
                 order:   2,
                 min: 0.,

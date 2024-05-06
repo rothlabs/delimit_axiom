@@ -1,7 +1,7 @@
 use crate::{log, Shape};
 use crate::hit::{CascadeGroupJob, hit2::HitTest2, Miss, HitMiss2, Hit2};
 
-pub fn get_union2_shapes(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> { // , shapes: Vec<CurveShape>, batch: UnionIndexBatch
+pub fn union_job2(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> { // , shapes: Vec<CurveShape>, batch: UnionIndexBatch
     let batch = CascadeGroupJob::new(&jobs);
     let shapes: Vec<Shape> = jobs.clone().into_iter().flatten().flatten().collect();
     let (hits2, misses) = shapes.hit2(&batch.pairs);
@@ -33,7 +33,6 @@ pub struct UnionBasis2 {
     pub groups: [Vec<Shape>; 2], // &'static 
     pub hits:   [Vec<HitMiss2>; 2], 
     pub shapes: Vec<Shape>,
-    //pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis2 { 
@@ -42,7 +41,6 @@ impl UnionBasis2 {
             hits: hits.clone(),
             groups: [groups[0].clone(), groups[1].clone()], 
             shapes: vec![],
-            //shapes: vec![],
         }.make()
     }
 
@@ -51,7 +49,7 @@ impl UnionBasis2 {
             for i in 0..self.groups[g].len() {
                 if self.hits[g][i].hits.is_empty() {
                     self.hits[g][i].misses.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                    if self.hits[g][i].misses.is_empty() || self.hits[g][i].misses[0].dot * self.groups[g][i].space.sign > 0. { 
+                    if self.hits[g][i].misses.is_empty() || self.hits[g][i].misses[0].dot * self.groups[g][i].basis.sign > 0. { 
                         self.shapes.push(self.groups[g][i].clone());   
                     }
                 }else{
@@ -61,7 +59,7 @@ impl UnionBasis2 {
             }
         }
         for shape in &mut self.shapes {
-            if shape.space.sign < 0. {
+            if shape.basis.sign < 0. {
                 shape.reverse().negate();
             }
             //self.shapes.push(curve.clone());
@@ -71,21 +69,21 @@ impl UnionBasis2 {
 
     fn add_bounded_curves(&mut self, g: usize, i: usize) {
         let mut curve = self.groups[g][i].clone();
-        let min_basis = curve.space.min;
+        let min_basis = curve.basis.min;
         for curve_hit in self.hits[g][i].hits.iter() {
-            if curve_hit.dot * curve.space.sign < 0. {
-                curve.space.set_min(curve_hit.u);
+            if curve_hit.dot * curve.basis.sign < 0. {
+                curve.basis.set_min(curve_hit.u);
             }else{
                 let range = curve_hit.u - min_basis;
                 if range < 0.0001 {
                     console_log!("union2 range: {}", range);
                 }
-                curve.space.set_max(min_basis, curve_hit.u);
+                curve.basis.set_max(min_basis, curve_hit.u);
                 self.shapes.push(curve);
                 curve = self.groups[g][i].clone();
             }
         }
-        if self.hits[g][i].hits.last().expect("There should be one or more hits.").dot * curve.space.sign < 0. {
+        if self.hits[g][i].hits.last().expect("There should be one or more hits.").dot * curve.basis.sign < 0. {
             self.shapes.push(curve);
         }
     }

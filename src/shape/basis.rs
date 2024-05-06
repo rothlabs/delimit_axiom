@@ -1,10 +1,10 @@
 use glam::*;
-use serde::{Deserialize, Serialize};
-use crate::Shape;
+use serde::*;
+use super::Shape;
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
-pub struct Space {
+pub struct Basis {
     pub sign:    f32,
     pub order:   usize,       // order = polynomial_degree + 1
     pub min:     f32,
@@ -13,9 +13,9 @@ pub struct Space {
     pub weights: Vec<f32>,    // weight_count = control_count
 }
 
-impl Default for Space {
+impl Default for Basis {
     fn default() -> Self {
-        Space {
+        Basis {
             sign:    1.,
             order:   1,
             min:     0.,
@@ -26,11 +26,11 @@ impl Default for Space {
     }
 }
 
-impl Space {
+impl Basis {
     pub fn shape(&self) -> Shape {
         Shape {
             rank:       0,
-            space:      self.clone(),
+            basis:      self.clone(),
             controls:   vec![],  
             boundaries: vec![], 
             rectifier:  None,
@@ -110,10 +110,11 @@ impl Space {
         self.max = min_basis*(1.-u) + self.max*u;
     }
 
-    pub fn get_basis(&self, knot_index: usize, u: f32) -> ([f32; 4], [f32; 4]) {
+    pub fn at(&self, u: f32) -> (usize, ([f32; 4], [f32; 4])) {
+        let ki = self.knot_index(u);
         let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);
-        let k0 = self.knots[knot_index];
-        let k1 = self.knots[knot_index + 1];
+        let k0 = self.knots[ki];
+        let k1 = self.knots[ki + 1];
         let k1u = k1 - u;
         let uk0 = u - k0;
         let k0k1 = k0 - k1;
@@ -121,11 +122,11 @@ impl Space {
         let k1u_d_k1k0 = k1u / k1k0;
         let uk0_d_k1k0 = uk0 / k1k0;
         if self.order > 2 { // quadratic
-            let r1 = self.knots[knot_index - 1];
-            let k2 = self.knots[knot_index + 2];
-            let w0 = self.weights[knot_index - self.order + 1];
-            let w1 = self.weights[knot_index - self.order + 2];
-            let w2 = self.weights[knot_index - self.order + 3];
+            let r1 = self.knots[ki - 1];
+            let k2 = self.knots[ki + 2];
+            let w0 = self.weights[ki - self.order + 1];
+            let w1 = self.weights[ki - self.order + 2];
+            let w2 = self.weights[ki - self.order + 3];
             let k0u = k0 - u;
             let k2u = k2 - u;
             let ur1 = u - r1;
@@ -155,7 +156,7 @@ impl Space {
             basis.0 = [0., 0., k1u_d_k1k0, uk0_d_k1k0];
             basis.1 = [0., 0., 1./k0k1, 1./k1k0];
         }
-        basis
+        (ki, basis)
     }
 
     pub fn sample_count(&self, count: usize) -> usize { 

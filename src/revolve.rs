@@ -1,5 +1,6 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
-use crate::{log, space::Space, Shape, Model, Models, Reshape, Shapes};
+use crate::shape::*;
+use crate::{Model, Models, Reshape};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -66,7 +67,7 @@ impl Revolve {
 }
 
 struct RevolveBasis {
-    nurbs: Space,
+    nurbs: Basis,
     axis: Vec3,
     direction: f32,
     base_angle: f32,
@@ -78,7 +79,7 @@ struct RevolveBasis {
 impl RevolveBasis {
     fn new(center: Vec3, axis: Vec3, angle: f32) -> Self {
         Self {
-            nurbs: Space {
+            nurbs: Basis {
                 sign: 1.,
                 order:   3,
                 min: 0.,

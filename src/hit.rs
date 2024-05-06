@@ -113,7 +113,7 @@ pub fn cascade_group_job_pairs(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<Shap
                     for c1 in 0..groups[g1].len(){
                         //if groups[g0][c0].rank == 1 && groups[g1][c1].rank == 1 {
                         let mut reverse = false;
-                        if groups[g0][c0].space.sign != groups[g1][c1].space.sign {
+                        if groups[g0][c0].basis.sign != groups[g1][c1].basis.sign {
                             reverse = true; 
                         }
                             pairs.push(TestPair{

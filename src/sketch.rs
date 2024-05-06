@@ -95,7 +95,7 @@ impl SketchShape {
     fn line_to(&mut self, point: Vec2) -> &mut Self {
         let mut curve = Shape::default();
         curve.controls = vec![Shape::from_point(self.turtle.pos.extend(0.)), Shape::from_point(point.extend(0.))]; 
-        curve.space.order = 2;
+        curve.basis.order = 2;
         curve.validate();
         self.shapes.push(curve);
         self.shapes.push(Shape::from_point(point.extend(0.)));

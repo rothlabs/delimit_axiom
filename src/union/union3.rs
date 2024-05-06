@@ -101,7 +101,7 @@ impl UnionBasis3 {
                     if self.hit_groups[gi][fi].is_empty() {
                         //self.move_misses_in_bounds(gi, fi, hi); 
                         miss_groups[gi][fi].sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                        if !miss_groups[gi][fi].is_empty() && miss_groups[gi][fi][0].dot * self.facet_groups[gi][fi].space.sign > 0. {   
+                        if !miss_groups[gi][fi].is_empty() && miss_groups[gi][fi][0].dot * self.facet_groups[gi][fi].basis.sign > 0. {   
                             collect_groups[gi][fi] = false;
                         }
                     }else{
@@ -124,7 +124,7 @@ impl UnionBasis3 {
             for fi in 0..self.facet_groups[gi].len() {
                 if collect_groups[gi][fi] {
                     let mut facet = self.facet_groups[gi][fi].clone();
-                    if facet.space.sign < 0. {facet.reverse().negate();}
+                    if facet.basis.sign < 0. {facet.reverse().negate();}
                     self.shapes.push(facet);
                 }
             }
@@ -138,7 +138,7 @@ impl UnionBasis3 {
 
     fn union_facet_with_hits(&mut self, gi: usize, fi: usize) {
         let facet = self.facet_groups[gi].get_mut(fi).expect("Should be a facet at this index.");
-        if facet.space.sign < 0. {
+        if facet.basis.sign < 0. {
             for curve in &mut facet.boundaries {
                 curve.negate();
             }

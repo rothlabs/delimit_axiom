@@ -5,6 +5,7 @@ pub trait Shapes {
     fn of_rank(&self, rank: u8) -> Vec<&Shape>;
     fn high_rank(&self) -> u8;
     fn reshaped(&self, mat4: Mat4) -> Vec<Shape>;
+    fn reverse_direction(&mut self);
 }
 
 impl Shapes for Vec<Shape> {
@@ -30,6 +31,11 @@ impl Shapes for Vec<Shape> {
             shapes.push(shape.reshaped(mat4));
         }
         shapes
+    }
+    fn reverse_direction(&mut self) {
+        for shape in self {
+            shape.reverse();
+        }
     }
 }
 

@@ -351,11 +351,16 @@ impl Shape {
     }
 }
 
-
-
 #[derive(Clone)]
 pub struct Rectifier {
     pub curve: Shape,
+}
+
+pub fn rank0(vector: Vec3) -> Shape {
+    Shape {
+        vector: Some(vector),
+        ..Default::default()
+    }
 }
 
 

@@ -1,12 +1,12 @@
 pub mod curve;
 pub mod facet;
-pub mod sketch;
 pub mod revolve;
+pub mod sketch;
 
 pub use curve::*;
 pub use facet::*;
-pub use sketch::*;
 pub use revolve::*;
+pub use sketch::*;
 
 use glam::*;
 use serde::*;

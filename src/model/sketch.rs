@@ -1,5 +1,6 @@
 use std::f32::consts::{FRAC_PI_2, PI};
-use crate::{actor, Model, Models, Reshape, Revolve, Shape};
+use crate::shape::*;
+use crate::{actor, Model, Models, Reshape};
 use serde::*;
 use glam::*;
 
@@ -55,23 +56,24 @@ pub struct Circle {
 
 impl Circle {
     pub fn shapes(&self) -> Vec<Shape> {
-        let mut revolve = Revolve {
-            parts: vec![Model::Point(vec3(self.center.x + self.radius, self.center.y, 0.))], 
+        let mut shapes = actor::Revolve {
+            shapes: vec![Shape::from_point(vec3(self.center.x + self.radius, self.center.y, 0.))], 
             center: self.center.extend(0.),
             ..Default::default()
-        };
-        revolve.reshape.reverse = self.reverse;
-        let mut shapes = revolve.shapes();
-        if self.arrows > 0 {
-            for i in 0..self.arrows {
-                let mut curve = Shape::default();
-                let arrow = shapes[0].get_arrow(&[i as f32 / (self.arrows - 1) as f32]);
-                curve.controls.push(Shape::from_point(arrow.point));
-                curve.controls.push(Shape::from_point(arrow.point + arrow.delta));
-                curve.validate();
-                shapes.push(curve);
-            }
+        }.shapes();
+        if self.reverse {
+            shapes.reverse_direction();
         }
+                    if self.arrows > 0 {
+                        for i in 0..self.arrows {
+                            let mut curve = Shape::default();
+                            let arrow = shapes[0].get_arrow(&[i as f32 / (self.arrows - 1) as f32]);
+                            curve.controls.push(Shape::from_point(arrow.point));
+                            curve.controls.push(Shape::from_point(arrow.point + arrow.delta));
+                            curve.validate();
+                            shapes.push(curve);
+                        }
+                    }
         shapes
     }
 }
@@ -111,7 +113,7 @@ impl Rectangle {
             .turn(FRAC_PI_2, self.radius)
             .shapes();
         if self.reverse {
-            shapes.reverse();
+            shapes.reverse_direction();
         }
         shapes
     }
@@ -161,7 +163,7 @@ impl Slot {
             .turn(PI, self.radius)
             .shapes();
         if self.reverse {
-            shapes.reverse();
+            shapes.reverse_direction();
         }
         shapes
     }

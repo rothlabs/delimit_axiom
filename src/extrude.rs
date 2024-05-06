@@ -34,13 +34,14 @@ impl Extrude {
         }
         //let axis = self.axis;//get_vec3_or(&self.axis, Vec3::Z).normalize(); 
         let basis = ExtrudeBasis::new(self.axis * self.length);
-        let high_rank = shapes0.high_rank();
-        let mut shapes1 = shapes0.clone();
+        //let high_rank = shapes0.high_rank();
+        let mut shapes1 = vec![]; //shapes0.clone();
         for shape0 in shapes0 {
-            let mut shape1 = shape0.clone();
-            shape1.invert().reshape(basis.mat4);
+            let shape1 = shape0.reshaped(basis.mat4);
+            //shape1.invert().reshape(basis.mat4);
+            shapes1.push(shape0.inverted());
             shapes1.push(shape1.clone());
-            if shape0.rank < high_rank {
+            if shape0.boundaries.is_empty() {// if shape0.rank < high_rank {
                 let mut shape2 = basis.nurbs.shape();
                 shape2.controls = vec![shape0.clone(), shape1];
                 shape2.validate(); 

@@ -2,7 +2,7 @@
 mod union2;
 mod union3;
 
-use crate::{hit::{job_indexes, TestPair}, log, Shape, Model, Models, Reshape, ShapeGroups, Shapes};
+use crate::{hit::{TestPair}, log, Shape, Model, Models, Reshape, ShapeGroups, Shapes};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
@@ -32,11 +32,11 @@ impl Union {
 
 
 
-pub trait UnionBatchTrait { // TODO: rename to Union in different module from "Models" module
+pub trait UnionJob { // TODO: rename to Union in different module from "Models" module
     fn union(self) -> Vec<Vec<Shape>>;
 }
 
-impl UnionBatchTrait for Vec<Vec<Vec<Shape>>> { // jobs, groups, curves
+impl UnionJob for Vec<Vec<Vec<Shape>>> { // jobs, groups, curves
     fn union(self) -> Vec<Vec<Shape>> { 
         let shapes0: Vec<Shape> = self.clone().into_iter().flatten().flatten().collect();
         if shapes0.high_rank() < 2 {
@@ -64,55 +64,6 @@ impl UnionBatchTrait for Vec<Vec<Vec<Shape>>> { // jobs, groups, curves
             vec![UnionBasis3::get_shapes(self)]
         }
     }
-}
-
-
-
-
-pub struct UnionIndexBatch {
-    pub pairs: Vec<TestPair>,
-    //pub hit_index: Vec<Vec<Vec<Vec<usize>>>>,
-    indexes: Vec<(usize, usize, usize)>,
-}
-
-impl UnionIndexBatch {
-    pub fn new(jobs: &Vec<Vec<Vec<Shape>>>) -> Self {
-        let (starts, indexes) = job_indexes(jobs);
-        UnionIndexBatch {
-            pairs: job_pairs(&starts, jobs),
-            indexes,
-        }
-    }
-    // pub fn hit_miss(&self) {
-        
-    // }
-    pub fn index(&self, pair: &TestPair) -> (usize, usize, usize, usize, usize) {
-        let (_,  g0, i0) = self.indexes[pair.i0];
-        let (ji, g1, i1) = self.indexes[pair.i1];
-        (ji, g0, i0, g1, i1)
-    }
-}
-
-pub fn job_pairs(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<Shape>>>) -> Vec<TestPair> {
-    let mut pairs = vec![];
-    for (ji, groups) in jobs.iter().enumerate() {
-        for g1 in 1..groups.len(){
-            for g0 in 0..g1 {
-                for c0 in 0..groups[g0].len(){
-                    for c1 in 0..groups[g1].len(){
-                        //if groups[g0][c0].rank == 1 && groups[g1][c1].rank == 1 {
-                            pairs.push(TestPair{
-                                i0: starts[0][ji] + starts[1][g0] + c0, 
-                                i1: starts[0][ji] + starts[1][g1] + c1,
-                                reverse: false,
-                            });
-                        //}
-                    }  
-                }   
-            }
-        }
-    }
-    pairs
 }
 
 

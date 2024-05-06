@@ -11,7 +11,80 @@ pub mod hit3;
 use glam::*;
 use crate::{gpu::framebuffer::Framebuffer, Shape};
 
-pub fn job_indexes<T>(jobs: &Vec<Vec<Vec<T>>>) -> ([Vec<usize>; 2], Vec<(usize, usize, usize)>) {
+
+pub struct HitJob {
+    pub pairs: Vec<TestPair>,
+    indexes:   Vec<(usize, usize)>,
+}
+
+impl HitJob {
+    pub fn new(jobs: &Vec<Vec<Shape>>) -> Self {
+        let (starts, indexes) = job_indexes(jobs);
+        HitJob {
+            pairs: job_pairs(&starts, jobs), 
+            indexes,
+        }
+    }
+    pub fn index(&self, pair: &TestPair) -> (usize, usize, usize) {
+        let (ji, i0) = self.indexes[pair.i0];
+        let (_,  i1) = self.indexes[pair.i1];
+        (ji, i0, i1)
+    }
+}
+
+fn job_indexes(jobs: &Vec<Vec<Shape>>) -> (Vec<usize>, Vec<(usize, usize)>) {
+    let mut indexes = vec![];
+    let mut starts  = vec![];
+    let mut job_start = 0;
+    for (ji, shapes) in jobs.iter().enumerate() {
+        starts.push(job_start);
+        job_start += shapes.len();
+        for i in 0..shapes.len(){
+            indexes.push((ji, i));
+        }
+    }
+    (starts, indexes)
+}
+
+pub fn job_pairs(starts: &Vec<usize>, jobs: &Vec<Vec<Shape>>) -> Vec<TestPair> {
+    let mut pairs = vec![];
+    for (ji, shapes) in jobs.iter().enumerate() {
+        for i0 in 0..shapes.len() {
+            for i1 in i0+1..shapes.len() {
+                //if i0 == i1 {continue}
+                pairs.push(TestPair{
+                    i0: starts[ji] + i0, 
+                    i1: starts[ji] + i1,
+                    reverse: false,
+                });
+            }
+        }
+    }
+    pairs
+}
+
+
+pub struct CascadeGroupJob {
+    pub pairs: Vec<TestPair>,
+    indexes:   Vec<(usize, usize, usize)>,
+}
+
+impl CascadeGroupJob {
+    pub fn new(jobs: &Vec<Vec<Vec<Shape>>>) -> Self {
+        let (starts, indexes) = cascade_group_job_indexes(jobs);
+        CascadeGroupJob {
+            pairs: cascade_group_job_pairs(&starts, jobs), 
+            indexes,
+        }
+    }
+    pub fn index(&self, pair: &TestPair) -> (usize, usize, usize, usize, usize) {
+        let (_,  g0, i0) = self.indexes[pair.i0];
+        let (ji, g1, i1) = self.indexes[pair.i1];
+        (ji, g0, i0, g1, i1)
+    }
+}
+
+fn cascade_group_job_indexes<T>(jobs: &Vec<Vec<Vec<T>>>) -> ([Vec<usize>; 2], Vec<(usize, usize, usize)>) {
     let mut indexes = vec![];
     let mut starts = [vec![], vec![]];
     let mut job_start = 0;
@@ -29,6 +102,37 @@ pub fn job_indexes<T>(jobs: &Vec<Vec<Vec<T>>>) -> ([Vec<usize>; 2], Vec<(usize, 
     }
     (starts, indexes)
 }
+
+// TODO: limit by shape rank
+pub fn cascade_group_job_pairs(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<Shape>>>) -> Vec<TestPair> {
+    let mut pairs = vec![];
+    for (ji, groups) in jobs.iter().enumerate() {
+        for g1 in 1..groups.len(){
+            for g0 in 0..g1 {
+                for c0 in 0..groups[g0].len(){
+                    for c1 in 0..groups[g1].len(){
+                        //if groups[g0][c0].rank == 1 && groups[g1][c1].rank == 1 {
+                        let mut reverse = false;
+                        if groups[g0][c0].space.sign != groups[g1][c1].space.sign {
+                            reverse = true; 
+                        }
+                            pairs.push(TestPair{
+                                i0: starts[0][ji] + starts[1][g0] + c0, 
+                                i1: starts[0][ji] + starts[1][g1] + c1,
+                                reverse,
+                            });
+                        //}
+                    }  
+                }   
+            }
+        }
+    }
+    pairs
+}
+
+
+
+
 
 #[derive(Clone, Debug)]
 pub struct TestPair {
@@ -94,6 +198,32 @@ struct HoneBuffer {
 }
 
 
+
+
+
+
+
+
+
+
+// pub fn job_indexes<T>(jobs: &Vec<Vec<Vec<T>>>) -> ([Vec<usize>; 2], Vec<(usize, usize, usize)>) {
+//     let mut indexes = vec![];
+//     let mut starts = [vec![], vec![]];
+//     let mut job_start = 0;
+//     for (ji, groups) in jobs.iter().enumerate() {
+//         starts[0].push(job_start);
+//         job_start += groups.len();
+//         let mut group_start = 0;
+//         for (gi, items) in groups.iter().enumerate() {
+//             starts[1].push(group_start);
+//             group_start += items.len();
+//             for i in 0..items.len(){
+//                 indexes.push((ji, gi, i));
+//             }
+//         }
+//     }
+//     (starts, indexes)
+// }
 
 
 

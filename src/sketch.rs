@@ -35,6 +35,7 @@ impl Sketch {
             actions: self.actions.clone(),
             start_point: vec2(0., 0.),
             turtle: Turtle::default(),
+            drawing: false,
         };
         sketch_shape.build_from_actions() 
     }
@@ -47,6 +48,7 @@ pub struct SketchShape {
     pub start_point: Vec2,
     pub turtle: Turtle,
     pub reshape: Reshape,
+    pub drawing: bool,
 }
 
 impl SketchShape { 
@@ -73,26 +75,32 @@ impl SketchShape {
         self.reshape.get_reshapes(self.shapes.clone())
     }
     fn jump_to(&mut self, point: Vec2) -> &mut Self {
-        self.start_point = point;
+        if self.drawing {
+            self.shapes.push(Shape::from_point(self.start_point.extend(0.)));
+        }
         self.turtle.jump_to(point);
+        self.start_point = self.turtle.pos;
+        self.drawing = false;
         self
-        //self.actions.push(Action::Start([x, y]));
+    }
+    fn jump_forward(&mut self, length: f32) -> &mut Self {
+        if self.drawing {
+            self.shapes.push(Shape::from_point(self.start_point.extend(0.)));
+        }
+        self.turtle.jump_forward(length);
+        self.start_point = self.turtle.pos;
+        self.drawing = false;
+        self
     }
     fn line_to(&mut self, point: Vec2) -> &mut Self {
         let mut curve = Shape::default();
-        // curve.nurbs.knots = vec![0., 0., 1., 1.];
-        // curve.nurbs.weights = vec![1., 1.];
         curve.controls = vec![Shape::from_point(self.turtle.pos.extend(0.)), Shape::from_point(point.extend(0.))]; 
         curve.space.order = 2;
         curve.validate();
         self.shapes.push(curve);
         self.shapes.push(Shape::from_point(point.extend(0.)));
         self.turtle.jump_to(point);
-        self
-        //self.actions.push(Action::LineTo([x, y]));
-    }
-    fn jump_forward(&mut self, length: f32) -> &mut Self {
-        self.turtle.jump_forward(length);
+        self.drawing = true;
         self
     }
     fn line_forward(&mut self, length: f32) -> &mut Self {
@@ -104,6 +112,7 @@ impl SketchShape {
         curve.validate(); 
         self.shapes.push(curve);
         self.shapes.push(Shape::from_point(end_point.extend(0.)));
+        self.drawing = true;
         self
     }
     fn turn(&mut self, angle: f32, radius: f32) -> &mut Self {
@@ -119,13 +128,13 @@ impl SketchShape {
             self.shapes.extend(revolve.shapes());
         }
         self.turtle.turn(center, angle);
+        self.drawing = true;
         self
-        //self.actions.push(Action::Turn(Turn{angle, radius}));
     }
     fn close(&mut self) -> &mut Self {
         self.line_to(self.start_point);
+        self.drawing = false;
         self
-        //self.actions.push(Action::Close(true));
     }
 }
 

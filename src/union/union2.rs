@@ -1,8 +1,8 @@
-use crate::{log, Shape, UnionIndexBatch};
-use crate::hit::{hit2::HitTest2, Miss, HitMiss2, Hit2};
+use crate::{log, Shape};
+use crate::hit::{CascadeGroupJob, hit2::HitTest2, Miss, HitMiss2, Hit2};
 
 pub fn get_union2_shapes(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> { // , shapes: Vec<CurveShape>, batch: UnionIndexBatch
-    let batch = UnionIndexBatch::new(&jobs);
+    let batch = CascadeGroupJob::new(&jobs);
     let shapes: Vec<Shape> = jobs.clone().into_iter().flatten().flatten().collect();
     let (hits2, misses) = shapes.hit2(&batch.pairs);
     let mut hits:   Vec<[Vec<HitMiss2>; 2]> = vec![[vec![], vec![]]; jobs.len()];
@@ -22,7 +22,7 @@ pub fn get_union2_shapes(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> { // , s
     }
     let mut results = vec![];
     for (ji, groups) in jobs.iter().enumerate() {
-        let curves = UnionBasis2::shape([&groups[0], &groups[1]], &hits[ji]); 
+        let curves = UnionBasis2::shapes([&groups[0], &groups[1]], &hits[ji]); 
         results.push(curves);
     }
     results
@@ -32,27 +32,27 @@ pub fn get_union2_shapes(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> { // , s
 pub struct UnionBasis2 {
     pub groups: [Vec<Shape>; 2], // &'static 
     pub hits:   [Vec<HitMiss2>; 2], 
-    pub curves: Vec<Shape>,
     pub shapes: Vec<Shape>,
+    //pub shapes: Vec<Shape>,
 }
 
 impl UnionBasis2 { 
-    pub fn shape(groups: [&Vec<Shape>; 2], hits: &[Vec<HitMiss2>; 2]) -> Vec<Shape> { 
+    pub fn shapes(groups: [&Vec<Shape>; 2], hits: &[Vec<HitMiss2>; 2]) -> Vec<Shape> { 
         UnionBasis2 {
             hits: hits.clone(),
             groups: [groups[0].clone(), groups[1].clone()], 
-            curves: vec![],
             shapes: vec![],
-        }.build()
+            //shapes: vec![],
+        }.make()
     }
 
-    pub fn build(&mut self) -> Vec<Shape> {
+    pub fn make(&mut self) -> Vec<Shape> {
         for g in 0..2 {
             for i in 0..self.groups[g].len() {
                 if self.hits[g][i].hits.is_empty() {
                     self.hits[g][i].misses.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
                     if self.hits[g][i].misses.is_empty() || self.hits[g][i].misses[0].dot * self.groups[g][i].space.sign > 0. { 
-                        self.curves.push(self.groups[g][i].clone());   
+                        self.shapes.push(self.groups[g][i].clone());   
                     }
                 }else{
                     self.hits[g][i].hits.sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
@@ -60,11 +60,11 @@ impl UnionBasis2 {
                 }
             }
         }
-        for curve in &mut self.curves {
-            if curve.space.sign < 0. {
-                curve.reverse().negate();
+        for shape in &mut self.shapes {
+            if shape.space.sign < 0. {
+                shape.reverse().negate();
             }
-            self.shapes.push(curve.clone());
+            //self.shapes.push(curve.clone());
         }
         self.shapes.clone()
     }
@@ -81,12 +81,12 @@ impl UnionBasis2 {
                     console_log!("union2 range: {}", range);
                 }
                 curve.space.set_max(min_basis, curve_hit.u);
-                self.curves.push(curve);
+                self.shapes.push(curve);
                 curve = self.groups[g][i].clone();
             }
         }
         if self.hits[g][i].hits.last().expect("There should be one or more hits.").dot * curve.space.sign < 0. {
-            self.curves.push(curve);
+            self.shapes.push(curve);
         }
     }
 }

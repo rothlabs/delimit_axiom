@@ -24,7 +24,6 @@ mod actor;
 mod gpu;
 mod spatial;
 mod hit;
-mod union;
 mod trim;
 mod arrow;
 
@@ -34,7 +33,6 @@ use shape::*;
 use model::*;
 use spatial::spatial3::*;
 use hit::{hit2::*, hit3::*};
-use union::*;
 use trim::*;
 
 use serde::{Deserialize, Serialize};

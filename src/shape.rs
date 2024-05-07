@@ -101,7 +101,7 @@ impl Shape {
 
     pub fn reshape(&mut self, mat4: Mat4) -> &mut Self {
         if let Some(vector) = self.vector {
-            self.vector = Some(mat4.mul_vec4(vector.extend(1.)).truncate());
+            self.vector = Some(mat4.mul_vec4(vector.extend(1.)).xyz());
         }else{
             for control in &mut self.controls {
                 control.reshape(mat4);

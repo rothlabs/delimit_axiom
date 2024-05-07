@@ -1,8 +1,5 @@
 use glam::*;
-use crate::actor::MakeArea;
 use crate::shape::*;
-use crate::{Area, Circle, Model, Rectangle, Reshape};
-
 
 pub trait ToExtrude {
     fn extrude(self) -> Extrude;
@@ -13,7 +10,8 @@ impl ToExtrude for Vec<Shape> {
         Extrude {
             shapes: self,
             axis:   Vec3::Z,
-            length: 1.
+            length: 1.,
+            anchor: 0.,
         }
     }
 }
@@ -23,6 +21,7 @@ pub struct Extrude {
     pub shapes:  Vec<Shape>,
     pub axis:    Vec3,
     pub length:  f32,
+    pub anchor:  f32
 }
 
 
@@ -30,15 +29,17 @@ pub struct Extrude {
 //                     2. Same as 1 but also create new shape with highest ranking plus one and remaining one lower ranks copied into its boundaries 
 impl Extrude {
     pub fn shapes(&self) -> Vec<Shape> {
-        //let shapes0 = self.shapes.shapes();
+        let shapes0 = self.shapes.reshaped(Mat4::from_translation(vec3(0., 0., -self.anchor * self.length)));
         if self.length == 0. {
-            return self.shapes.clone();
+            return shapes0;
         }
+
         //let axis = self.axis;//get_vec3_or(&self.axis, Vec3::Z).normalize(); 
-        let basis = ExtrudeBasis::new(self.axis * self.length);
+        let vector = self.axis * self.length;
+        let basis = ExtrudeBasis::new(vector);
         //let high_rank = shapes0.high_rank();
         let mut shapes1 = vec![]; //shapes0.clone();
-        for shape0 in &self.shapes {
+        for shape0 in &shapes0 {
             let shape1 = shape0.reshaped(basis.mat4);
             //shape1.invert().reshape(basis.mat4);
             shapes1.push(shape0.inverted());
@@ -58,6 +59,10 @@ impl Extrude {
     } 
     pub fn length(&mut self, length: f32) -> &mut Self {
         self.length = length;
+        self
+    } 
+    pub fn anchor(&mut self, anchor: f32) -> &mut Self {
+        self.anchor = anchor;
         self
     } 
 }

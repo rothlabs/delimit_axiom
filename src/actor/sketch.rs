@@ -105,7 +105,7 @@ impl Turtle {
         let mat3 = Mat3::from_translation(center)
             * Mat3::from_axis_angle(Vec3::Z, angle)
             * Mat3::from_translation(-center);
-        self.pos = mat3.mul_vec3(self.pos.extend(1.)).truncate();
+        self.pos = mat3.mul_vec3(self.pos.extend(1.)).xy();
         self.dir = Vec2::from_angle(self.dir.to_angle() + angle);
     }
 }

@@ -1,12 +1,10 @@
-//mod union2;
-mod union2;
-mod union3;
-
-use crate::{Shape, Model, Models, Reshape, Groups, Shapes};
+use crate::actor::UnionJob;
+use crate::shape::*;
+use crate::{log, Model, Models, Reshape, Groups};
 use serde::{Deserialize, Serialize};
 use glam::*;
 
-use self::{union2::union_job2, union3::UnionBasis3};
+//use self::{union2::union_job2, union3::UnionBasis3};
 
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -19,6 +17,7 @@ pub struct Union {
 
 impl Union {
     pub fn shapes(&self) -> Vec<Shape> {
+        log("union");
         let mut shape_groups = self.parts.shape_groups();
         let neg_shape_groups = self.negated_parts.shape_groups().negated();
         shape_groups.extend(neg_shape_groups);
@@ -26,40 +25,6 @@ impl Union {
     }
 }
 
-
-pub trait UnionJob { // TODO: rename to Union in different module from "Models" module
-    fn union(self) -> Vec<Vec<Shape>>;
-}
-
-impl UnionJob for Vec<Vec<Vec<Shape>>> { // jobs, groups, curves
-    fn union(self) -> Vec<Vec<Shape>> { 
-        let shapes0: Vec<Shape> = self.clone().into_iter().flatten().flatten().collect();
-        if shapes0.high_rank() < 2 {
-            let mut result = vec![];
-            for groups in &self {
-                result.push(groups[0].clone());
-            }
-            let mut gi = 1;
-            loop {
-                let mut jobs = vec![];
-                let mut done = true;
-                for (ji, groups) in self.iter().enumerate() {
-                    jobs.push(vec![result[ji].clone()]);
-                    if gi < groups.len() {
-                        jobs[ji].push(groups[gi].clone());
-                        done = false
-                    }
-                }
-                if done { break }
-                result = union_job2(jobs);
-                gi += 1;
-            }
-            result
-        }else{
-            vec![UnionBasis3::get_shapes(self)]
-        }
-    }
-}
 
 
 

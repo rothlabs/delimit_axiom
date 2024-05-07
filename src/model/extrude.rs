@@ -41,27 +41,8 @@ impl Extrude {
     }
 }
 
-
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
-pub struct Cuboid {
-    pub lengths: [f32; 3],
-    pub reshape: Reshape,
-}
-
-impl Cuboid {
-    pub fn shapes(&self) -> Vec<Shape> {
-        let mut rect = Rectangle::default();
-        rect.lengths = [self.lengths[0], self.lengths[1]];
-        let shapes = Model::Rectangle(rect).shapes().area().extrude().length(self.lengths[2]).shapes();
-        self.reshape.shapes(shapes)
-        //let area = Model::Rectangle(rect).shapes().area();//Area::from_part(Model::Rectangle(rect));
-        //Extrude::from_area(area, self.lengths[2], &self.reshape).shapes()
-    }
-}
-
-#[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "Cylinder::default")]
 pub struct Cylinder {
     pub radius: f32,
     pub length: f32,

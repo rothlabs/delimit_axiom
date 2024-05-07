@@ -9,6 +9,7 @@ pub mod sketch;
 pub mod grid_pattern;
 pub mod radial_pattern;
 pub mod mirror;
+pub mod union;
 
 pub use curve::*;
 pub use facet::*;
@@ -21,6 +22,7 @@ pub use sketch::*;
 pub use grid_pattern::*;
 pub use radial_pattern::*;
 pub use mirror::*;
+pub use union::*;
 
 use glam::*;
 use serde::*;

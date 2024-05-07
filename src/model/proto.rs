@@ -1,7 +1,11 @@
 use glam::*;
 use serde::*;
+use crate::actor::MakeArea;
+use crate::actor::ToExtrude;
 use crate::shape::*;
 use crate::actor;
+use crate::Model;
+use crate::Reshape;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -38,24 +42,22 @@ impl Circle {
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Rectangle {
-    pub half_lengths: [f32; 2],
-    pub lengths:      [f32; 2],
-    pub point_a:      [f32; 2], 
-    pub point_b:      [f32; 2], 
-    pub radius:       f32,
-    pub reverse:      bool,
+    pub point_a:  Vec2, 
+    pub point_b:  Vec2,
+    pub size:     Vec2, 
+    pub anchor:   Vec2,
+    pub radius:   f32,
+    pub reverse:  bool,
 }
 
 impl Rectangle {
     pub fn shapes(&self) -> Vec<Shape> {
-        let mut point_a = -Vec2::from_array(self.half_lengths);
-        let mut point_b = -point_a;
-        if self.lengths[0] > 0. || self.lengths[1] > 0. {
-            point_a = -Vec2::from_array(self.lengths) / 2.;
-            point_b = -point_a;
-        }else if self.point_a[0] > 0. || self.point_a[1] > 0. || self.point_b[0] > 0. || self.point_b[1] > 0. {
-            point_a = Vec2::from_array(self.point_a);
-            point_b = Vec2::from_array(self.point_b);
+        let mut point_a = self.point_a;
+        let mut point_b = self.point_b;
+        if self.size.length() > 0. {
+            let origin = -self.size * self.anchor;
+            point_a = origin;
+            point_b = origin + self.size;
         }
         let mut shapes = actor::rectangle()
             .points(point_a, point_b)
@@ -65,6 +67,30 @@ impl Rectangle {
             shapes.reverse_direction();
         }
         shapes
+    }
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Cuboid {
+    pub size:    Vec3,
+    pub anchor:  Vec3,
+    pub reshape: Reshape,
+}
+
+impl Cuboid {
+    pub fn shapes(&self) -> Vec<Shape> {
+        let origin = -self.size * self.anchor;
+        let point_a = origin;
+        let point_b = origin + self.size;
+        let rect = actor::rectangle()
+            .points(point_a.xy(), point_b.xy())
+            .shapes();
+        let shapes = rect.area().extrude()
+            .length(self.size.z)
+            .anchor(self.anchor.z)
+            .shapes();
+        self.reshape.shapes(shapes)
     }
 }
 
@@ -129,3 +155,39 @@ impl Arc {
         vec![]
     }
 }
+
+
+
+
+// #[derive(Clone, Default, Serialize, Deserialize)]
+// #[serde(default)]
+// pub struct Rectangle {
+//     pub half_lengths: [f32; 2],
+//     pub lengths:      [f32; 2],
+//     pub point_a:      [f32; 2], 
+//     pub point_b:      [f32; 2], 
+//     pub radius:       f32,
+//     pub reverse:      bool,
+// }
+
+// impl Rectangle {
+//     pub fn shapes(&self) -> Vec<Shape> {
+//         let mut point_a = -Vec2::from_array(self.half_lengths);
+//         let mut point_b = -point_a;
+//         if self.lengths[0] > 0. || self.lengths[1] > 0. {
+//             point_a = -Vec2::from_array(self.lengths) / 2.;
+//             point_b = -point_a;
+//         }else if self.point_a[0] > 0. || self.point_a[1] > 0. || self.point_b[0] > 0. || self.point_b[1] > 0. {
+//             point_a = Vec2::from_array(self.point_a);
+//             point_b = Vec2::from_array(self.point_b);
+//         }
+//         let mut shapes = actor::rectangle()
+//             .points(point_a, point_b)
+//             .radius(self.radius)
+//             .shapes();
+//         if self.reverse {
+//             shapes.reverse_direction();
+//         }
+//         shapes
+//     }
+// }

@@ -1,8 +1,29 @@
 use std::f32::consts::{PI, FRAC_PI_2, FRAC_PI_4, FRAC_1_SQRT_2};
 use crate::shape::*;
-use crate::Reshape;
 use glam::*;
 
+
+pub trait ToRevolve {
+    fn revolve(self) -> Revolve;
+}
+
+impl ToRevolve for Vec<Shape> {
+    fn revolve(self) -> Revolve {
+        Revolve {
+            shapes: self,
+            ..Default::default()
+        }
+    }
+}
+
+impl ToRevolve for Shape {
+    fn revolve(self) -> Revolve {
+        Revolve {
+            shapes: vec![self],
+            ..Default::default()
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct Revolve {
@@ -10,7 +31,6 @@ pub struct Revolve {
     pub center:  Vec3,
     pub axis:    Vec3,
     pub angle:   f32,
-    pub reshape: Reshape,
 }
 
 impl Default for Revolve {
@@ -20,7 +40,6 @@ impl Default for Revolve {
             center:  Vec3::ZERO,
             axis:    Vec3::Z,
             angle:   PI * 2.,
-            reshape: Reshape::default(),
         }
     }
 }
@@ -37,7 +56,7 @@ impl Revolve {
         basis.add_second_to_last_turn(self.angle);
         basis.nurbs.normalize();
         let final_turn = basis.get_matrix(self.angle, 1.);
-        let high_rank = self.shapes.high_rank();
+        //let high_rank = self.shapes.high_rank();
         let mut shapes1 = vec![];
         if self.angle < PI*2. {
             shapes1 = self.shapes.clone(); // + cap_shapes; overload + operator to combine shapes
@@ -48,7 +67,8 @@ impl Revolve {
             if self.angle.abs() < PI*2. {
                 shapes1.push(shape2.clone());
             }
-            if high_rank == 0 || shape0.rank < high_rank {
+            //if high_rank == 0 || shape0.rank < high_rank {
+            if shape0.boundaries.is_empty() {
                 let mut shape3 = basis.nurbs.shape(); 
                 shape3.controls = vec![shape1.clone()];
                 for &mat4 in &basis.turns { 
@@ -59,7 +79,19 @@ impl Revolve {
                 shapes1.push(shape3);
             }
         }
-        self.reshape.get_reshapes(shapes1) 
+        shapes1
+    }
+    pub fn center(&mut self, center: Vec3) -> &mut Self {
+        self.center = center;
+        self
+    }
+    pub fn axis(&mut self, axis: Vec3) -> &mut Self {
+        self.axis = axis;
+        self
+    }
+    pub fn angle(&mut self, angle: f32) -> &mut Self {
+        self.angle = angle;
+        self
     }
 }
 

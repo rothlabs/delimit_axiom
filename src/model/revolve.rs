@@ -30,14 +30,13 @@ impl Default for Revolve {
 
 impl Revolve {
     pub fn shapes(&self) -> Vec<Shape> {
-        let mat4 = self.reshape.get_matrix();
-        actor::Revolve {
+        self.reshape.shapes(actor::Revolve {
             shapes: self.parts.shapes(),
             center: self.center,
             axis:   self.axis,
             angle:  self.angle,
             ..Default::default()
-        }.shapes().reshaped(mat4)
+        }.shapes())
     }
 }
 

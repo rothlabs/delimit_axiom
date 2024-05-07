@@ -1,8 +1,9 @@
 mod basis;
 mod group;
+mod proto;
 use std::f32::INFINITY;
 use crate::scene::Mesh;
-use crate::{log, Rectangle};
+use crate::{actor, log, Rectangle};
 use crate::{get_vector_hash, query::DiscreteQuery, arrow::Arrow, scene::Polyline};
 use glam::*;
 
@@ -12,6 +13,7 @@ use lyon::path::Winding;
 
 pub use self::basis::*;
 pub use self::group::*;
+pub use self::proto::*;
 
 #[derive(Clone)]
 pub struct Shape {
@@ -155,15 +157,14 @@ impl Shape {
     pub fn point(&self, params: &[f32]) -> Vec3 {
         if let Some((u, params)) = params.split_last() {
             if self.basis.order > 1 {
-                let u = self.basis.u(u); 
-                //let ki = self.basis.knot_index(u);      
+                let u = self.basis.u(u);      
                 let (ki, basis) = self.basis.at(u);
                 return (0..self.basis.order).map(|k| {
                     let i = 4 - self.basis.order + k;
                     self.controls[ki + i - 3].point(params)  * basis.0[i]
                 }).sum()
             }else{
-                self.log();
+                //self.log();
                 self.vector.expect("There should be a vector if order is 1 or less")
             }
         }else{
@@ -175,8 +176,7 @@ impl Shape {
         let mut arrow = Arrow::new(Vec3::ZERO, Vec3::ZERO);
         if let Some((u, params)) = params.split_last() {
             if self.basis.order > 1 {
-                let u = self.basis.u(u);     
-                //let ki = self.basis.knot_index(u);  
+                let u = self.basis.u(u);      
                 let (ki, basis) = self.basis.at(u);
                 for k in 0..self.basis.order {
                     let i = 4 - self.basis.order + k;
@@ -210,7 +210,7 @@ impl Shape {
         self.rank = self.get_rank(0);
         if self.boundaries.is_empty() {
             if self.rank == 2{
-                self.boundaries = Rectangle::unit();
+                self.boundaries = actor::rectangle().shapes();
             }
         }
         self
@@ -327,6 +327,13 @@ pub struct Rectifier {
 pub fn rank0(vector: Vec3) -> Shape {
     Shape {
         vector: Some(vector),
+        ..Default::default()
+    }
+}
+
+pub fn rank0d3(x: f32, y: f32, z: f32) -> Shape {
+    Shape {
+        vector: Some(vec3(x, y, z)),
         ..Default::default()
     }
 }

@@ -29,7 +29,7 @@ impl Default for RadialPattern {
 impl RadialPattern {
     pub fn shapes(&self) -> Vec<Shape> {
         let mut shapes = vec![];
-        let reshape_matrix = self.reshape.get_matrix();
+        let reshape_matrix = self.reshape.matrix();
         let basis_shapes = self.parts.shapes();
         for i in 0..self.count {
             let angle = self.angle * i as f32 / self.count as f32;

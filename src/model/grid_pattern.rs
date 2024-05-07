@@ -4,7 +4,7 @@ use glam::*;
 
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "GridPattern::default")]
+#[serde(default)]
 pub struct GridPattern {
     pub parts:    Vec<Model>,
     pub reshape:  Reshape,
@@ -39,7 +39,7 @@ impl GridPattern {
             count: [x_count, y_count, z_count],
             length: vec3(x_length, y_length, z_length),
         };
-        self.reshape.get_reshapes(basis.get_shapes(self.parts.shapes()))
+        self.reshape.shapes(basis.get_shapes(self.parts.shapes()))
     }
 }
 

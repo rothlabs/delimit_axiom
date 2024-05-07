@@ -1,19 +1,14 @@
 use std::f32::{INFINITY, NEG_INFINITY};
 use crate::shape::*;
-use crate::{Model, Models, Reshape};
-use serde::{Deserialize, Serialize};
 use glam::*;
 
-#[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "Area::default")]
-pub struct Area {
-    pub parts: Vec<Model>,
-    pub reshape: Reshape,
+pub trait MakeArea {
+    fn area(&self) -> Vec<Shape>;
 }
 
-impl Area { 
-    pub fn shapes(&self) -> Vec<Shape> {
-        let mut shapes = self.parts.shapes();
+impl MakeArea for Vec<Shape> { // TODO: make general so creates volume from facets and so on (not just facets from curves)
+    fn area(&self) -> Vec<Shape> {
+        let mut shapes = self.clone();
         let mut min = Vec3::new(INFINITY, INFINITY, INFINITY);
         let mut max = Vec3::new(NEG_INFINITY, NEG_INFINITY, NEG_INFINITY);
         for curve in shapes.of_rank(1) {
@@ -47,16 +42,16 @@ impl Area {
         }
         facet.validate();
         shapes.push(facet);
-        self.reshape.get_reshapes(shapes)
+        shapes
     }
-    pub fn from_parts(parts: Vec<Model>) -> Self {
-        let mut area = Area::default();
-        area.parts = parts;
-        area
-    }
-    pub fn from_part(part: Model) -> Self {
-        let mut area = Area::default();
-        area.parts = vec![part];
-        area
-    }
+    // pub fn from_parts(parts: Vec<Model>) -> Self {
+    //     let mut area = Area::default();
+    //     area.parts = parts;
+    //     area
+    // }
+    // pub fn from_part(part: Model) -> Self {
+    //     let mut area = Area::default();
+    //     area.parts = vec![part];
+    //     area
+    // }
 }

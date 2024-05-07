@@ -1,12 +1,26 @@
 pub mod curve;
 pub mod facet;
+pub mod proto;
+pub mod reshape;
+pub mod area;
+pub mod extrude;
 pub mod revolve;
 pub mod sketch;
+pub mod grid_pattern;
+pub mod radial_pattern;
+pub mod mirror;
 
 pub use curve::*;
 pub use facet::*;
+pub use proto::*;
+pub use reshape::*;
+pub use area::*;
+pub use extrude::*;
 pub use revolve::*;
 pub use sketch::*;
+pub use grid_pattern::*;
+pub use radial_pattern::*;
+pub use mirror::*;
 
 use glam::*;
 use serde::*;

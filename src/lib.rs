@@ -26,13 +26,6 @@ mod spatial;
 mod hit;
 mod union;
 mod trim;
-mod reshape; 
-mod area;
-mod extrude;
-//mod revolve;
-mod grid_pattern;
-mod radial_pattern;
-mod mirror;
 mod arrow;
 
 use utils::*;
@@ -43,13 +36,6 @@ use spatial::spatial3::*;
 use hit::{hit2::*, hit3::*};
 use union::*;
 use trim::*;
-use reshape::*;
-use area::*;
-use extrude::*;
-//use revolve::*;
-use grid_pattern::*;
-use radial_pattern::*;
-use mirror::*;
 
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -89,7 +75,7 @@ impl Model {
             Model::Circle(m)    => m.shapes(),
             Model::Rectangle(m) => m.shapes(),
             Model::Slot(m)      => m.shapes(),
-            Model::Reshape(m)   => m.shapes(),
+            Model::Reshape(m)   => m.shapes(vec![]),
             Model::Area(m)      => m.shapes(),
             Model::Extrude(m)   => m.shapes(),
             Model::Cuboid(m)    => m.shapes(),

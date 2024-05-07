@@ -1,19 +1,10 @@
 use crate::shape::*;
-use crate::{Model, Revolve};
 use glam::*;
+use super::ToRevolve;
 
-// pub trait ToSketch {
-//     fn sketch(self) -> SketchActor;
-// }
-
-// impl ToSketch for Vec<Shape> {
-//     fn sketch(self) -> SketchActor {
-//         SketchActor{
-//             shapes: self,
-//             ..Default::default()
-//         }
-//     }
-// }
+pub fn sketch() -> Sketch {
+    Sketch::default()
+}
 
 #[derive(Default)]
 pub struct Sketch {
@@ -76,17 +67,16 @@ impl Sketch {
     pub fn turn(&mut self, angle: f32, radius: f32) -> &mut Self {
         let center = self.turtle.pos + self.turtle.dir.perp() * radius * angle.signum(); 
         if radius > 0. {
-            let revolve = Revolve {
-                parts: vec![Model::Point(self.turtle.pos.extend(0.))], 
-                center: center.extend(0.),
-                axis: vec3(0., 0., angle.signum()),
-                angle: angle.abs(),
-                ..Default::default()
-            };
-            self.shapes.extend(revolve.shapes());
+            self.shapes.extend(
+                rank0(self.turtle.pos.extend(0.)).revolve()
+                    .center(center.extend(0.))
+                    .axis(vec3(0., 0., angle.signum()))
+                    .angle(angle.abs())
+                    .shapes()
+            );
+            self.drawing = true;
         }
         self.turtle.turn(center, angle);
-        self.drawing = true;
         self
     }
     pub fn close(&mut self) -> &mut Self {
@@ -119,3 +109,41 @@ impl Turtle {
         self.dir = Vec2::from_angle(self.dir.to_angle() + angle);
     }
 }
+
+
+
+
+
+
+// pub trait ToSketch {
+//     fn sketch(self) -> SketchActor;
+// }
+
+// impl ToSketch for Vec<Shape> {
+//     fn sketch(self) -> SketchActor {
+//         SketchActor{
+//             shapes: self,
+//             ..Default::default()
+//         }
+//     }
+// }
+
+
+
+
+
+
+            // let revolve = actor::Revolve {
+            //     shapes: vec![rank0(self.turtle.pos.extend(0.))], 
+            //     center: center.extend(0.),
+            //     axis:   vec3(0., 0., angle.signum()),
+            //     angle:  angle.abs(),
+            //     ..Default::default()
+            // };
+
+
+
+// let mut shapes = actor::Revolve {
+//     shapes: vec![rank0(vec3(radius, 0., 0.))], 
+//     ..Default::default()
+// }.shapes();

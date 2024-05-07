@@ -23,7 +23,7 @@ impl Mirror {
         //     let mat4 = Mat4::from_translation(pos);
         //     shapes.extend(get_reshapes(&self.parts, mat4));
         // }
-        self.reshape.get_reshapes(shapes)
+        self.reshape.shapes(shapes)
     }
 }
 

@@ -1,12 +1,13 @@
 use glam::*;
 use serde::{Deserialize, Serialize};
+use crate::actor::{MakeArea, ToExtrude};
 use crate::shape::*;
 use crate::{Area, Circle, Model, Models, Rectangle, Reshape};
 
 
 
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(default)] //  = "Extrude::default"
+#[serde(default)] 
 pub struct Extrude {
     pub parts:   Vec<Model>,
     pub reshape: Reshape,
@@ -30,61 +31,19 @@ impl Default for Extrude {
 //                     2. Same as 1 but also create new shape with highest ranking plus one and remaining one lower ranks copied into its boundaries 
 impl Extrude {
     pub fn shapes(&self) -> Vec<Shape> {
-        let shapes0 = self.parts.shapes();
-        if self.length == 0. {
-            return shapes0;
-        }
-        //let axis = self.axis;//get_vec3_or(&self.axis, Vec3::Z).normalize(); 
-        let basis = ExtrudeBasis::new(self.axis * self.length);
-        //let high_rank = shapes0.high_rank();
-        let mut shapes1 = vec![]; //shapes0.clone();
-        for shape0 in shapes0 {
-            let shape1 = shape0.reshaped(basis.mat4);
-            //shape1.invert().reshape(basis.mat4);
-            shapes1.push(shape0.inverted());
-            shapes1.push(shape1.clone());
-            if shape0.boundaries.is_empty() {// if shape0.rank < high_rank {
-                let mut shape2 = basis.nurbs.shape();
-                shape2.controls = vec![shape0.clone(), shape1];
-                shape2.validate(); 
-                shapes1.push(shape2);
-            }
-        }
-        self.reshape.get_reshapes(shapes1) 
-    }
-    pub fn from_area(area: Area, length: f32, reshape: &Reshape) -> Self {
-        let mut model = Self::default();
-        model.parts = vec![Model::Area(area)];
-        model.length = length;
-        model.reshape = reshape.clone();
-        model
-    }
-}
-
-struct ExtrudeBasis {
-    nurbs: Basis,
-    mat4: Mat4,
-}
-
-impl ExtrudeBasis {
-    fn new(translation: Vec3) -> Self {
-        Self {
-            nurbs: Basis {
-                sign:    1.,
-                order:   2,
-                min: 0.,
-                max: 1.,
-                knots:   vec![0., 0., 1., 1.],
-                weights: vec![1., 1.],
-            },
-            mat4: Mat4::from_translation(translation),
-        }
+        self.reshape.shapes(
+            self.parts.shapes()
+                .extrude()
+                    .axis(self.axis)
+                    .length(self.length)
+                    .shapes()
+        )
     }
 }
 
 
 #[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(default = "Cuboid::default")]
+#[serde(default)]
 pub struct Cuboid {
     pub lengths: [f32; 3],
     pub reshape: Reshape,
@@ -94,8 +53,10 @@ impl Cuboid {
     pub fn shapes(&self) -> Vec<Shape> {
         let mut rect = Rectangle::default();
         rect.lengths = [self.lengths[0], self.lengths[1]];
-        let area = Area::from_part(Model::Rectangle(rect));
-        Extrude::from_area(area, self.lengths[2], &self.reshape).shapes()
+        let shapes = Model::Rectangle(rect).shapes().area().extrude().length(self.lengths[2]).shapes();
+        self.reshape.shapes(shapes)
+        //let area = Model::Rectangle(rect).shapes().area();//Area::from_part(Model::Rectangle(rect));
+        //Extrude::from_area(area, self.lengths[2], &self.reshape).shapes()
     }
 }
 
@@ -113,8 +74,10 @@ impl Cylinder {
         let mut circle = Circle::default();
         circle.radius = self.radius;
         circle.center = self.center;
-        let area = Area::from_part(Model::Circle(circle));
-        Extrude::from_area(area, self.length, &self.reshape).shapes()
+        let shapes = Model::Circle(circle).shapes().area().extrude().length(self.length).shapes();
+        self.reshape.shapes(shapes)
+        //let area = Model::Circle(circle).shapes().area();
+        //Extrude::from_area(area, self.length, &self.reshape).shapes()
     }
 }
 

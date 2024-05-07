@@ -4,8 +4,10 @@ use super::Shape;
 pub trait Shapes {
     fn of_rank(&self, rank: u8) -> Vec<&Shape>;
     fn high_rank(&self) -> u8;
+    fn reshape(&mut self, mat4: Mat4) -> &mut Self;
     fn reshaped(&self, mat4: Mat4) -> Vec<Shape>;
-    fn reverse_direction(&mut self);
+    fn reverse_direction(&mut self) -> &mut Self;
+    //fn translate(&mut self) -> &mut Self;
 }
 
 impl Shapes for Vec<Shape> {
@@ -25,6 +27,12 @@ impl Shapes for Vec<Shape> {
         }
         rank
     }
+    fn reshape(&mut self, mat4: Mat4) -> &mut Self {
+        for i in 0..self.len() {
+            self[i].reshape(mat4);
+        }
+        self
+    }
     fn reshaped(&self, mat4: Mat4) -> Vec<Shape> {
         let mut shapes = vec![];
         for shape in self {
@@ -32,12 +40,17 @@ impl Shapes for Vec<Shape> {
         }
         shapes
     }
-    fn reverse_direction(&mut self) {
-        for shape in self {
-            shape.reverse();
+    fn reverse_direction(&mut self) -> &mut Self {
+        for i in 0..self.len() {
+            self[i].reverse();
         }
+        self
     }
+    // fn translate(&mut self, pos: Vec2) -> &mut Self {
+        
+    // }
 }
+
 
 pub trait Groups {
     fn negated(&self) -> Vec<Vec<Shape>>;

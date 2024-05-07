@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use crate::Model;
 
 #[derive(Default, Serialize, Deserialize)]
-#[serde(default = "DiscreteQuery::default")]
+#[serde(default)]
 pub struct DiscreteQuery {
     pub model:     Model,
     pub count:     usize,

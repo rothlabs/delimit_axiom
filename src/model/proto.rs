@@ -4,7 +4,6 @@ use crate::actor::MakeArea;
 use crate::actor::ToExtrude;
 use crate::shape::*;
 use crate::actor;
-use crate::Model;
 use crate::Reshape;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -52,15 +51,10 @@ pub struct Rectangle {
 
 impl Rectangle {
     pub fn shapes(&self) -> Vec<Shape> {
-        let mut point_a = self.point_a;
-        let mut point_b = self.point_b;
-        if self.size.length() > 0. {
-            let origin = -self.size * self.anchor;
-            point_a = origin;
-            point_b = origin + self.size;
-        }
         let mut shapes = actor::rectangle()
-            .points(point_a, point_b)
+            .points((self.point_a, self.point_b))
+            .size(self.size)
+            .anchor(self.anchor)
             .radius(self.radius)
             .shapes();
         if self.reverse {
@@ -80,16 +74,13 @@ pub struct Cuboid {
 
 impl Cuboid {
     pub fn shapes(&self) -> Vec<Shape> {
-        let origin = -self.size * self.anchor;
-        let point_a = origin;
-        let point_b = origin + self.size;
-        let rect = actor::rectangle()
-            .points(point_a.xy(), point_b.xy())
-            .shapes();
-        let shapes = rect.area().extrude()
-            .length(self.size.z)
-            .anchor(self.anchor.z)
-            .shapes();
+        let shapes = actor::rectangle()
+            .size(self.size.xy())
+            .anchor(self.anchor.xy())
+            .shapes().area().extrude()
+                .length(self.size.z)
+                .anchor(self.anchor.z)
+                .shapes();
         self.reshape.shapes(shapes)
     }
 }

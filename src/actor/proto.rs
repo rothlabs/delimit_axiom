@@ -34,32 +34,49 @@ impl Circle {
 pub fn rectangle() -> Rectanlge {
     Rectanlge {
         points: (Vec2::ZERO, Vec2::ONE),
+        anchor: Vec2::ZERO,
+        size:   Vec2::ONE,
         radius: 0.,
     }
 }
 
 pub struct Rectanlge {
     pub points: (Vec2, Vec2),
+    pub anchor: Vec2,
+    pub size:   Vec2,
     pub radius: f32,
 }
 
 impl Rectanlge {
     pub fn shapes(&self) -> Vec<Shape> {
+        let mut points = self.points;
+        if self.size.length() > 0. {
+            let origin = -self.size * self.anchor;
+            points.0 = origin;
+            points.1 = origin + self.size;
+        }
         super::sketch()
-            .jump_to(self.points.0 + Vec2::X * self.radius) // point.0[0]+self.radius, point.0[1]
-            .line_to(vec2(self.points.1.x-self.radius, self.points.0.y)) // point.1[0]-self.radius, point.0[1]
+            .jump_to(points.0 + Vec2::X * self.radius) // point.0[0]+self.radius, point.0[1]
+            .line_to(vec2(points.1.x-self.radius, points.0.y)) // point.1[0]-self.radius, point.0[1]
             .turn(FRAC_PI_2, self.radius) // if self.radius > 0. {
-            .line_to(self.points.1 - Vec2::Y * self.radius) // point.1[0], point.1[1]-self.radius
+            .line_to(points.1 - Vec2::Y * self.radius) // point.1[0], point.1[1]-self.radius
             .turn(FRAC_PI_2, self.radius)
-            .line_to(vec2(self.points.0.x+self.radius, self.points.1.y)) // point.0[0]+self.radius, point.1[1]
+            .line_to(vec2(points.0.x+self.radius, points.1.y)) // point.0[0]+self.radius, point.1[1]
             .turn(FRAC_PI_2, self.radius)
-            .line_to(self.points.0 + Vec2::Y * self.radius)  // point.0[0], point.0[1]+self.radius
+            .line_to(points.0 + Vec2::Y * self.radius)  // point.0[0], point.0[1]+self.radius
             .turn(FRAC_PI_2, self.radius)
             .shapes()
     }
-    pub fn points(&mut self, a: Vec2, b: Vec2) -> &mut Self {
-        self.points.0 = a;
-        self.points.1 = b;
+    pub fn points(&mut self, points: (Vec2, Vec2)) -> &mut Self {
+        self.points = points;
+        self
+    }
+    pub fn size(&mut self, size: Vec2) -> &mut Self {
+        self.size = size;
+        self
+    }
+    pub fn anchor(&mut self, anchor: Vec2) -> &mut Self {
+        self.anchor = anchor;
         self
     }
     pub fn radius(&mut self, radius: f32) -> &mut Self {

@@ -69,3 +69,21 @@ impl Groups for Vec<Vec<Shape>> {
         groups
     }
 }
+
+pub trait Jobs {
+    fn high_rank(&self) -> u8;
+}
+
+impl Jobs for Vec<Vec<Vec<Shape>>> {
+    fn high_rank(&self) -> u8 {
+        let mut rank = 0;
+        for groups in self {
+            for shapes in groups {
+                for shape in shapes {
+                    rank = rank.max(shape.rank);
+                }
+            }
+        }
+        rank
+    }
+}

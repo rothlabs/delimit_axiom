@@ -24,7 +24,6 @@ mod actor;
 mod gpu;
 mod spatial;
 mod hit;
-mod trim;
 mod arrow;
 
 use utils::*;
@@ -32,8 +31,6 @@ use tolerance::*;
 use shape::*;
 use model::*;
 use spatial::spatial3::*;
-use hit::{hit2::*, hit3::*};
-use trim::*;
 
 
 use wasm_bindgen::prelude::*;

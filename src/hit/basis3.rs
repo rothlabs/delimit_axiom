@@ -143,8 +143,7 @@ impl TraceBasis {
                 if hit_miss[i*4] < -5. {continue}
                 misses.push(MissPair { 
                     pair:     basis.index_pairs[i].clone(),
-                    dot0:     hit_miss[i*4+1], 
-                    dot1:     hit_miss[i*4+2], 
+                    dots:     (hit_miss[i*4+1], hit_miss[i*4+2]), 
                     distance: hit_miss[i*4+3],
                 });
             }

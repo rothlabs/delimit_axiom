@@ -2,7 +2,7 @@ mod union2;
 mod union3;
 
 use crate::shape::*;
-use self::{union2::union_job2, union3::UnionBasis3};
+use self::{union2::union_job2, union3::union_job3};
 
 pub trait ToUnion {
     fn union(&self, shapes: &Vec<Shape>) -> Vec<Shape>;
@@ -43,8 +43,7 @@ pub trait UnionJob { // TODO: rename to Union in different module from "Models" 
 
 impl UnionJob for Vec<Vec<Vec<Shape>>> { // jobs, groups, curves
     fn union(self) -> Vec<Vec<Shape>> { 
-        let shapes0: Vec<Shape> = self.clone().into_iter().flatten().flatten().collect();
-        if shapes0.high_rank() < 2 {
+        if self.high_rank() < 2 {
             let mut result = vec![];
             for groups in &self {
                 result.push(groups[0].clone());
@@ -66,7 +65,8 @@ impl UnionJob for Vec<Vec<Vec<Shape>>> { // jobs, groups, curves
             }
             result
         }else{
-            vec![UnionBasis3::get_shapes(self)]
+            union_job3(self)
+            //vec![UnionBasis3::get_shapes(self)]
         }
     }
 }

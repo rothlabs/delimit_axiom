@@ -2,7 +2,7 @@ use glam::*;
 use crate::shape::*;
 use crate::{arrow::*, AT_0_TOL, AT_1_TOL, DELTA_0_TOL, TRACE_STEP};
 use crate::log;
-use super::{TestPair, HitPair3};
+use super::{hit_shape, HitPair, TestPair};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -17,7 +17,7 @@ pub struct TracedCurve {
 pub fn get_traced_curves(
     hit_pairs: Vec<TestPair>, buf_size: IVec2, traces: Vec<f32>, boxes: Vec<f32>, 
     centers0: Vec<f32>, uv_dirs: Vec<f32>, dirs: Vec<f32>, 
-) -> Vec<HitPair3> {
+) -> Vec<HitPair> {
     let mut traced_curves = vec![];
     let mut box_map: HashMap<String, Vec<(Vec2, Vec2)>> = HashMap::new();
     let half = buf_size.x as usize / 2;
@@ -230,11 +230,10 @@ pub fn get_traced_curves(
         // curve0 = curve0.get_valid();
         // curve1 = curve1.get_valid();
         // curve2 = curve2.get_valid();
-        traced_curves.push(HitPair3{
+        traced_curves.push(HitPair{
             pair: hit_pairs[i].clone(),
-            curve0,
-            curve1,
-            curve2, 
+            shape: curve2,
+            hits: (hit_shape(curve0), hit_shape(curve1)),
         });
     }
     traced_curves

@@ -1,19 +1,19 @@
 use glam::*;
 use web_sys::WebGlProgram;
 use crate::gpu::framebuffer::Framebuffer;
-use crate::Shape;
+use crate::{rank0, Shape};
 use crate::{gpu::GPU, Spatial3, DUP_0_TOL};
-use super::{HitPair2, HoneBuffer, MissPair, TestPair};
+use super::{Hit, HitPair, HoneBuffer, MissPair, TestPair};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
-pub trait HitTest2 {
-    fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>);
-}
+// pub trait HitTest2 {
+//     fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<MissPair>);
+// }
 
-impl HitTest2 for Vec<Shape> {
-    fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair2>, Vec<MissPair>) {
+// impl HitTest2 for Vec<Shape> {
+    pub fn hit2(shapes: Vec<Shape>, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<MissPair>) {
         let gpu = GPU::new().unwrap();
-        let mut basis = HoneBasis2::new(&self, &pairs);
+        let mut basis = HoneBasis2::new(&shapes, &pairs);
         gpu.texture.make_r32f(0, &mut basis.curve_texels).unwrap();
         let (_, pair_buf_size) = gpu.texture.make_rg32i(1, &mut basis.pair_texels).unwrap();
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
@@ -35,7 +35,7 @@ impl HitTest2 for Vec<Shape> {
             points:  vec![],
         }.make() // .expect("HitBasis2 should work for Vec<CurveShape>.hit()")
     }
-}
+//}
 
 pub struct HitBasis2 {
     //curves: Vec<CurveShape>,
@@ -51,7 +51,7 @@ pub struct HitBasis2 {
 }
 
 impl HitBasis2 { 
-    pub fn make(&mut self) -> (Vec<HitPair2>, Vec<MissPair>) { 
+    pub fn make(&mut self) -> (Vec<HitPair>, Vec<MissPair>) { 
         self.hone();
         let hit_miss = self.gpu.read(&self.buffer.io, 0);
         //console_log!("hit_miss {:?}", hit_miss);
@@ -75,13 +75,25 @@ impl HitBasis2 {
                 if !duplicate {
                     self.spatial.insert(&point, self.points.len());
                     self.points.push(point);
-                    hits.push(HitPair2{
-                        pair:     pair.clone(),
-                        u0:   hit_miss[j+0],
-                        u1:   hit_miss[j+1],
-                        dot0: hit_miss[j+2],
-                        dot1: hit_miss[j+3], 
-                        point,
+                    hits.push(HitPair {
+                        pair: pair.clone(),
+                        // u0:   hit_miss[j+0],
+                        // u1:   hit_miss[j+1],
+                        // dot0: hit_miss[j+2],
+                        // dot1: hit_miss[j+3], 
+                        hits: (Hit{
+                            u:   hit_miss[j+0],
+                            dot: hit_miss[j+2],
+                            shape: None,
+                            twin: vec![],
+                        },
+                        Hit{
+                            u:   hit_miss[j+1],
+                            dot: hit_miss[j+3],
+                            shape: None,
+                            twin: vec![],
+                        }),
+                        shape: rank0(point),
                     }); 
                 }
             }else{
@@ -92,8 +104,7 @@ impl HitBasis2 {
                 if hit_miss[i*4] < -5. {continue}
                 misses.push(MissPair { 
                     pair:     pair.clone(),
-                    dot0:     hit_miss[j+1], 
-                    dot1:     hit_miss[j+2], 
+                    dots:     (hit_miss[j+1], hit_miss[j+2]), 
                     distance: hit_miss[j+3],
                 });
             }

@@ -22,29 +22,37 @@ pub fn union_job2(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> { // , shapes: 
     }
     let mut results = vec![];
     for (ji, groups) in jobs.iter().enumerate() {
-        let curves = UnionBasis2::shapes([&groups[0], &groups[1]], &hits[ji]); 
+        let curves = union2([&groups[0], &groups[1]], &hits[ji]); 
         results.push(curves);
     }
     results
 }
 
+fn union2(groups: [&Vec<Shape>; 2], hits: &[Vec<HitMiss2>; 2]) -> Vec<Shape> {
+    Union2 {
+        hits: hits.clone(),
+        groups: [groups[0].clone(), groups[1].clone()], 
+        shapes: vec![],
+    }.shapes()
+}
 
-pub struct UnionBasis2 {
+
+pub struct Union2 {
     pub groups: [Vec<Shape>; 2], // &'static 
     pub hits:   [Vec<HitMiss2>; 2], 
     pub shapes: Vec<Shape>,
 }
 
-impl UnionBasis2 { 
-    pub fn shapes(groups: [&Vec<Shape>; 2], hits: &[Vec<HitMiss2>; 2]) -> Vec<Shape> { 
-        UnionBasis2 {
-            hits: hits.clone(),
-            groups: [groups[0].clone(), groups[1].clone()], 
-            shapes: vec![],
-        }.make()
-    }
+impl Union2 { 
+    // pub fn shapes(groups: [&Vec<Shape>; 2], hits: &[Vec<HitMiss2>; 2]) -> Vec<Shape> { 
+    //     Union2 {
+    //         hits: hits.clone(),
+    //         groups: [groups[0].clone(), groups[1].clone()], 
+    //         shapes: vec![],
+    //     }.make()
+    // }
 
-    pub fn make(&mut self) -> Vec<Shape> {
+    pub fn shapes(&mut self) -> Vec<Shape> {
         for g in 0..2 {
             for i in 0..self.groups[g].len() {
                 if self.hits[g][i].hits.is_empty() {

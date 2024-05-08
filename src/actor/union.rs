@@ -2,9 +2,40 @@ mod union2;
 mod union3;
 
 use crate::shape::*;
-
-
 use self::{union2::union_job2, union3::UnionBasis3};
+
+pub trait ToUnion {
+    fn union(&self, shapes: &Vec<Shape>) -> Vec<Shape>;
+}
+
+impl ToUnion for Vec<Shape> { 
+    fn union(&self, shapes: &Vec<Shape>) -> Vec<Shape> {
+        vec![vec![self.clone(), shapes.clone()]].union()[0].clone()
+        // Union {
+        //     shapes: vec![self.clone(), shapes.clone()],
+        // }
+    }
+}
+
+pub trait UnionCascade {
+    fn union(&self) -> Vec<Shape>;
+}
+
+impl UnionCascade for Vec<Vec<Shape>> { 
+    fn union(&self) -> Vec<Shape> {
+        vec![self.clone()].union()[0].clone()
+    }
+}
+
+// pub struct Union {
+//     pub shapes: Vec<Vec<Shape>>,
+// }
+
+// impl Union {
+//     fn shapes(&self) -> Vec<Shape> {
+//         vec![self.shapes.clone()].union()[0].clone()
+//     }
+// }
 
 pub trait UnionJob { // TODO: rename to Union in different module from "Models" module
     fn union(self) -> Vec<Vec<Shape>>;

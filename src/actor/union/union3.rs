@@ -1,7 +1,7 @@
 use glam::*;
 use crate::shape::*;
 use crate::{log, HitTest3, TrimJob};
-use super::UnionJob;
+use super::{ToUnion, UnionJob};
 use crate::hit::{CascadeGroupJob, HitPair3, Miss, MissPair};
 
 // pub trait Union3 {
@@ -54,6 +54,7 @@ pub struct UnionBasis3 {
 
 impl UnionBasis3 { 
     pub fn get_shapes(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Shape> {
+        //let mut wow = vec![];
         let batch = CascadeGroupJob::new(&jobs);
         let facet_groups = jobs[0].clone();
         let facets: Vec<Shape> = facet_groups.clone().into_iter().flatten().collect();
@@ -183,7 +184,7 @@ impl UnionBasis3 {
         // }
         // let mut union = UnionBasis2::new(facet.boundaries.clone(), trimmed.clone()); // self.facet_hits[g][i].clone()
         // facet.boundaries = union.build();
-        facet.boundaries = vec![vec![facet.boundaries.clone(), trimmed.clone()]].union()[0].clone();
+        facet.boundaries = facet.boundaries.union(&trimmed); //vec![facet.boundaries.clone(), trimmed.clone()].union();
         //if gi < 1 {
             for j in 0..facet.boundaries.len() {
                 let mut bndry = facet.boundaries[j].clone();

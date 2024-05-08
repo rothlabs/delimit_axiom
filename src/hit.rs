@@ -119,7 +119,7 @@ pub fn cascade_group_job_pairs(starts: &[Vec<usize>; 2], jobs: &Vec<Vec<Vec<Shap
                             pairs.push(TestPair{
                                 i0: starts[0][ji] + starts[1][g0] + c0, 
                                 i1: starts[0][ji] + starts[1][g1] + c1,
-                                reverse,
+                                reverse: true,
                             });
                         //}
                     }  

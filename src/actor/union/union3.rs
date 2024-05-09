@@ -2,8 +2,8 @@ use crate::shape::*;
 use crate::hit::cascade::HitTest;
 
 pub fn union_job3(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> {
-    let hits = jobs.hit();
-    for (ji, groups) in jobs.iter().enumerate() {
+    let score = jobs.hit();
+    for j in 0..jobs.len() {
         
     }
 

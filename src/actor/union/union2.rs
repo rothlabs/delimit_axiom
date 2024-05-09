@@ -1,55 +1,110 @@
-use crate::actor::Trim;
+use crate::Shape;
+use crate::hit::{ClosetOut, Score};
 use crate::hit::cascade::HitTest;
-use crate::{log, Shape};
-use crate::hit::HitMiss;
+use crate::actor::Trim;
 
 pub fn union_job2(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> { 
     let hits = jobs.hit();
-    let mut results = vec![];
-    for (ji, groups) in jobs.iter().enumerate() {
-        let curves = Union2 {
-            hits:   [hits[ji][0].clone(), hits[ji][1].clone()],
-            groups: [groups[0].clone(), groups[1].clone()], 
-            shapes: vec![],
-        }.shapes();
-        results.push(curves);
+    let mut shapes = vec![];
+    for i in 0..jobs.len() {
+        shapes.push(union2(
+            jobs[i].iter().flatten().collect(),
+            hits[i].iter().flatten().collect()
+        ));
     }
-    results
+    shapes
 }
 
-
-pub struct Union2 {
-    pub groups: [Vec<Shape>; 2], // &'static 
-    pub hits:   [Vec<HitMiss>; 2], 
-    pub shapes: Vec<Shape>,
-}
-
-impl Union2 { 
-    pub fn shapes(&mut self) -> Vec<Shape> {
-        for g in 0..2 {
-            for i in 0..self.groups[g].len() {
-                if self.hits[g][i].hits.is_empty() {
-                    self.hits[g][i].misses.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
-                    if self.hits[g][i].misses.is_empty() || self.hits[g][i].misses[0].dot * self.groups[g][i].basis.sign > 0. { 
-                        self.shapes.push(self.groups[g][i].clone());   
-                    }
-                }else{
-                    self.hits[g][i].hits.sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap());
-                    //self.add_bounded_curves(g, i);   
-                    self.shapes.extend(
-                        self.groups[g][i].trim(&self.hits[g][i].hits)
-                    );
-                }
+fn union2(shapes0: Vec<&Shape>, score: Vec<&Score>) -> Vec<Shape> {
+    let mut shapes1 = vec![];
+    for i in 0..shapes0.len() {
+        if score[i].hits.is_empty() {
+            if score[i].outs.is_empty() {
+                shapes1.push(shapes0[i].clone());  
+                continue;
             }
-        }
-        for shape in &mut self.shapes {
-            if shape.basis.sign < 0. {
-                shape.reverse().negate();
+            let out = score[i].outs.closest();
+            if shapes0[i].basis.sign * out.dot > 0. { 
+                shapes1.push(shapes0[i].clone());   
             }
+        }else{
+            let mut hits = score[i].hits.clone();
+            hits.sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap()); 
+            shapes1.extend(shapes0[i].trim(&hits));
         }
-        self.shapes.clone()
     }
+    for shape in &mut shapes1 {
+        if shape.basis.sign < 0. {
+            shape.reverse().negate();
+        }
+    }
+    shapes1
 }
+
+
+// let mut dot = 0.;
+//             let mut distance = INFINITY;
+//             for miss in &hit_miss[i].misses {
+//                 if miss.distance < distance {
+//                     dot = miss.dot;
+//                     distance = miss.distance;
+//                 }
+//             }
+
+
+
+// let curves = Union2 {
+        //     hits:     hits[ji].clone().into_iter().flatten().collect(),//[hits[ji][0].clone(), hits[ji][1].clone()],
+        //     shapes0:  groups.clone().into_iter().flatten().collect(),//, 
+        //     shapes: vec![],
+        // }.shapes();
+
+
+            // let misses = hit_miss[i].misses.sort_by(|a, b| 
+            //     a.distance.partial_cmp(&b.distance).unwrap()
+            // );
+// let miss = hit_miss[i].misses.iter().fold(0., |distance, miss| 
+//     miss.distance.min(distance)
+// );
+
+
+
+
+// pub struct Union2 {
+//     pub shapes0: Vec<Shape>, // &'static 
+//     pub hits:    Vec<HitMiss>, 
+//     pub shapes:  Vec<Shape>,
+// }
+
+// impl Union2 { 
+//     pub fn shapes(&mut self) -> Vec<Shape> {
+//         for i in 0..self.shapes0.len() {
+//             if self.hits[i].hits.is_empty() {
+//                 self.hits[i].misses.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+//                 if self.hits[i].misses.is_empty() || self.hits[i].misses[0].dot * self.shapes0[i].basis.sign > 0. { 
+//                     self.shapes.push(self.shapes0[i].clone());   
+//                 }
+//             }else{
+//                 self.hits[i].hits.sort_by(|a, b| a.u.partial_cmp(&b.u).unwrap()); 
+//                 self.shapes.extend(
+//                     self.shapes0[i].trim(&self.hits[i].hits)
+//                 );
+//             }
+//         }
+//         for shape in &mut self.shapes {
+//             if shape.basis.sign < 0. {
+//                 shape.reverse().negate();
+//             }
+//         }
+//         self.shapes.clone()
+//     }
+// }
+
+
+
+
+
+
 
     // fn add_bounded_curves(&mut self, g: usize, i: usize) {
     //     let mut curve = self.groups[g][i].clone();

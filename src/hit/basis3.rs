@@ -1,6 +1,6 @@
 use glam::*;
 use crate::{log, Shape};
-use super::{MissPair, TestPair};
+use super::{Out, OutPair, TestPair};
 
 struct IndexedUV {
     //facet_i: usize,
@@ -119,32 +119,37 @@ pub struct TraceBasis{
     pub pair_texels:   Vec<i32>,
     pub uv_texels:     Vec<f32>,
     pub box_texels:    Vec<f32>,
-    pub misses: Vec<MissPair>
+    pub misses: Vec<OutPair>
 }
 
 impl TraceBasis {
-    pub fn new(basis: &HoneBasis, hit_miss: Vec<f32>) -> Self {
+    pub fn new(basis: &HoneBasis, score: Vec<f32>) -> Self {
         let mut index_pairs = vec![];
         let mut pair_texels = vec![];
         let mut uv_texels   = vec![];
         let mut box_texels  = vec![];
         let mut misses      = vec![];
         for i in 0..basis.index_pairs.len() {
-            if hit_miss[i*4] > -0.5 { // it's a hit
+            let j = i * 4;
+            if score[i*4] > -0.5 { // it's a hit
                 index_pairs.push(basis.index_pairs[i].clone());
                 pair_texels.extend([basis.pair_texels[i*2], basis.pair_texels[i*2+1]]);
-                uv_texels.extend([hit_miss[i*4+0], hit_miss[i*4+1], hit_miss[i*4+2], hit_miss[i*4+3]]); // use .slice of tex
+                uv_texels.extend([score[j+0], score[j+1], score[j+2], score[j+3]]); // use .slice of tex
                 box_texels.extend([1., 1., 0., 0.]);
             }else{
                 // if hit_miss[i*4+1].is_nan() || hit_miss[i*4+2].is_nan() || hit_miss[i*4+3].is_nan() {
                 //     log("nan hit_miss in union3!");
                 //     continue;
                 // }
-                if hit_miss[i*4] < -5. {continue}
-                misses.push(MissPair { 
-                    pair:     basis.index_pairs[i].clone(),
-                    dots:     (hit_miss[i*4+1], hit_miss[i*4+2]), 
-                    distance: hit_miss[i*4+3],
+                if score[i*4] < -5. {continue}
+                misses.push(OutPair { 
+                    test:     basis.index_pairs[i].clone(),
+                    outs: (
+                        Out{dot:score[j+1], distance:score[j+3]},
+                        Out{dot:score[j+2], distance:score[j+3]}
+                    ),
+                    // dots:     (hit_miss[i*4+1], hit_miss[i*4+2]), 
+                    // distance: hit_miss[i*4+3],
                 });
             }
         }

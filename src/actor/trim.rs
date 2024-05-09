@@ -1,5 +1,5 @@
 use crate::hit::simple::HitTest;
-use crate::hit::{Hit, HitMiss};
+use crate::hit::{Hit, Score};
 use crate::{log, Shape, Shapes};
 
 // pub trait Trim {
@@ -39,23 +39,6 @@ impl TrimJob for Vec<Vec<Shape>> { // jobs, shapes
 }
 
 fn trim_job2(jobs: Vec<Vec<Shape>>) -> Vec<Vec<Shape>> { 
-    // let batch = HitJobsIndex::new(&jobs);
-    // let shapes: Vec<Shape> = jobs.clone().into_iter().flatten().collect();
-    // let (hits2, misses) = shapes.hit(&batch.pairs);
-    // let mut hits:   Vec<Vec<HitMiss>> = vec![vec![]; jobs.len()];
-    // for (ji, shapes) in jobs.iter().enumerate() {
-    //     hits[ji].extend(vec![HitMiss::default(); shapes.len()]);
-    // }
-    // for hit in &hits2 {
-    //     let (ji, i0, i1) = batch.index(&hit.pair);
-    //     hits[ji][i0].hits.push(hit.hits.0.clone());
-    //     hits[ji][i1].hits.push(hit.hits.1.clone());
-    // }
-    // for miss in &misses {
-    //     let (ji, i0, i1) = batch.index(&miss.pair);
-    //     hits[ji][i0].misses.push(Miss{dot:miss.dots.0, distance:miss.distance});
-    //     hits[ji][i1].misses.push(Miss{dot:miss.dots.1, distance:miss.distance});
-    // }
     let hits = jobs.hit();
     let mut results = vec![];
     for (ji, shapes0) in jobs.iter().enumerate() {
@@ -70,7 +53,7 @@ fn trim_job2(jobs: Vec<Vec<Shape>>) -> Vec<Vec<Shape>> {
 }
 
 pub struct Trim2 {
-    pub hits:    Vec<HitMiss>, 
+    pub hits:    Vec<Score>, 
     pub shapes0: Vec<Shape>,
     pub shapes1: Vec<Shape>,
 }
@@ -90,30 +73,6 @@ impl Trim2 {
         }
         self.shapes1.clone()
     }
-    // fn add_bounded_curves(&mut self, i: usize) {
-    //     let mut curve = self.shapes0[i].clone();
-    //     let min_basis = curve.basis.min;
-    //     for hit in self.hits[i].hits.iter() { 
-    //         if hit.dot * curve.basis.sign > 0. {
-    //             curve.basis.set_min(hit.u);
-    //         }else{
-    //             curve.basis.set_max(min_basis, hit.u);
-    //             let range = curve.basis.range();
-    //             if range < 0.001 {
-    //                 console_log!("trim range: {}", range);
-    //             }
-    //             self.shapes1.push(curve);
-    //             curve = self.shapes0[i].clone();
-    //         }
-    //     }
-    //     if self.hits[i].hits.last().expect("There should be one or more hits.").dot * curve.basis.sign > 0. {
-    //         let range = curve.basis.range();
-    //         if range < 0.001 {
-    //             console_log!("trim range last: {}", range);
-    //         }
-    //         self.shapes1.push(curve);
-    //     }
-    // }
 }
 
 pub trait Trim { // TODO: rename to Union in different module from "Models" module
@@ -150,7 +109,52 @@ impl Trim for Shape {
 }
 
 
+    // fn add_bounded_curves(&mut self, i: usize) {
+    //     let mut curve = self.shapes0[i].clone();
+    //     let min_basis = curve.basis.min;
+    //     for hit in self.hits[i].hits.iter() { 
+    //         if hit.dot * curve.basis.sign > 0. {
+    //             curve.basis.set_min(hit.u);
+    //         }else{
+    //             curve.basis.set_max(min_basis, hit.u);
+    //             let range = curve.basis.range();
+    //             if range < 0.001 {
+    //                 console_log!("trim range: {}", range);
+    //             }
+    //             self.shapes1.push(curve);
+    //             curve = self.shapes0[i].clone();
+    //         }
+    //     }
+    //     if self.hits[i].hits.last().expect("There should be one or more hits.").dot * curve.basis.sign > 0. {
+    //         let range = curve.basis.range();
+    //         if range < 0.001 {
+    //             console_log!("trim range last: {}", range);
+    //         }
+    //         self.shapes1.push(curve);
+    //     }
+    // }
 
+
+
+
+
+// let batch = HitJobsIndex::new(&jobs);
+    // let shapes: Vec<Shape> = jobs.clone().into_iter().flatten().collect();
+    // let (hits2, misses) = shapes.hit(&batch.pairs);
+    // let mut hits:   Vec<Vec<HitMiss>> = vec![vec![]; jobs.len()];
+    // for (ji, shapes) in jobs.iter().enumerate() {
+    //     hits[ji].extend(vec![HitMiss::default(); shapes.len()]);
+    // }
+    // for hit in &hits2 {
+    //     let (ji, i0, i1) = batch.index(&hit.pair);
+    //     hits[ji][i0].hits.push(hit.hits.0.clone());
+    //     hits[ji][i1].hits.push(hit.hits.1.clone());
+    // }
+    // for miss in &misses {
+    //     let (ji, i0, i1) = batch.index(&miss.pair);
+    //     hits[ji][i0].misses.push(Miss{dot:miss.dots.0, distance:miss.distance});
+    //     hits[ji][i1].misses.push(Miss{dot:miss.dots.1, distance:miss.distance});
+    // }
 
 
 

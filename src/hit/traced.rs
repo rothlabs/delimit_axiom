@@ -231,7 +231,7 @@ pub fn get_traced_curves(
         // curve1 = curve1.get_valid();
         // curve2 = curve2.get_valid();
         traced_curves.push(HitPair{
-            pair: hit_pairs[i].clone(),
+            test: hit_pairs[i].clone(),
             shape: curve2,
             hits: (hit_shape(curve0), hit_shape(curve1)),
         });

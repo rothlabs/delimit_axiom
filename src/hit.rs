@@ -11,17 +11,19 @@ mod traced;
 mod hit2;
 mod hit3;
 
+use std::f32::INFINITY;
+
 use glam::*;
 use crate::{gpu::framebuffer::Framebuffer, Shape, Shapes};
 use hit2::hit2;
 use hit3::hit3;
 
 pub trait ToHit {
-    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<MissPair>);
+    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>);
 }
 
 impl ToHit for Vec<Shape> {
-    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<MissPair>) {
+    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
         if self.high_rank() < 2 {
             hit2(self, pairs)
         } else {
@@ -38,22 +40,15 @@ pub struct TestPair {
     pub reverse: bool,
 }
 
-#[derive(Clone)]
-pub struct MissPair {
-    pub pair: TestPair,
-    pub dots: (f32, f32),
-    pub distance: f32,
-}
-
-#[derive(Clone)]
-pub struct Miss {
-    pub dot: f32,
-    pub distance: f32,
+#[derive(Clone, Default)]
+pub struct Score {
+    pub hits: Vec<Hit>,
+    pub outs: Vec<Out>,
 }
 
 #[derive(Clone)]
 pub struct HitPair {
-    pub pair: TestPair,
+    pub test: TestPair,
     pub shape: Shape,
     pub hits: (Hit, Hit),
 }
@@ -83,10 +78,36 @@ impl Hit {
     }
 }
 
-#[derive(Clone, Default)]
-pub struct HitMiss {
-    pub hits:   Vec<Hit>,
-    pub misses: Vec<Miss>,
+#[derive(Clone)]
+pub struct OutPair {
+    pub test: TestPair,
+    pub outs: (Out, Out),
+    // pub dots: (f32, f32),
+    // pub distance: f32,
+}
+
+#[derive(Clone)]
+pub struct Out {
+    pub dot: f32,
+    pub distance: f32,
+}
+
+pub trait ClosetOut {
+    fn closest(&self) -> &Out;
+}
+
+impl ClosetOut for Vec<Out> {
+    fn closest(&self) -> &Out {
+        let mut closest = &self[0];
+        let mut distance = INFINITY;
+        for out in self {
+            if out.distance < distance {
+                closest  = out;
+                distance = out.distance;
+            }
+        }
+        &closest
+    }
 }
 
 struct HoneBuffer {

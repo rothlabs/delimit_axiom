@@ -3,7 +3,7 @@ use web_sys::WebGlProgram;
 use crate::gpu::framebuffer::Framebuffer;
 use crate::{rank0, Shape};
 use crate::{gpu::GPU, Spatial3, DUP_0_TOL};
-use super::{Hit, HitPair, HoneBuffer, MissPair, TestPair};
+use super::{Hit, HitPair, HoneBuffer, Out, OutPair, TestPair};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
 // pub trait HitTest2 {
@@ -11,7 +11,7 @@ use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 // }
 
 // impl HitTest2 for Vec<Shape> {
-    pub fn hit2(shapes: Vec<Shape>, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<MissPair>) {
+    pub fn hit2(shapes: Vec<Shape>, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
         let gpu = GPU::new().unwrap();
         let mut basis = HoneBasis2::new(&shapes, &pairs);
         gpu.texture.make_r32f(0, &mut basis.curve_texels).unwrap();
@@ -51,17 +51,17 @@ pub struct HitBasis2 {
 }
 
 impl HitBasis2 { 
-    pub fn make(&mut self) -> (Vec<HitPair>, Vec<MissPair>) { 
+    pub fn make(&mut self) -> (Vec<HitPair>, Vec<OutPair>) { 
         self.hone();
-        let hit_miss = self.gpu.read(&self.buffer.io, 0);
+        let score = self.gpu.read(&self.buffer.io, 0);
         //console_log!("hit_miss {:?}", hit_miss);
         let points   = self.gpu.read(&self.buffer.io, 1);
         let mut hits = vec![];
-        let mut misses = vec![];
+        let mut outs = vec![];
         //let mut to_prints: Vec<f32> = vec![];
         for (i, pair) in self.basis.pairs.iter().enumerate() {
             let j = i * 4;
-            if hit_miss[j] > -0.5 { // it's a hit
+            if score[j] > -0.5 { // it's a hit
                 //to_prints.extend(&[999., hit_miss[j], hit_miss[j+1], hit_miss[j+2], hit_miss[j+3]]);
                 //log("hit!");
                 let point = vec3(points[j+0], points[j+1], points[j+2]);
@@ -76,20 +76,20 @@ impl HitBasis2 {
                     self.spatial.insert(&point, self.points.len());
                     self.points.push(point);
                     hits.push(HitPair {
-                        pair: pair.clone(),
+                        test: pair.clone(),
                         // u0:   hit_miss[j+0],
                         // u1:   hit_miss[j+1],
                         // dot0: hit_miss[j+2],
                         // dot1: hit_miss[j+3], 
                         hits: (Hit{
-                            u:   hit_miss[j+0],
-                            dot: hit_miss[j+2],
+                            u:   score[j+0],
+                            dot: score[j+2],
                             shape: None,
                             twin: vec![],
                         },
                         Hit{
-                            u:   hit_miss[j+1],
-                            dot: hit_miss[j+3],
+                            u:   score[j+1],
+                            dot: score[j+3],
                             shape: None,
                             twin: vec![],
                         }),
@@ -101,11 +101,15 @@ impl HitBasis2 {
                 //     log("nan hit_miss in union3!");
                 //     continue;
                 // }
-                if hit_miss[i*4] < -5. {continue}
-                misses.push(MissPair { 
-                    pair:     pair.clone(),
-                    dots:     (hit_miss[j+1], hit_miss[j+2]), 
-                    distance: hit_miss[j+3],
+                if score[i*4] < -5. {continue}
+                outs.push(OutPair { 
+                    test:     pair.clone(),
+                    outs: (
+                        Out{dot:score[j+1], distance:score[j+3]},
+                        Out{dot:score[j+2], distance:score[j+3]}
+                    ),
+                    // dots:     (hit_miss[j+1], hit_miss[j+2]), 
+                    // distance: hit_miss[j+3],
                 });
             }
         }
@@ -113,7 +117,7 @@ impl HitBasis2 {
         // let wow: Vec<f32> = vec![1.234567891234567891234; 3];
         // console_log!("wow {}", wow[0]);
         // console_log!("f32::DIGITS {}", f32::DIGITS);
-        (hits, misses)
+        (hits, outs)
     }
     fn hone(&self) {
         self.draw_init_hone_palette();

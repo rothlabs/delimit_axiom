@@ -1,29 +1,29 @@
 use crate::shape::*;
-use super::{ToHit, TestPair, HitMiss, Miss};
+use super::{ToHit, TestPair, Score};
 
 pub trait HitTest {
-    fn hit(&self) -> Vec<Vec<HitMiss>>;
+    fn hit(&self) -> Vec<Vec<Score>>;
 }
 
 impl HitTest for Vec<Vec<Shape>> {
-    fn hit(&self) -> Vec<Vec<HitMiss>> {
+    fn hit(&self) -> Vec<Vec<Score>> {
         let (indices, starts) = indices_and_starts(self);
-        let index = Index{indices,  pairs:job_pairs(self, &starts)};
+        let index = Index{indices,  pairs:pairs(self, &starts)};
         let shapes: Vec<Shape> = self.clone().into_iter().flatten().collect();
-        let (hits2, misses) = shapes.hit(&index.pairs);
-        let mut hits:   Vec<Vec<HitMiss>> = vec![vec![]; self.len()];
+        let (hit_pairs, out_pairs) = shapes.hit(&index.pairs);
+        let mut hits:   Vec<Vec<Score>> = vec![vec![]; self.len()];
         for (ji, shapes) in self.iter().enumerate() {
-            hits[ji].extend(vec![HitMiss::default(); shapes.len()]);
+            hits[ji].extend(vec![Score::default(); shapes.len()]);
         }
-        for hit in &hits2 {
-            let (ji, i0, i1) = index.at(&hit.pair);
-            hits[ji][i0].hits.push(hit.hits.0.clone());
-            hits[ji][i1].hits.push(hit.hits.1.clone());
+        for pair in hit_pairs {
+            let (j, i0, i1) = index.at(&pair.test);
+            hits[j][i0].hits.push(pair.hits.0);
+            hits[j][i1].hits.push(pair.hits.1);
         }
-        for miss in &misses {
-            let (ji, i0, i1) = index.at(&miss.pair);
-            hits[ji][i0].misses.push(Miss{dot:miss.dots.0, distance:miss.distance});
-            hits[ji][i1].misses.push(Miss{dot:miss.dots.1, distance:miss.distance});
+        for pair in out_pairs {
+            let (j, i0, i1) = index.at(&pair.test);
+            hits[j][i0].outs.push(pair.outs.0);
+            hits[j][i1].outs.push(pair.outs.1);
         }
         hits
     }
@@ -36,9 +36,9 @@ pub struct Index {
 
 impl Index {
     pub fn at(&self, pair: &TestPair) -> (usize, usize, usize) {
-        let (ji, i0) = self.indices[pair.i0];
-        let (_,  i1) = self.indices[pair.i1];
-        (ji, i0, i1)
+        let (j, i0) = self.indices[pair.i0];
+        let (_, i1) = self.indices[pair.i1];
+        (j, i0, i1)
     }
 }
 
@@ -56,7 +56,7 @@ fn indices_and_starts(jobs: &Vec<Vec<Shape>>) -> (Vec<(usize, usize)>, Vec<usize
     (indices, starts)
 }
 
-pub fn job_pairs(jobs: &Vec<Vec<Shape>>, starts: &Vec<usize>) -> Vec<TestPair> {
+pub fn pairs(jobs: &Vec<Vec<Shape>>, starts: &Vec<usize>) -> Vec<TestPair> {
     let mut pairs = vec![];
     for (ji, shapes) in jobs.iter().enumerate() {
         for i0 in 0..shapes.len() {

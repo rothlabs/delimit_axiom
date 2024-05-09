@@ -1,36 +1,33 @@
 use crate::shape::*;
-use super::{ToHit, TestPair, HitMiss, Miss};
+use super::{ToHit, TestPair, Score};
 
 pub trait HitTest {
-    fn hit(&self) -> Vec<Vec<Vec<HitMiss>>>;
+    fn hit(&self) -> Vec<Vec<Vec<Score>>>;
 }
 
 impl HitTest for Vec<Vec<Vec<Shape>>> {
-    fn hit(&self) -> Vec<Vec<Vec<HitMiss>>> {
+    fn hit(&self) -> Vec<Vec<Vec<Score>>> {
         let (indices, starts) = indices_and_starts(self);
-        let index = Index {
-            pairs: pairs(self, &starts), 
-            indices,
-        };
+        let index = Index {indices, pairs:pairs(self, &starts)};
         let shapes: Vec<Shape> = self.clone().into_iter().flatten().flatten().collect();
-        let (hit_pairs, miss_pairs) = shapes.hit(&index.pairs);
-        let mut hits: Vec<Vec<Vec<HitMiss>>> = vec![vec![]; self.len()];
+        let (hit_pairs, out_pairs) = shapes.hit(&index.pairs);
+        let mut score: Vec<Vec<Vec<Score>>> = vec![vec![]; self.len()];
         for (ji, groups) in self.iter().enumerate() {
             for gi in 0..groups.len() {
-                hits[ji].push(vec![HitMiss::default(); groups[gi].len()]);
+                score[ji].push(vec![Score::default(); groups[gi].len()]);
             }
         }
-        for hit in &hit_pairs {
-            let (ji, g0, i0, g1, i1) = index.at(&hit.pair);
-            hits[ji][g0][i0].hits.push(hit.hits.0.twined(vec![g1, i1]));
-            hits[ji][g1][i1].hits.push(hit.hits.1.twined(vec![g0, i0]));
+        for pair in hit_pairs {
+            let (j, g0, i0, g1, i1) = index.at(&pair.test);
+            score[j][g0][i0].hits.push(pair.hits.0); // .twined(vec![g1, i1])
+            score[j][g1][i1].hits.push(pair.hits.1); // .twined(vec![g0, i0])
         }
-        for miss in &miss_pairs {
-            let (ji, g0, i0, g1, i1) = index.at(&miss.pair);
-            hits[ji][g0][i0].misses.push(Miss{dot:miss.dots.0, distance:miss.distance});
-            hits[ji][g1][i1].misses.push(Miss{dot:miss.dots.1, distance:miss.distance});
+        for pair in out_pairs {
+            let (j, g0, i0, g1, i1) = index.at(&pair.test);
+            score[j][g0][i0].outs.push(pair.outs.0);
+            score[j][g1][i1].outs.push(pair.outs.1);
         }
-        hits
+        score
     }
 }
 
@@ -41,9 +38,9 @@ pub struct Index {
 
 impl Index {
     pub fn at(&self, pair: &TestPair) -> (usize, usize, usize, usize, usize) {
-        let (_,  g0, i0) = self.indices[pair.i0];
-        let (ji, g1, i1) = self.indices[pair.i1];
-        (ji, g0, i0, g1, i1)
+        let (j, g0, i0) = self.indices[pair.i0];
+        let (_, g1, i1) = self.indices[pair.i1];
+        (j, g0, i0, g1, i1)
     }
 }
 

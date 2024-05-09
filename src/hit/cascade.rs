@@ -19,8 +19,8 @@ impl HitTest for Vec<Vec<Vec<Shape>>> {
         }
         for pair in hit_pairs {
             let (j, g0, i0, g1, i1) = index.at(&pair.test);
-            score[j][g0][i0].hits.push(pair.hits.0); // .twined(vec![g1, i1])
-            score[j][g1][i1].hits.push(pair.hits.1); // .twined(vec![g0, i0])
+            score[j][g0][i0][cascade_index].hits.push(pair.hits.0);   // .twined(vec![g1, i1])
+            score[j][g1][i1][cascade_index].hits.push(pair.hits.1);   // .twined(vec![g0, i0])
         }
         for pair in out_pairs {
             let (j, g0, i0, g1, i1) = index.at(&pair.test);

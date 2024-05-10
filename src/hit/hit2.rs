@@ -14,11 +14,11 @@ use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
     pub fn hit2(shapes: Vec<Shape>, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
         let gpu = GPU::new().unwrap();
         let mut basis = HoneBasis2::new(&shapes, &pairs);
-        gpu.texture.make_r32f(0, &mut basis.curve_texels).unwrap();
+        gpu.texture.make_r32f(0, &mut basis.shape_texels).unwrap();
         let (_, pair_buf_size) = gpu.texture.make_rg32i(1, &mut basis.pair_texels).unwrap();
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
         let buffer = HoneBuffer{
-            io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.u_texels, 2).unwrap(),
+            io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.knot_texels, 2).unwrap(),
             palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_buf_size, 2).unwrap(),
             palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_buf_size, 2).unwrap(),
         };
@@ -159,71 +159,67 @@ impl HitBasis2 {
 }
 
 #[derive(Clone, Debug)]
-struct IndexedU {
-    texel_index: usize,
-    u: f32
+struct IndexedKnot {
+    index: usize,
+    knot:  f32
 }
 
 
 #[derive(Default)]
 pub struct HoneBasis2{
     pub pairs: Vec<TestPair>,
-    pub pair_texels: Vec<i32>,
-    pub curve_texels: Vec<f32>,
-    pub u_texels: Vec<f32>,
+    pub pair_texels:  Vec<i32>,
+    pub shape_texels: Vec<f32>,
+    pub knot_texels:  Vec<f32>,
     pub max_knot_count: i32,
 }
 
 impl HoneBasis2 {
     pub fn new(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> Self{
         let mut max_knot_count = 0;
-        let mut index_pairs: Vec<TestPair> = vec![];
-        let mut u_groups: Vec<Vec<IndexedU>> = vec![]; // vec![]; shapes.len()
-        let mut curve_texels: Vec<f32> = vec![];
-        let mut pair_texels: Vec<i32> = vec![];
-        let mut u_texels: Vec<f32> = vec![];
-        //for (ci, curve) in shapes.of_rank(1).iter().enumerate() {
-        for curve in shapes {
-            let mut u_indexes: Vec<IndexedU> = vec![];
-            if curve.rank == 1 {
-                if curve.basis.knots.len() > max_knot_count { 
-                    max_knot_count = curve.basis.knots.len(); 
+        let mut index_pairs:  Vec<TestPair> = vec![];
+        let mut knot_groups:  Vec<Vec<IndexedKnot>> = vec![]; // vec![]; shapes.len()
+        let mut shape_texels: Vec<f32> = vec![];
+        let mut pair_texels:  Vec<i32> = vec![];
+        let mut knot_texels:  Vec<f32> = vec![];
+        for shape in shapes {
+            let mut indexed_knots: Vec<IndexedKnot> = vec![];
+            //if shape.rank == 1 {
+                if shape.basis.knots.len() > max_knot_count { 
+                    max_knot_count = shape.basis.knots.len(); 
                 }
-                let texel_index = curve_texels.len();
-                curve_texels.extend([
+                let texel_index = shape_texels.len();
+                shape_texels.extend([
                     9000000., // + ci as f32,
-                    curve.controls.len() as f32,
-                    curve.basis.order as f32,
-                    curve.basis.min,
-                    curve.basis.max,
+                    shape.controls.len() as f32,
+                    shape.basis.order as f32,
+                    shape.basis.min,
+                    shape.basis.max,
                 ]); 
-                for i in 0..curve.basis.knots.len()-1 {
-                    if curve.basis.knots[i] < curve.basis.knots[i+1] || i == curve.basis.knots.len() - curve.basis.order {
-                        // if curve.nurbs.knots[i] > 1. {
-                        //     log("what?!?????????");
-                        // }
-                        u_indexes.push(IndexedU{
-                            texel_index, 
-                            u: curve.basis.knots[i],
+                shape_texels.push(0.);
+                for i in 1..shape.basis.knots.len() { // -1 {
+                    if shape.basis.knots[i-1] < shape.basis.knots[i] || i == shape.basis.order-1 { 
+                        indexed_knots.push(IndexedKnot{
+                            index: texel_index, 
+                            knot:  shape.basis.knots[i],
                         }); 
                     }
-                    curve_texels.push(curve.basis.knots[i]);
+                    shape_texels.push(shape.basis.knots[i]);
                 }  
-                curve_texels.push(curve.basis.knots[curve.basis.knots.len()-1]);
-                curve_texels.extend(&curve.basis.weights);
-                for control in &curve.controls {
-                    curve_texels.extend(control.point(&[]).to_array());
+                shape_texels.extend(&shape.basis.weights);
+                for control in &shape.controls {
+                    shape_texels.extend(control.point(&[]).to_array());
                 }
-            }
-            u_groups.push(u_indexes);
+            //}
+            knot_groups.push(indexed_knots);
         }
         for pair in pairs {
-            for IndexedU{texel_index:t0, u:u0} in &u_groups[pair.i0]{
-                for IndexedU{texel_index:t1, u:u1} in &u_groups[pair.i1]{
+            for IndexedKnot{index:t0, knot:u0} in &knot_groups[pair.i0]{
+                for IndexedKnot{index:t1, knot:u1} in &knot_groups[pair.i1]{
                     index_pairs.push(pair.clone());
                     pair_texels.push(*t0 as i32);
                     pair_texels.push(*t1 as i32);
-                    u_texels.extend(&[*u0, *u1, 0., 0.]);
+                    knot_texels.extend(&[*u0, *u1, 0., 0.]);
                 }  
             }  
         }
@@ -234,8 +230,8 @@ impl HoneBasis2 {
         HoneBasis2 {
             pairs: index_pairs,
             pair_texels,
-            curve_texels,
-            u_texels,
+            shape_texels,
+            knot_texels,
             max_knot_count: max_knot_count as i32,
         }
     }

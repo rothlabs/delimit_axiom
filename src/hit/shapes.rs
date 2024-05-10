@@ -61,7 +61,6 @@ pub fn pairs(jobs: &Vec<Vec<Shape>>, starts: &Vec<usize>) -> Vec<TestPair> {
     for (ji, shapes) in jobs.iter().enumerate() {
         for i0 in 0..shapes.len() {
             for i1 in i0+1..shapes.len() {
-                //if i0 == i1 {continue}
                 pairs.push(TestPair{
                     i0: starts[ji] + i0, 
                     i1: starts[ji] + i1,

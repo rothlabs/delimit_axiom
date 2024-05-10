@@ -1,9 +1,9 @@
 use crate::Shape;
 use crate::hit::{ClosetOut, Score};
-use crate::hit::cascade::HitTest;
+use crate::hit::groups::HitTest;
 use crate::actor::Trim;
 
-pub fn union_job2(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> { 
+pub fn union_job2(jobs: Vec<[Vec<Shape>; 2]>) -> Vec<Vec<Shape>> { 
     let hits = jobs.hit();
     let mut shapes = vec![];
     for i in 0..jobs.len() {

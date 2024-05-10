@@ -43,19 +43,19 @@ pub trait UnionJob { // TODO: rename to Union in different module from "Models" 
 
 impl UnionJob for Vec<Vec<Vec<Shape>>> { // jobs, groups, shapes
     fn union(self) -> Vec<Vec<Shape>> { 
-        if self.high_rank() < 2 {
+        //if self.high_rank() < 2 {
             let mut shapes = vec![];
             for groups in &self {
                 shapes.push(groups[0].clone());
             }
             let mut gi = 1;
             loop {
-                let mut jobs = vec![];
+                let mut jobs: Vec<[Vec<Shape>; 2]> = vec![];
                 let mut done = true;
                 for (ji, groups) in self.iter().enumerate() {
-                    jobs.push(vec![shapes[ji].clone()]);
+                    jobs.push([shapes[ji].clone(), vec![]]);
                     if gi < groups.len() {
-                        jobs[ji].push(groups[gi].clone());
+                        jobs[ji][1] = groups[gi].clone();
                         done = false;
                     }
                 }
@@ -64,9 +64,9 @@ impl UnionJob for Vec<Vec<Vec<Shape>>> { // jobs, groups, shapes
                 gi += 1;
             }
             shapes
-        }else{
-            union_job3(self)
-        }
+        // }else{
+        //     union_job3(self)
+        // }
     }
 }
 

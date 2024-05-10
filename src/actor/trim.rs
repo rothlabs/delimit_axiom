@@ -1,4 +1,4 @@
-use crate::hit::simple::HitTest;
+use crate::hit::shapes::HitTest;
 use crate::hit::{Hit, Score};
 use crate::{log, Shape, Shapes};
 

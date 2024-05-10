@@ -1,5 +1,5 @@
-pub mod simple;
-pub mod cascade;
+pub mod shapes;
+pub mod groups;
 
 mod basis3;
 mod shader_parts;
@@ -24,11 +24,11 @@ pub trait ToHit {
 
 impl ToHit for Vec<Shape> {
     fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
-        if self.high_rank() < 2 {
+        //if self.high_rank() < 2 {
             hit2(self, pairs)
-        } else {
-            hit3(self, pairs)
-        }
+        //} else {
+        //    hit3(self, pairs)
+        //}
     }
 }
 

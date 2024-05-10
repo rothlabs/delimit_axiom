@@ -13,7 +13,7 @@ use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 // impl HitTest2 for Vec<Shape> {
     pub fn hit2(shapes: Vec<Shape>, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
         let gpu = GPU::new().unwrap();
-        let mut basis = HoneBasis2::new(&shapes, &pairs);
+        let mut basis = hone_basis(&shapes, &pairs);
         gpu.texture.make_r32f(0, &mut basis.shape_texels).unwrap();
         let (_, pair_buf_size) = gpu.texture.make_rg32i(1, &mut basis.pair_texels).unwrap();
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
@@ -174,65 +174,91 @@ pub struct HoneBasis2{
     pub max_knot_count: i32,
 }
 
-impl HoneBasis2 {
-    pub fn new(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> Self{
-        let mut max_knot_count = 0;
-        let mut index_pairs:  Vec<TestPair> = vec![];
-        let mut knot_groups:  Vec<Vec<IndexedKnot>> = vec![]; // vec![]; shapes.len()
-        let mut shape_texels: Vec<f32> = vec![];
-        let mut pair_texels:  Vec<i32> = vec![];
-        let mut knot_texels:  Vec<f32> = vec![];
-        for shape in shapes {
-            let mut indexed_knots: Vec<IndexedKnot> = vec![];
-            //if shape.rank == 1 {
-                if shape.basis.knots.len() > max_knot_count { 
-                    max_knot_count = shape.basis.knots.len(); 
-                }
-                let texel_index = shape_texels.len();
-                shape_texels.extend([
-                    9000000., // + ci as f32,
-                    shape.controls.len() as f32,
-                    shape.basis.order as f32,
-                    shape.basis.min,
-                    shape.basis.max,
-                ]); 
-                shape_texels.push(0.);
-                for i in 1..shape.basis.knots.len() { // -1 {
-                    if shape.basis.knots[i-1] < shape.basis.knots[i] || i == shape.basis.order-1 { 
-                        indexed_knots.push(IndexedKnot{
-                            index: texel_index, 
-                            knot:  shape.basis.knots[i],
-                        }); 
-                    }
-                    shape_texels.push(shape.basis.knots[i]);
-                }  
-                shape_texels.extend(&shape.basis.weights);
-                for control in &shape.controls {
-                    shape_texels.extend(control.point(&[]).to_array());
-                }
-            //}
-            knot_groups.push(indexed_knots);
-        }
-        for pair in pairs {
-            for IndexedKnot{index:t0, knot:u0} in &knot_groups[pair.i0]{
-                for IndexedKnot{index:t1, knot:u1} in &knot_groups[pair.i1]{
-                    index_pairs.push(pair.clone());
-                    pair_texels.push(*t0 as i32);
-                    pair_texels.push(*t1 as i32);
-                    knot_texels.extend(&[*u0, *u1, 0., 0.]);
-                }  
+pub fn hone_basis(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> HoneBasis2 {
+    let mut max_knot_len = 0;
+    let mut index_pairs:  Vec<TestPair> = vec![];
+    let mut knot_groups:  Vec<Vec<IndexedKnot>> = vec![]; // vec![]; shapes.len()
+    let mut shape_texels: Vec<f32> = vec![];
+    let mut pair_texels:  Vec<i32> = vec![];
+    let mut knot_texels:  Vec<f32> = vec![];
+    for shape in shapes {
+        let section = add_section(shape, shape_texels.len(), max_knot_len);
+        shape_texels.extend(section.texels);
+        max_knot_len = section.max_knot_len;
+        knot_groups.push(section.indexed_knots);
+    }
+    for pair in pairs {
+        for IndexedKnot{index:t0, knot:u0} in &knot_groups[pair.i0] {
+            for IndexedKnot{index:t1, knot:u1} in &knot_groups[pair.i1] {
+                index_pairs.push(pair.clone());
+                pair_texels.push(*t0 as i32);
+                pair_texels.push(*t1 as i32);
+                knot_texels.extend(&[*u0, *u1, 0., 0.]);
             }  
-        }
-        // console_log!("u_groups {:?}", u_groups);
-        // console_log!("index_pairs {:?}", index_pairs);
-        // console_log!("pair_texels {:?}", pair_texels);
-        // console_log!("u_texels {:?}", u_texels);
-        HoneBasis2 {
-            pairs: index_pairs,
-            pair_texels,
-            shape_texels,
-            knot_texels,
-            max_knot_count: max_knot_count as i32,
-        }
+        }  
+    }
+    // console_log!("u_groups {:?}", u_groups);
+    // console_log!("index_pairs {:?}", index_pairs);
+    // console_log!("pair_texels {:?}", pair_texels);
+    // console_log!("u_texels {:?}", u_texels);
+    HoneBasis2 {
+        pairs: index_pairs,
+        pair_texels,
+        shape_texels,
+        knot_texels,
+        max_knot_count: max_knot_len as i32,
     }
 }
+
+pub struct Section {
+    texels: Vec<f32>,
+    max_knot_len: usize,
+    indexed_knots: Vec<IndexedKnot>,
+}
+
+fn add_section(shape: &Shape, shape_index: usize, max_knot_len0: usize) -> Section {
+    let mut texels: Vec<f32> = vec![];
+    //let mut indexed_knots: Vec<IndexedKnot> = vec![];
+    let mut max_knot_len = max_knot_len0;
+    if shape.basis.knots.len() > max_knot_len0 { 
+        max_knot_len = shape.basis.knots.len(); 
+    }
+    texels.extend([
+        9000000., // + ci as f32,
+        shape.controls.len() as f32,
+        shape.basis.order as f32,
+        shape.basis.min,
+        shape.basis.max,
+    ]); 
+    texels.extend(&shape.basis.knots);
+    texels.extend(&shape.basis.weights);
+    let mut control_indices = vec![];
+    let mut control_texels = vec![];
+    for control in &shape.controls {
+        let control_index = texels.len() + control_texels.len();
+        control_indices.push(control_index as f32);
+        let section = add_section(control, control_index, max_knot_len);
+        control_texels.extend(section.texels);
+        max_knot_len = section.max_knot_len;
+    }
+    texels.extend(control_indices);
+    texels.extend(control_texels);
+    if let Some(point) = shape.vector {
+        texels.extend(point.to_array());
+    } else {
+        texels.extend([0., 0., 0.]);
+    }
+    Section{texels, max_knot_len, indexed_knots}
+}
+
+
+// texels.push(0.); // first knot
+//     for i in 1..shape.basis.knots.len() {
+//         if shape.basis.knots[i-1] < shape.basis.knots[i] || i == shape.basis.order - 1 { // TODO: manually add IndexedKnot at shape.basis.order-1
+//             indexed_knots.push(IndexedKnot{
+//                 index: shape_index, 
+//                 knot:  shape.basis.knots[i],
+//             }); 
+//         }
+//         texels.push(shape.basis.knots[i]);
+//     } 

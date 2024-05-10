@@ -116,28 +116,34 @@ impl Shape {
         curve
     }
 
-    pub fn get_unique_knots(&self) -> Vec<f32> {
-        let mut knots = vec![0.];
-        for k in self.basis.knots.windows(2) {
-            if k[0] < k[1] {
-                knots.push(k[1]);
+    pub fn knot_spread(&self) -> Vec<Vec<f32>> {
+        let mut spread0 = vec![];
+        // let spread = self.basis.knot_spread();
+        // for ki in spread {
+        //     //for k in 0..self.basis.order {
+        //         let i = k - self.basis.order + 1;
+        //         self.controls[ki+i].basis.knot_spread();
+        //     //}
+        // }
+        for i in 0..self.controls.len() {
+            let mut spread1 = self.controls[i].knot_spread();
+            for spread in &mut spread1 {
+                spread.push(self.basis.knots[i + self.basis.order - 1]);
             }
+            spread0.extend(spread1);
         }
-        knots
+        spread0
     }
 
-    pub fn get_u_and_point_from_target(&self, u: f32, delta: Vec3) -> (f32, Vec3) {
-        if delta.length() < 0.00001 {
-            let point = self.point(&[u]);
-            return (u, point)
-        }
-        let arrow = self.get_arrow(&[u]);
-       //let length_ratio = delta.length() / arrow.delta.length();
-        let mut u = u + arrow.delta.normalize().dot(delta) / arrow.delta.length();
-        u = u.clamp(0., 1.); 
-        let point = self.point(&[u]);
-        (u, point)
-    }
+    // pub fn knot_spread(&self) -> Vec<f32> {
+    //     let mut knots = vec![0.];
+    //     for k in self.basis.knots.windows(2) {
+    //         if k[0] < k[1] {
+    //             knots.push(k[1]);
+    //         }
+    //     }
+    //     knots
+    // }
 
     pub fn get_polyline(&self, query: &DiscreteQuery) -> Polyline {
         let vector = self.get_polyline_vector(query);
@@ -154,14 +160,14 @@ impl Shape {
             .flatten().collect()
     }
 
-    pub fn point(&self, params: &[f32]) -> Vec3 {
+    pub fn point(&self, params: &[f32]) -> Vec3 { // TODO: rename to shape.at(&self, &[f32])?
         if let Some((u, params)) = params.split_last() {
             if self.basis.order > 1 {
-                let u = self.basis.u(u);      
-                let (ki, basis) = self.basis.at(u);
+                //let u = self.basis.u(u);      
+                let (ki, basis) = self.basis.at(*u);
                 return (0..self.basis.order).map(|k| {
-                    let i = 4 - self.basis.order + k;
-                    self.controls[ki + i - 3].point(params)  * basis.0[i]
+                    let i = k - self.basis.order + 1;
+                    self.controls[ki+i].point(params)  * basis.0[3+i]
                 }).sum()
             }else{
                 //self.log();
@@ -176,13 +182,13 @@ impl Shape {
         let mut arrow = Arrow::new(Vec3::ZERO, Vec3::ZERO);
         if let Some((u, params)) = params.split_last() {
             if self.basis.order > 1 {
-                let u = self.basis.u(u);      
-                let (ki, basis) = self.basis.at(u);
+                //let u = self.basis.u(u);      
+                let (ki, basis) = self.basis.at(*u);
                 for k in 0..self.basis.order {
-                    let i = 4 - self.basis.order + k;
-                    let point = self.controls[ki - 3 + i].point(params);
-                    arrow.point += point * basis.0[i];
-                    arrow.delta += point * basis.1[i];
+                    let i = k - self.basis.order + 1; // let i = 4 - self.basis.order + k;
+                    let point = self.controls[ki+i].point(params); // ki - 3 + i
+                    arrow.point += point * basis.0[3+i];
+                    arrow.delta += point * basis.1[3+i];
                 }
                 let range = self.basis.range();
                 if range < 0.0001 {
@@ -337,6 +343,20 @@ pub fn rank0d3(x: f32, y: f32, z: f32) -> Shape {
         ..Default::default()
     }
 }
+
+
+    // pub fn get_u_and_point_from_target(&self, u: f32, delta: Vec3) -> (f32, Vec3) {
+    //     if delta.length() < 0.00001 {
+    //         let point = self.point(&[u]);
+    //         return (u, point)
+    //     }
+    //     let arrow = self.get_arrow(&[u]);
+    //    //let length_ratio = delta.length() / arrow.delta.length();
+    //     let mut u = u + arrow.delta.normalize().dot(delta) / arrow.delta.length();
+    //     u = u.clamp(0., 1.); 
+    //     let point = self.point(&[u]);
+    //     (u, point)
+    // }
 
 
 

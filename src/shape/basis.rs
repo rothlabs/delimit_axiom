@@ -74,6 +74,18 @@ impl Basis {
         self.knots.extend(vec![1.; repeats]);
     }
 
+    // pub fn knot_spread(&self) -> Vec<usize> {
+    //     let mut spread = vec![];
+    //     // for i in 0..self.knots.len() - 1 { 
+    //     //     if self.knots[i] < self.knots[i+1] { 
+    //     //         spread.push(i);
+    //     //     }
+    //     // }
+    //     // //spread.push(self.knots.len() - self.order - 1);
+    //     self.knots.split_off(at)
+    //     spread
+    // }
+
     pub fn knot_index(&self, u: f32) -> usize {
         for i in 0..self.knots.len() - 1 { 
             if u >= self.knots[i] && u < self.knots[i+1] { 
@@ -94,9 +106,9 @@ impl Basis {
         self.weights.reverse();
     }
 
-    pub fn u(&self, u: &f32) -> f32 {
-        self.min * (1.-u) + self.max * u
-    }
+    // pub fn u(&self, u: &f32) -> f32 {
+    //     self.min * (1.-u) + self.max * u
+    // }
 
     pub fn range(&self) -> f32 {
         self.max - self.min
@@ -111,7 +123,7 @@ impl Basis {
     }
 
     pub fn at(&self, u: f32) -> (usize, ([f32; 4], [f32; 4])) {
-        let ki = self.knot_index(u);
+        let ki = self.knot_index(self.min * (1.-u) + self.max * u);
         let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);
         let k0 = self.knots[ki];
         let k1 = self.knots[ki + 1];

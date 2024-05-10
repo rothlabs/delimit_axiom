@@ -21,7 +21,7 @@ impl Union {
         let mut shape_groups = self.parts.shape_groups();
         let neg_shape_groups = self.negated_parts.shape_groups().negated();
         shape_groups.extend(neg_shape_groups);
-        shape_groups.union()
+        shape_groups.into_iter().flatten().collect() // shape_groups.union()
         //vec![shape_groups].union()[0].clone()
     }
 }

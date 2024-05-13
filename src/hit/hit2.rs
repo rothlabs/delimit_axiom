@@ -1,9 +1,11 @@
 use glam::*;
 use web_sys::WebGlProgram;
+use crate::log;
 use crate::gpu::framebuffer::Framebuffer;
-use crate::{rank0, Shape};
+use crate::shape::*; //{rank0, Shape, Shapes};
 use crate::{gpu::GPU, Spatial3, DUP_0_TOL};
 use super::{Hit, HitPair, HoneBuffer, Out, OutPair, TestPair};
+use super::hone_basis::{hone_basis, HoneBasis};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
 // pub trait HitTest2 {
@@ -18,10 +20,11 @@ use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
         let (_, pair_buf_size) = gpu.texture.make_rg32i(1, &mut basis.pair_texels).unwrap();
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
         let buffer = HoneBuffer{
-            io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.knot_texels, 2).unwrap(),
+            io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.param_texels, 2).unwrap(),
             palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_buf_size, 2).unwrap(),
             palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_buf_size, 2).unwrap(),
         };
+        //console_log!("shapes.max_knot_len() {}", shapes.max_knot_len());
         HitBasis2 {
             //curves:self, 
             //pairs: pairs.clone(), 
@@ -30,6 +33,7 @@ use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
             init_palette:     gpu.get_quad_program_from_source(INIT_PALETTE_SOURCE).unwrap(),
             hone_palette:     gpu.get_quad_program_from_source(HONE_SOURCE).unwrap(),
             hit_miss_program: gpu.get_quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
+            max_knot_len:     shapes.max_knot_len() as i32,
             gpu,
             spatial: Spatial3::new(0.1), 
             points:  vec![],
@@ -40,11 +44,12 @@ use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 pub struct HitBasis2 {
     //curves: Vec<CurveShape>,
     //pairs:  Vec<TestPair>,
-    basis:  HoneBasis2,
+    basis:  HoneBasis,
     buffer: HoneBuffer,
     init_palette: WebGlProgram,
     hone_palette: WebGlProgram,
     hit_miss_program: WebGlProgram,
+    max_knot_len: i32,
     gpu: GPU,
     pub spatial:      Spatial3,
     pub points:       Vec<Vec3>,
@@ -150,7 +155,7 @@ impl HitBasis2 {
     }
     fn set_curve_uniforms(&self, program: &WebGlProgram) {
         self.gpu.set_uniform_1i(program, "geom_tex", 0);
-        self.gpu.set_uniform_1i(program, "max_knot_count", self.basis.max_knot_count);
+        self.gpu.set_uniform_1i(program, "max_knot_count", self.max_knot_len);
     }
     fn set_arrow_uniforms(&self, program: &WebGlProgram, i: i32) {
         self.gpu.set_uniform_1i(program, "point_tex", i);
@@ -158,98 +163,24 @@ impl HitBasis2 {
     }
 }
 
-#[derive(Clone, Debug)]
-struct IndexedKnot {
-    index: usize,
-    knot:  f32
-}
+// #[derive(Clone, Debug)]
+// struct IndexedKnot {
+//     index: usize,
+//     knot:  f32
+// }
 
 
-#[derive(Default)]
-pub struct HoneBasis2{
-    pub pairs: Vec<TestPair>,
-    pub pair_texels:  Vec<i32>,
-    pub shape_texels: Vec<f32>,
-    pub knot_texels:  Vec<f32>,
-    pub max_knot_count: i32,
-}
 
-pub fn hone_basis(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> HoneBasis2 {
-    let mut max_knot_len = 0;
-    let mut index_pairs:  Vec<TestPair> = vec![];
-    let mut knot_groups:  Vec<Vec<IndexedKnot>> = vec![]; // vec![]; shapes.len()
-    let mut shape_texels: Vec<f32> = vec![];
-    let mut pair_texels:  Vec<i32> = vec![];
-    let mut knot_texels:  Vec<f32> = vec![];
-    for shape in shapes {
-        let section = add_section(shape, shape_texels.len(), max_knot_len);
-        shape_texels.extend(section.texels);
-        max_knot_len = section.max_knot_len;
-        knot_groups.push(section.indexed_knots);
-    }
-    for pair in pairs {
-        for IndexedKnot{index:t0, knot:u0} in &knot_groups[pair.i0] {
-            for IndexedKnot{index:t1, knot:u1} in &knot_groups[pair.i1] {
-                index_pairs.push(pair.clone());
-                pair_texels.push(*t0 as i32);
-                pair_texels.push(*t1 as i32);
-                knot_texels.extend(&[*u0, *u1, 0., 0.]);
-            }  
-        }  
-    }
-    // console_log!("u_groups {:?}", u_groups);
-    // console_log!("index_pairs {:?}", index_pairs);
-    // console_log!("pair_texels {:?}", pair_texels);
-    // console_log!("u_texels {:?}", u_texels);
-    HoneBasis2 {
-        pairs: index_pairs,
-        pair_texels,
-        shape_texels,
-        knot_texels,
-        max_knot_count: max_knot_len as i32,
-    }
-}
-
-pub struct Section {
-    texels: Vec<f32>,
-    max_knot_len: usize,
-    indexed_knots: Vec<IndexedKnot>,
-}
-
-fn add_section(shape: &Shape, shape_index: usize, max_knot_len0: usize) -> Section {
-    let mut texels: Vec<f32> = vec![];
-    //let mut indexed_knots: Vec<IndexedKnot> = vec![];
-    let mut max_knot_len = max_knot_len0;
-    if shape.basis.knots.len() > max_knot_len0 { 
-        max_knot_len = shape.basis.knots.len(); 
-    }
-    texels.extend([
-        9000000., // + ci as f32,
-        shape.controls.len() as f32,
-        shape.basis.order as f32,
-        shape.basis.min,
-        shape.basis.max,
-    ]); 
-    texels.extend(&shape.basis.knots);
-    texels.extend(&shape.basis.weights);
-    let mut control_indices = vec![];
-    let mut control_texels = vec![];
-    for control in &shape.controls {
-        let control_index = texels.len() + control_texels.len();
-        control_indices.push(control_index as f32);
-        let section = add_section(control, control_index, max_knot_len);
-        control_texels.extend(section.texels);
-        max_knot_len = section.max_knot_len;
-    }
-    texels.extend(control_indices);
-    texels.extend(control_texels);
-    if let Some(point) = shape.vector {
-        texels.extend(point.to_array());
-    } else {
-        texels.extend([0., 0., 0.]);
-    }
-    Section{texels, max_knot_len, indexed_knots}
-}
+// for pair in pairs {
+//     for IndexedKnot{index:t0, knot:u0} in &knot_groups[pair.i0] {
+//         for IndexedKnot{index:t1, knot:u1} in &knot_groups[pair.i1] {
+//             index_pairs.push(pair.clone());
+//             pair_texels.push(*t0 as i32);
+//             pair_texels.push(*t1 as i32);
+//             knot_texels.extend(&[*u0, *u1, 0., 0.]);
+//         }  
+//     }  
+// }
 
 
 // texels.push(0.); // first knot

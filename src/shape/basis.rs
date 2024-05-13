@@ -2,6 +2,8 @@ use glam::*;
 use serde::*;
 use super::Shape;
 
+use crate::log;
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Basis {
@@ -36,6 +38,19 @@ impl Basis {
             rectifier:  None,
             vector:     None, 
         }
+    }
+
+    pub fn texels(&self) -> Vec<f32> {
+        let mut texels = vec![
+            9000000.0,
+            self.weights.len() as f32,
+            self.order as f32,
+            self.min,
+            self.max,
+        ]; 
+        texels.extend(&self.knots);
+        texels.extend(&self.weights);
+        texels
     }
 
     pub fn validate(&mut self, control_len: usize) {
@@ -123,7 +138,8 @@ impl Basis {
     }
 
     pub fn at(&self, u: f32) -> (usize, ([f32; 4], [f32; 4])) {
-        let ki = self.knot_index(self.min * (1.-u) + self.max * u);
+        let u = self.min * (1.-u) + self.max * u;
+        let ki = self.knot_index(u);
         let mut basis = ([0., 0., 0., 1.], [0., 0., 0., 1.]);
         let k0 = self.knots[ki];
         let k1 = self.knots[ki + 1];

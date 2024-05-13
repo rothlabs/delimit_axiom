@@ -1,3 +1,4 @@
+use crate::log;
 use crate::Shape;
 use crate::hit::{ClosetOut, Score};
 use crate::hit::groups::HitTest;

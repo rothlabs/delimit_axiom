@@ -7,6 +7,7 @@ pub trait Shapes {
     fn reshape(&mut self, mat4: Mat4) -> &mut Self;
     fn reshaped(&self, mat4: Mat4) -> Vec<Shape>;
     fn reverse_direction(&mut self) -> &mut Self;
+    fn max_knot_len(&self) -> usize;
     //fn translate(&mut self) -> &mut Self;
 }
 
@@ -45,6 +46,13 @@ impl Shapes for Vec<Shape> {
             self[i].reverse();
         }
         self
+    }
+    fn max_knot_len(&self) -> usize {
+        let mut max_knot_len = 0;
+        for shape in self {
+            max_knot_len = shape.max_knot_len(max_knot_len); 
+        }
+        max_knot_len
     }
     // fn translate(&mut self, pos: Vec2) -> &mut Self {
         

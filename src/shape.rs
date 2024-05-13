@@ -115,18 +115,50 @@ impl Shape {
         curve.reshape(mat4);
         curve
     }
+    
+    pub fn max_knot_len(&self, max_knot_len0: usize) -> usize {
+        let mut max_knot_len = max_knot_len0;
+        if max_knot_len < self.basis.knots.len(){
+            max_knot_len = self.basis.knots.len();
+        }
+        for shape in &self.controls {
+            max_knot_len = shape.max_knot_len(max_knot_len);
+        }
+        max_knot_len
+    }
 
-    pub fn knot_spread(&self) -> Vec<Vec<f32>> {
+    pub fn texels(&self) -> Vec<f32> {
+        let mut texels = self.main_texels();
+        let mut control_texels = vec![];
+        let control_base_index = texels.len() + self.controls.len();
+        for control in &self.controls {
+            texels.push((control_base_index + control_texels.len()) as f32);
+            control_texels.extend(control.texels());
+        }
+        texels.extend(control_texels);
+        texels
+    }
+
+    fn main_texels(&self) -> Vec<f32> {
+        //let mut texels = vec![self.rank as f32];
+        if let Some(vector) = self.vector {
+            //texels.extend(vector.to_array());
+            vector.to_array().to_vec()
+        } else {
+            //texels.push(self.controls.len() as f32);
+            //texels.extend(self.basis.texels());
+            self.basis.texels()
+        }
+        //texels
+    }
+
+    pub fn param_spread(&self) -> Vec<Vec<f32>> {
+        if self.basis.order < 2 {
+            return vec![vec![]];
+        }
         let mut spread0 = vec![];
-        // let spread = self.basis.knot_spread();
-        // for ki in spread {
-        //     //for k in 0..self.basis.order {
-        //         let i = k - self.basis.order + 1;
-        //         self.controls[ki+i].basis.knot_spread();
-        //     //}
-        // }
         for i in 0..self.controls.len() {
-            let mut spread1 = self.controls[i].knot_spread();
+            let mut spread1 = self.controls[i].param_spread();
             for spread in &mut spread1 {
                 spread.push(self.basis.knots[i + self.basis.order - 1]);
             }

@@ -32,13 +32,13 @@ float get_geom_texel(int index) {
     return texelFetch(geom_tex, ivec2(x, y), 0).r;
 }
 
-int get_knot_index(int idx, int knot_count, int order, float u){
+int get_knot_index(int idx, int knot_len, int order, float u){
     for(int i = 0; i < max_knot_count-1; i++) { 
-        if(i < knot_count && u >= get_geom_texel(idx + i) && u < get_geom_texel(idx + i + 1)) { 
+        if(i < knot_len && u >= get_geom_texel(idx + i) && u < get_geom_texel(idx + i + 1)) { 
             return i; 
         }
     }
-    return knot_count - order - 1;
+    return knot_len - order - 1;
 }
 
 float[8] get_basis(int ki, int order, int control_len, float u){
@@ -70,34 +70,42 @@ float[8] get_basis(int ki, int order, int control_len, float u){
         float p1 = w1 * (k1u_d_k1k0 * ur1/k1r1 + uk0_d_k1k0 * k2u/k2k0);
         float p2 = w2xuk0 * uk0_d_k1k0 / k2k0;
         float sum = p0 + p1 + p2;
-            // derivative parts:
-            float a0 = 2. * k0k1 * k0k2 * k1r1;
-            float n0 = a0 * w0xk1u * (w1 * (u-k2) - w2xuk0);
-            float n1 = a0 * w1 * (w0 * k1u * k2u - w2xuk0 * ur1);
-            float n2 = a0 * w2xuk0 * (w0 * k1u + w1 * ur1);
-            float uxu = u * u;
-            float k2xr1 = k2 * r1;
-            float ux2 = u * 2.;
-            float a1 = - w0xk1u * k0k2 * k1u + w1 * (k0 * (k1 * r1k2 + k2xr1 - r1 * ux2 + uxu) - k1*(k2xr1 - k2 * ux2 + uxu) + uxu * r1k2);
-            float d0 = a1 + w2xuk0 * uk0 * k1r1;
-            float d1 = a1 + w2 * k0u * k0u * k1r1;
-            return float[8](0., p0/sum, p1/sum, p2/sum, 0., n0/d0/d0, n1/d0/d0, n2/d1/d1);
+        // derivative parts:
+        float a0 = 2. * k0k1 * k0k2 * k1r1;
+        float n0 = a0 * w0xk1u * (w1 * (u-k2) - w2xuk0);
+        float n1 = a0 * w1 * (w0 * k1u * k2u - w2xuk0 * ur1);
+        float n2 = a0 * w2xuk0 * (w0 * k1u + w1 * ur1);
+        float uxu = u * u;
+        float k2xr1 = k2 * r1;
+        float ux2 = u * 2.;
+        float a1 = - w0xk1u * k0k2 * k1u + w1 * (k0 * (k1 * r1k2 + k2xr1 - r1 * ux2 + uxu) - k1*(k2xr1 - k2 * ux2 + uxu) + uxu * r1k2);
+        float d0 = a1 + w2xuk0 * uk0 * k1r1;
+        float d1 = a1 + w2 * k0u * k0u * k1r1;
+        return float[8](0., p0/sum, p1/sum, p2/sum, 0., n0/d0/d0, n1/d0/d0, n2/d1/d1);
     } else { // linear
         return float[8](0., 0., k1u_d_k1k0, uk0_d_k1k0, 0., 0., 1./k0k1, 1./k1k0);
     }
 }
 
-float[6] get_curve_arrow(int ci, float u){
-    int control_count = int(get_geom_texel(ci + 1));
-    int order = int(get_geom_texel(ci + 2));
-    float min = get_geom_texel(ci + 3);
-    float max = get_geom_texel(ci + 4);
-    int knot_count = control_count + order;
+vec3 get_point(int si) {
+    return vec3(
+        get_geom_texel(si + 0),
+        get_geom_texel(si + 1),
+        get_geom_texel(si + 2)
+    );
+}
+
+float[6] get_curve_arrow(int si, float u) {
+    int control_len = int(get_geom_texel(si + 1));
+    int order = int(get_geom_texel(si + 2));
+    float min = get_geom_texel(si + 3);
+    float max = get_geom_texel(si + 4);
+    int knot_len = control_len + order;
     u = min*(1.-u) + max*u;
     float range = max - min;
-    int knot_i = get_knot_index(ci + 5, knot_count, order, u);
-    int control_start = ci + 5 + knot_count + control_count + (knot_i-order+1)*3;
-    float[8] basis = get_basis(ci + 5 + knot_i, order, control_count, u);
+    int ki = get_knot_index(si + 5, knot_len, order, u);
+    int control_start = si + 5 + knot_len + control_len*2 + (ki-order+1)*3;
+    float[8] basis = get_basis(si + 5 + ki, order, control_len, u);
     float[6] arrow = float[6](0., 0., 0., 0., 0., 0.);
     for(int k = 0; k < order; k++) {
         for(int j = 0; j < 3; j++) {

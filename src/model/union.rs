@@ -1,4 +1,4 @@
-use crate::actor::UnionCascade;
+use crate::actor::{UnionCascade, UnionJob};
 use crate::shape::*;
 use crate::{log, Model, Models, Reshape, Groups};
 use serde::{Deserialize, Serialize};
@@ -21,8 +21,8 @@ impl Union {
         let mut shape_groups = self.parts.shape_groups();
         let neg_shape_groups = self.negated_parts.shape_groups().negated();
         shape_groups.extend(neg_shape_groups);
-        shape_groups.into_iter().flatten().collect() // shape_groups.union()
-        //vec![shape_groups].union()[0].clone()
+        //shape_groups.into_iter().flatten().collect() // shape_groups.union()
+        vec![shape_groups].union()[0].clone()
     }
 }
 

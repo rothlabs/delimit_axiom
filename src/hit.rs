@@ -10,13 +10,15 @@ mod shader_parts3;
 mod traced;
 mod hit2;
 mod hit3;
+mod hone_basis;
 
 use std::f32::INFINITY;
 
 use glam::*;
-use crate::{gpu::framebuffer::Framebuffer, Shape, Shapes};
+use crate::gpu::framebuffer::Framebuffer;
+use crate::Shape;
 use hit2::hit2;
-use hit3::hit3;
+//use hit3::hit3;
 
 pub trait ToHit {
     fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>);

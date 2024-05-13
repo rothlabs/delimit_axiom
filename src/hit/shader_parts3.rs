@@ -7,7 +7,7 @@ uniform int max_facet_length;
 int get_curve_index(int fi, int nth){
     int ci = -1;
     for(int i = 8; i < max_facet_length-10; i++) {
-        if(ci < 0 && nth == int(round(get_geom_texel(fi+i) - 9000000.))){
+        if(ci < 0 && nth == int(round(shape_texel(fi+i) - 9000000.))){
             ci = fi+i;
         }
     }
@@ -15,8 +15,8 @@ int get_curve_index(int fi, int nth){
 }
 
 float[9] get_facet_arrows(int fi, vec2 uv){
-    int control_count = int(get_geom_texel(fi + 1));
-    int order = int(get_geom_texel(fi + 2));
+    int control_count = int(shape_texel(fi + 1));
+    int order = int(shape_texel(fi + 2));
     int knot_count = control_count + order;
     int knot_i = get_knot_index(fi + 3, knot_count, order, uv.y);
     int nth_control = knot_i - order + 1;

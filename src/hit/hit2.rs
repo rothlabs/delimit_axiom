@@ -154,7 +154,7 @@ impl HitBasis2 {
         self.gpu.draw(&self.buffer.io);
     }
     fn set_curve_uniforms(&self, program: &WebGlProgram) {
-        self.gpu.set_uniform_1i(program, "geom_tex", 0);
+        self.gpu.set_uniform_1i(program, "shape_texture", 0);
         self.gpu.set_uniform_1i(program, "max_knot_count", self.max_knot_len);
     }
     fn set_arrow_uniforms(&self, program: &WebGlProgram, i: i32) {

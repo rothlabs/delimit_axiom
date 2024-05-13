@@ -143,7 +143,7 @@ impl HitBasis3 {
     }
 
     fn set_facet_uniforms(&self, program: &WebGlProgram) {
-        self.gpu.set_uniform_1i(program, "geom_tex", 0);
+        self.gpu.set_uniform_1i(program, "shape_texture", 0);
         self.gpu.set_uniform_1i(program, "max_facet_length", self.hone_basis.max_facet_length);
         self.gpu.set_uniform_1i(program, "max_knot_count",   self.hone_basis.max_knot_count);
     }

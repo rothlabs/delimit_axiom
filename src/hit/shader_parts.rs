@@ -22,19 +22,19 @@ const float DOT_1_TOL    = "##, DOT_1_TOL_STR, ";"
 ); 
 
 pub const GEOM_CORE: &str = r##"
-uniform sampler2D geom_tex;
+uniform sampler2D shape_texture;
 uniform int max_knot_count;
-int geom_tex_width = 0;
+int shape_texture_width = 0;
 
-float get_geom_texel(int index) {
-    int y = index / geom_tex_width;
-    int x = index % geom_tex_width;
-    return texelFetch(geom_tex, ivec2(x, y), 0).r;
+float shape_texel(int index) {
+    int y = index / shape_texture_width;
+    int x = index % shape_texture_width;
+    return texelFetch(shape_texture, ivec2(x, y), 0).r;
 }
 
 int get_knot_index(int idx, int knot_len, int order, float u){
     for(int i = 0; i < max_knot_count-1; i++) { 
-        if(i < knot_len && u >= get_geom_texel(idx + i) && u < get_geom_texel(idx + i + 1)) { 
+        if(i < knot_len && u >= shape_texel(idx + i) && u < shape_texel(idx + i + 1)) { 
             return i; 
         }
     }
@@ -42,8 +42,8 @@ int get_knot_index(int idx, int knot_len, int order, float u){
 }
 
 float[8] get_basis(int ki, int order, int control_len, float u){
-    float k0  = get_geom_texel(ki);
-    float k1  = get_geom_texel(ki + 1);
+    float k0  = shape_texel(ki);
+    float k1  = shape_texel(ki + 1);
     float k1u  = k1 - u;
     float uk0  = u - k0;
     float k0k1 = k0 - k1;
@@ -51,11 +51,11 @@ float[8] get_basis(int ki, int order, int control_len, float u){
     float k1u_d_k1k0 = k1u / k1k0;
     float uk0_d_k1k0 = uk0 / k1k0;
     if(order > 2){ // quadratic
-        float r1 = get_geom_texel(ki - 1);
-        float k2 = get_geom_texel(ki + 2);
-        float w0 = get_geom_texel(ki + control_len + 1);
-        float w1 = get_geom_texel(ki + control_len + 2);
-        float w2 = get_geom_texel(ki + control_len + 3);
+        float r1 = shape_texel(ki - 1);
+        float k2 = shape_texel(ki + 2);
+        float w0 = shape_texel(ki + control_len + 1);
+        float w1 = shape_texel(ki + control_len + 2);
+        float w2 = shape_texel(ki + control_len + 3);
             // origin parts:
         float k0u = k0 - u;
         float k2u = k2 - u;
@@ -70,7 +70,7 @@ float[8] get_basis(int ki, int order, int control_len, float u){
         float p1 = w1 * (k1u_d_k1k0 * ur1/k1r1 + uk0_d_k1k0 * k2u/k2k0);
         float p2 = w2xuk0 * uk0_d_k1k0 / k2k0;
         float sum = p0 + p1 + p2;
-        // derivative parts:
+            // derivative parts:
         float a0 = 2. * k0k1 * k0k2 * k1r1;
         float n0 = a0 * w0xk1u * (w1 * (u-k2) - w2xuk0);
         float n1 = a0 * w1 * (w0 * k1u * k2u - w2xuk0 * ur1);
@@ -89,32 +89,30 @@ float[8] get_basis(int ki, int order, int control_len, float u){
 
 vec3 get_point(int si) {
     return vec3(
-        get_geom_texel(si + 0),
-        get_geom_texel(si + 1),
-        get_geom_texel(si + 2)
+        shape_texel(si + 0),
+        shape_texel(si + 1),
+        shape_texel(si + 2)
     );
 }
 
-float[6] get_curve_arrow(int si, float u) {
-    int control_len = int(get_geom_texel(si + 1));
-    int order = int(get_geom_texel(si + 2));
-    float min = get_geom_texel(si + 3);
-    float max = get_geom_texel(si + 4);
+vec3 get_curve_arrow(int si, float u, out vec3 du) {
+    int control_len = int(shape_texel(si + 1));
+    int order = int(shape_texel(si + 2));
+    float min = shape_texel(si + 3);
+    float max = shape_texel(si + 4);
     int knot_len = control_len + order;
     u = min*(1.-u) + max*u;
-    float range = max - min;
     int ki = get_knot_index(si + 5, knot_len, order, u);
     int control_start = si + 5 + knot_len + control_len*2 + (ki-order+1)*3;
     float[8] basis = get_basis(si + 5 + ki, order, control_len, u);
-    float[6] arrow = float[6](0., 0., 0., 0., 0., 0.);
+    vec3 point = vec3(0., 0., 0.);
     for(int k = 0; k < order; k++) {
-        for(int j = 0; j < 3; j++) {
-            float control_component = get_geom_texel(control_start + k*3 + j);
-            arrow[j]   += control_component * basis[4-order+k];
-            arrow[j+3] += control_component * basis[8-order+k] * range;
-        }
+        vec3 control_point = get_point(control_start + k*3);
+        point += control_point * basis[4-order+k];
+        du    += control_point * basis[8-order+k];
     }
-    return arrow; 
+    du *= (max - min);
+    return point; 
 }
 "##;
 
@@ -124,7 +122,7 @@ ivec2 out_pos = ivec2(gl_FragCoord.x, gl_FragCoord.y);
 "##; 
 
 pub const GEOM_PARTS: &str = r##"
-geom_tex_width = textureSize(geom_tex, 0).x;
+shape_texture_width = textureSize(shape_texture, 0).x;
 "##;
 
 pub const PALETTE_IN_POS: &str = r##"
@@ -192,7 +190,27 @@ vec3 get_arrow_hit(vec3 p0, vec3 delta0, vec3 p1, vec3 delta1) {
 
 
 
-
+// float[6] get_curve_arrow(int si, float u) {
+//     int control_len = int(shape_texel(si + 1));
+//     int order = int(shape_texel(si + 2));
+//     float min = shape_texel(si + 3);
+//     float max = shape_texel(si + 4);
+//     int knot_len = control_len + order;
+//     u = min*(1.-u) + max*u;
+//     float range = max - min;
+//     int ki = get_knot_index(si + 5, knot_len, order, u);
+//     int control_start = si + 5 + knot_len + control_len*2 + (ki-order+1)*3;
+//     float[8] basis = get_basis(si + 5 + ki, order, control_len, u);
+//     float[6] arrow = float[6](0., 0., 0., 0., 0., 0.);
+//     for(int k = 0; k < order; k++) {
+//         for(int j = 0; j < 3; j++) {
+//             float control_component = shape_texel(control_start + k*3 + j);
+//             arrow[j]   += control_component * basis[4-order+k];
+//             arrow[j+3] += control_component * basis[8-order+k] * range;
+//         }
+//     }
+//     return arrow; 
+// }
 
 
 

@@ -7,9 +7,9 @@ pub const ARROW_OUT: &str = r##"
 layout(location=0) out vec2 point;
 layout(location=1) out vec4 delta;
 void output_arrow(int ci, float u){
-    float[6] arrow = get_curve_arrow(ci, u);
-    point = vec2(arrow[0], arrow[1]);
-    delta = vec4(arrow[3], arrow[4], 0., u);
+    vec3 du = vec3(0., 0., 0.);
+    point = get_curve_arrow(ci, u, du).xy;
+    delta = vec4(du[0], du[1], 0., u);
 }
 "##;
 

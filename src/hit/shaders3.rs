@@ -26,11 +26,11 @@ void main() {"##,
         in_pos.x = in_pos.x - pair_size.x; 
     }
     if(in_pos.y < pair_size.y){
-        facet_index = texelFetch(pair_tex, in_pos, 0).r;
+        facet_index = texelFetch(index_texture, in_pos, 0).r;
         uv = texelFetch(io_tex, in_pos, 0).rg;
     }else{
         in_pos.y = in_pos.y - pair_size.y;
-        facet_index = texelFetch(pair_tex, in_pos, 0).g;
+        facet_index = texelFetch(index_texture, in_pos, 0).g;
         uv = texelFetch(io_tex, in_pos, 0).ba;
     }
     output_arrows(facet_index, uv);
@@ -105,11 +105,11 @@ void main() {"##,
         in_pos.x = in_pos.x - pair_size.x; 
     }
     if(in_pos.y < pair_size.y){
-        facet_index = texelFetch(pair_tex, in_pos, 0).r;
+        facet_index = texelFetch(index_texture, in_pos, 0).r;
         uv = texelFetch(io_tex, in_pos, 0).rg;
     }else{
         in_pos.y = in_pos.y - pair_size.y;
-        facet_index = texelFetch(pair_tex, in_pos, 0).g;
+        facet_index = texelFetch(index_texture, in_pos, 0).g;
         uv = texelFetch(io_tex, in_pos, 0).ba;
     }
     output_arrows(facet_index, uv);
@@ -121,7 +121,7 @@ void main() {"##,
 }
 "##);
 
-pub const TRACE_SEGMENT_SOURCE: &str = concatcp!( // TODO: does not need pair_tex, only size!
+pub const TRACE_SEGMENT_SOURCE: &str = concatcp!( // TODO: does not need index_texture, only size!
 HEADER, GEOM_CORE, FACET_CORE, ARROW_IN, r##"
 layout(location=0) out vec3 point;
 layout(location=1) out vec3 delta;
@@ -169,14 +169,14 @@ void main() {"##,
     vec3 dv_b = vec3(0., 0., 0.);
     ivec2 box_in_pos = ivec2(in_pos0a.x, out_pos.y);
     if(out_pos.y < pair_size.y){
-        facet_index = texelFetch(pair_tex, in_pos0a, 0).r;
+        facet_index = texelFetch(index_texture, in_pos0a, 0).r;
         uv   = uvs.rg;  du   = d0u;  dv =   d0v;
         uv_b = uvs.ba;  du_b = d1u;  dv_b = d1v;
         if(pick > 0){
             box_in_pos.x = in_pos0b.x;
         }
     }else{
-        facet_index = texelFetch(pair_tex, in_pos0a, 0).g;
+        facet_index = texelFetch(index_texture, in_pos0a, 0).g;
         uv   = uvs.ba;  du   = d1u;  dv   = d1v;
         uv_b = uvs.rg;  du_b = d0u;  dv_b = d0v;
         if(pick < 1){
@@ -272,7 +272,7 @@ void main() {"##,
 // precision highp float;
 // precision highp sampler2D;
 // precision highp isampler2D;
-// uniform isampler2D pair_tex;
+// uniform isampler2D index_texture;
 // uniform sampler2D origin_tex;
 // uniform sampler2D io_tex;
 // uniform sampler2D box_tex;
@@ -318,7 +318,7 @@ void main() {"##,
 
 // float step = 0.8;
 // float tolerance = 0.005;
-// uniform isampler2D pair_tex;
+// uniform isampler2D index_texture;
 // uniform sampler2D origin_tex;
 // uniform sampler2D io_tex;
 // uniform sampler2D box_tex;
@@ -356,14 +356,14 @@ void main() {"##,
         // int facet_index0 = 0;
         // int facet_index1 = 0;
         // if(in_pos.y < pair_size.y){
-        //     facet_index0 = texelFetch(pair_tex, in_pos, 0).r;
-        //     facet_index1 = texelFetch(pair_tex, in_pos + ivec2(0, pair_size.y), 0).g;
+        //     facet_index0 = texelFetch(index_texture, in_pos, 0).r;
+        //     facet_index1 = texelFetch(index_texture, in_pos + ivec2(0, pair_size.y), 0).g;
         // }else{
-        //     facet_index0 = texelFetch(pair_tex, in_pos - ivec2(0, pair_size.y), 0).r;
-        //     facet_index1 = texelFetch(pair_tex, in_pos, 0).g;
+        //     facet_index0 = texelFetch(index_texture, in_pos - ivec2(0, pair_size.y), 0).r;
+        //     facet_index1 = texelFetch(index_texture, in_pos, 0).g;
         // }
-        // int facet_index0 = texelFetch(pair_tex, in_pos0a, 0).r;
-        // int facet_index1 = texelFetch(pair_tex, in_pos0a, 0).g;
+        // int facet_index0 = texelFetch(index_texture, in_pos0a, 0).r;
+        // int facet_index1 = texelFetch(index_texture, in_pos0a, 0).g;
         // float sign0 = get_facet_texel(facet_index0);
         // float sign1 = get_facet_texel(facet_index1);
 
@@ -407,7 +407,7 @@ void main() {"##,
 // precision highp float;
 // precision highp sampler2D;
 // precision highp isampler2D;
-// uniform isampler2D pair_tex;
+// uniform isampler2D index_texture;
 // uniform sampler2D io_tex;
 // uniform sampler2D origin_tex;
 // out vec4 uvs;
@@ -434,7 +434,7 @@ void main() {"##,
 // precision highp float;
 // precision highp sampler2D;
 // precision highp isampler2D;
-// uniform isampler2D pair_tex;
+// uniform isampler2D index_texture;
 // uniform sampler2D io_tex;
 // out vec3 point;
 // "##,
@@ -454,11 +454,11 @@ void main() {"##,
 //     int facet_i = 0;
 //     vec2 uv = vec2(0., 0.);
 //     if(pair_coord.y < pair_size.y){
-//         facet_i = texelFetch(pair_tex, pair_coord, 0).r;
+//         facet_i = texelFetch(index_texture, pair_coord, 0).r;
 //         uv = texelFetch(io_tex, pair_coord, 0).rg;
 //     }else{
 //         pair_coord.y = pair_coord.y - pair_size.y;
-//         facet_i = texelFetch(pair_tex, pair_coord, 0).g;
+//         facet_i = texelFetch(index_texture, pair_coord, 0).g;
 //         uv = texelFetch(io_tex, pair_coord, 0).ba;
 //     }
 //     if(tile_x == 0){

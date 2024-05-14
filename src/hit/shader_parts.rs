@@ -11,7 +11,7 @@ pub const HEADER: &str = concatcp!(r##"#version 300 es
 precision highp float;
 precision highp sampler2D;
 precision highp isampler2D;
-uniform isampler2D pair_tex;
+uniform isampler2D index_texture;
 const float HIT_TOL      = "##, HIT_TOL_STR, r##";
 const float MISS_PADDING = "##, MISS_PADDING_STR, r##";
 const float AT_0_TOL     = "##, AT_0_TOL_STR, r##";
@@ -117,7 +117,7 @@ vec3 get_curve_arrow(int si, float u, out vec3 du) {
 "##;
 
 pub const CORE_PARTS: &str = r##"
-ivec2 pair_size = textureSize(pair_tex, 0);
+ivec2 pair_size = textureSize(index_texture, 0);
 ivec2 out_pos = ivec2(gl_FragCoord.x, gl_FragCoord.y);
 "##; 
 

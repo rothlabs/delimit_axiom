@@ -4,35 +4,71 @@ use crate::Shape;
 use super::TestPair;
 
 #[derive(Default, Debug)]
-pub struct HoneBasis{
-    pub pairs:          Vec<TestPair>,
-    pub pair_texels:    Vec<i32>,
-    pub shape_texels:   Vec<f32>,
-    pub param_texels:   Vec<f32>,
+pub struct HoneTexels{
+    pub shape: Vec<f32>,
+    pub spreads: [Vec<Spread>; 3],
+    // pub pairs: Vec<usize>,
+    // pub index: Vec<i32>,
+    // pub param: Vec<f32>,
 }
 
-pub fn hone_basis(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> HoneBasis {
-    let mut basis = HoneBasis::default();
-    let mut indices: Vec<usize> = vec![];
+#[derive(Default, Debug)]
+pub struct Spread{
+    pub pairs: Vec<usize>,
+    pub index: Vec<i32>,
+    pub param: Vec<f32>,
+}
+
+impl Spread {
+    fn add_1(&mut self, pair: usize, index: [i32; 2], params: [f32; 4]) {
+        self.pairs.push(pair);
+        self.index.extend(index);
+        self.param.extend(params);
+    }   
+}
+
+pub fn hone_basis(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> HoneTexels {
+    let mut texels = HoneTexels::default(); 
+    let mut spreads: [Vec<Spread>; 3] = [
+        vec![Spread::default()], // not used
+        (0..=2).map(|_| Spread::default()).collect(),
+        (0..=2).map(|_| Spread::default()).collect()
+    ];
+    let mut indices = vec![];
+    let mut knots = vec![];
     for shape in shapes {
-        indices.push(basis.shape_texels.len());
-        basis.shape_texels.extend(shape.texels());
+        indices.push(texels.shape.len());
+        texels.shape.extend(shape.texels());
+        knots.push(shape.param_spread());
     }
-    for pair in pairs {
-        if shapes[pair.i0].rank != 1 || shapes[pair.i1].rank != 1 {
-            continue;
-        }
-        let ti0 = indices[pair.i0];
-        let ti1 = indices[pair.i1];
-        for params0 in shapes[pair.i0].param_spread() {
-            for params1 in shapes[pair.i1].param_spread() {
-                basis.pairs.push(pair.clone());
-                basis.pair_texels.extend([ti0 as i32, ti1 as i32]);
-                basis.param_texels.extend([params0[0], params1[0], 0., 0.]);
+    for (pi, TestPair{i0, i1, ..}) in pairs.iter().enumerate() {
+        let ti = [indices[*i0] as i32, indices[*i1] as i32];
+        let rank = |r0, r1| {shapes[*i0].rank == r0 && shapes[*i1].rank == r1};
+        if rank(1, 0) {
+            for u0 in &knots[*i0] {
+                spreads[1][0].add_1(pi, ti, [u0[0], 0., 0., 0.]);
             }  
-        }  
+        } else if rank(1, 1) { 
+            for u0 in &knots[*i0] {
+                for u1 in &knots[*i1] {
+                    spreads[1][1].add_1(pi, ti, [u0[0], u1[0], 0., 0.]);
+                }  
+            }  
+        }
+        // } else if rank(1, 2) { 
+        //     for u0 in &knots[*i0] {
+        //         for u1 in &knots[*i1] {
+        //             spreads[1][2].add_1(pi, ti, [u0[0], u1[0], u1[1], 0.]);
+        //         }  
+        //     }  
+        // } else if rank(2, 0) { 
+        //     // for u0 in &knots[*i0] {
+        //     //     spreads[2][0].add_1(pi, ti, [u0[0], u1[1], 0., 0.]);
+        //     // }  
+        // }
     }
-    basis
+    texels.spreads = spreads;
+    texels
 }
 
 

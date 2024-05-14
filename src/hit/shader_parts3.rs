@@ -139,11 +139,11 @@ pub const HONE: &str = r##"
     vec3 pb    = vec3(0., 0., 0.);
     vec3 pt    = vec3(0., 0., 0.);
     if(out_pos.y < pair_size.y){
-        facet_index = texelFetch(pair_tex, in_pos0a, 0).r;
+        facet_index = texelFetch(index_texture, in_pos0a, 0).r;
         uv = uvs.rg; du = d0u; dv = d0v;
         pa = p0; pb = p1;
     }else{
-        facet_index = texelFetch(pair_tex, in_pos0a, 0).g;
+        facet_index = texelFetch(index_texture, in_pos0a, 0).g;
         uv = uvs.ba; du = d1u; dv = d1v;
         pa = p1; pb = p0;
     }
@@ -379,11 +379,11 @@ vec2 get_moved_uv(vec2 uv0, vec3 du0, vec3 dv0, vec2 uv1, vec3 du1, vec3 dv1, ve
 //     vec3 pb    = vec3(0., 0., 0.);
 //     vec3 deltaX = vec3(0., 0., 0.);
 //     if(out_pos.y < pair_size.y){
-//         facet_index = texelFetch(pair_tex, in_pos0a, 0).r;
+//         facet_index = texelFetch(index_texture, in_pos0a, 0).r;
 //         uv = uvs.rg; du = d0u; dv = d0v;
 //         pa = p0; pb = p1;
 //     }else{
-//         facet_index = texelFetch(pair_tex, in_pos0a, 0).g;
+//         facet_index = texelFetch(index_texture, in_pos0a, 0).g;
 //         uv = uvs.ba; du = d1u; dv = d1v;
 //         pa = p1; pb = p0;
 //     }

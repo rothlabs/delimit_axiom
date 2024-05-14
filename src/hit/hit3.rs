@@ -166,7 +166,7 @@ impl HitBasis3 {
 
     fn draw_init_hone_palette(&self){
         self.gpu.gl.use_program(Some(&self.init_hone_palette));
-        self.gpu.set_uniform_1i(&self.init_hone_palette, "pair_tex",  1);
+        self.gpu.set_uniform_1i(&self.init_hone_palette, "index_texture",  1);
         self.set_facet_uniforms(&self.init_hone_palette);
         self.gpu.set_uniform_1i(&self.init_hone_palette, "io_tex", 2);
         self.gpu.draw(&self.hone_buffer.as_ref().unwrap().palette0);
@@ -174,7 +174,7 @@ impl HitBasis3 {
 
     fn draw_hone_palette(&self, buff: &Framebuffer, i: i32) {
         self.gpu.gl.use_program(Some(&self.hone_palette));
-        self.gpu.set_uniform_1i(&self.hone_palette, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.hone_palette, "index_texture", 1);
         self.set_facet_uniforms(&self.hone_palette);
         self.set_arrow_uniforms(&self.hone_palette, i);
         self.gpu.draw(buff);
@@ -182,7 +182,7 @@ impl HitBasis3 {
 
     fn draw_hit_miss(&self){
         self.gpu.gl.use_program(Some(&self.hit_miss_program));
-        self.gpu.set_uniform_1i(&self.hit_miss_program, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.hit_miss_program, "index_texture", 1);
         self.set_facet_uniforms(&self.hit_miss_program);
         self.set_arrow_uniforms(&self.hit_miss_program, 3);
         self.gpu.draw(&self.hone_buffer.as_ref().unwrap().uv);
@@ -201,7 +201,7 @@ impl HitBasis3 {
 
     fn draw_init_trace_palette(&self){
         self.gpu.gl.use_program(Some(&self.init_trace_palette));
-        self.gpu.set_uniform_1i(&self.init_trace_palette, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.init_trace_palette, "index_texture", 1);
         self.set_facet_uniforms(&self.init_trace_palette);
         self.gpu.set_uniform_1i(&self.init_trace_palette, "io_tex",  2);
         //self.gpu.set_uniform_1i(&self.init_trace_palette, "box_tex", 3);
@@ -210,7 +210,7 @@ impl HitBasis3 {
 
     fn draw_trace_segments(&self, y: i32){
         self.gpu.gl.use_program(Some(&self.trace_segment));
-        self.gpu.set_uniform_1i(&self.trace_segment, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.trace_segment, "index_texture", 1);
         self.set_facet_uniforms(&self.trace_segment);
         self.set_arrow_uniforms(&self.trace_segment, 8);
         self.gpu.draw_at_y(&self.trace_buffer.as_ref().unwrap().trace, y, 1);
@@ -218,7 +218,7 @@ impl HitBasis3 {
 
     fn draw_trace_dual(&self, y: i32){
         self.gpu.gl.use_program(Some(&self.trace_dual));
-        self.gpu.set_uniform_1i(&self.trace_dual, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.trace_dual, "index_texture", 1);
         self.gpu.set_uniform_1i(&self.trace_dual, "current_segment", y);
         self.gpu.set_uniform_1i(&self.trace_dual, "trace_count", self.trace_count);
         self.set_facet_uniforms(&self.trace_dual);
@@ -229,7 +229,7 @@ impl HitBasis3 {
 
     fn draw_trace_palette(&self){
         self.gpu.gl.use_program(Some(&self.trace_palette));
-        self.gpu.set_uniform_1i(&self.trace_palette, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.trace_palette, "index_texture", 1);
         self.set_facet_uniforms(&self.trace_palette);
         self.set_arrow_uniforms(&self.trace_palette, 4);
         self.gpu.set_uniform_1i(&self.trace_palette, "box_tex", 7);
@@ -238,7 +238,7 @@ impl HitBasis3 {
 
     fn draw_boxes_dual(&self){
         self.gpu.gl.use_program(Some(&self.boxes_dual));
-        self.gpu.set_uniform_1i(&self.boxes_dual, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.boxes_dual, "index_texture", 1);
         self.set_arrow_uniforms(&self.boxes_dual, 8);
         self.gpu.set_uniform_1i(&self.boxes_dual, "box_tex", 11);
         self.gpu.draw(&self.trace_buffer.as_ref().unwrap().boxes);

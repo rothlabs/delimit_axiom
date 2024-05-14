@@ -5,7 +5,7 @@ use crate::gpu::framebuffer::Framebuffer;
 use crate::shape::*; //{rank0, Shape, Shapes};
 use crate::{gpu::GPU, Spatial3, DUP_0_TOL};
 use super::{Hit, HitPair, HoneBuffer, Out, OutPair, TestPair};
-use super::hone_basis::{hone_basis, HoneBasis};
+use super::hone_basis::{hone_basis, HoneTexels};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
 // pub trait HitTest2 {
@@ -16,18 +16,23 @@ use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
     pub fn hit2(shapes: Vec<Shape>, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
         let gpu = GPU::new().unwrap();
         let mut basis = hone_basis(&shapes, &pairs);
-        gpu.texture.make_r32f(0, &mut basis.shape_texels).unwrap();
-        let (_, pair_buf_size) = gpu.texture.make_rg32i(1, &mut basis.pair_texels).unwrap();
-        let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
+        // let mut shape_texels = vec![];
+        // for shape in shapes {
+        //     indices.push(texels.shape.len());
+        //     texels.shape.extend(shape.texels());
+        // }
+        gpu.texture.make_r32f(0, &mut basis.shape).unwrap();
+        let (_, index_size) = gpu.texture.make_rg32i(1, &mut basis.spreads[1][1].index).unwrap();
+        let palette_size = ivec2(index_size.x*3, index_size.y*2);
         let buffer = HoneBuffer{
-            io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.param_texels, 2).unwrap(),
-            palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_buf_size, 2).unwrap(),
-            palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_buf_size, 2).unwrap(),
+            io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.spreads[1][1].param, 2).unwrap(),
+            palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_size, 2).unwrap(),
+            palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_size, 2).unwrap(),
         };
         //console_log!("shapes.max_knot_len() {}", shapes.max_knot_len());
         HitBasis2 {
             //curves:self, 
-            //pairs: pairs.clone(), 
+            pairs: pairs.clone(), 
             basis, 
             buffer, 
             init_palette:     gpu.get_quad_program_from_source(INIT_PALETTE_SOURCE).unwrap(),
@@ -43,8 +48,8 @@ use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
 pub struct HitBasis2 {
     //curves: Vec<CurveShape>,
-    //pairs:  Vec<TestPair>,
-    basis:  HoneBasis,
+    pairs:  Vec<TestPair>,
+    basis:  HoneTexels,
     buffer: HoneBuffer,
     init_palette: WebGlProgram,
     hone_palette: WebGlProgram,
@@ -64,7 +69,7 @@ impl HitBasis2 {
         let mut hits = vec![];
         let mut outs = vec![];
         //let mut to_prints: Vec<f32> = vec![];
-        for (i, pair) in self.basis.pairs.iter().enumerate() {
+        for (i, k) in self.basis.spreads[1][1].pairs.iter().enumerate() {
             let j = i * 4;
             if score[j] > -0.5 { // it's a hit
                 //to_prints.extend(&[999., hit_miss[j], hit_miss[j+1], hit_miss[j+2], hit_miss[j+3]]);
@@ -81,7 +86,7 @@ impl HitBasis2 {
                     self.spatial.insert(&point, self.points.len());
                     self.points.push(point);
                     hits.push(HitPair {
-                        test: pair.clone(),
+                        test: self.pairs[*k].clone(),
                         // u0:   hit_miss[j+0],
                         // u1:   hit_miss[j+1],
                         // dot0: hit_miss[j+2],
@@ -108,7 +113,7 @@ impl HitBasis2 {
                 // }
                 if score[i*4] < -5. {continue}
                 outs.push(OutPair { 
-                    test:     pair.clone(),
+                    test:     self.pairs[*k].clone(),
                     outs: (
                         Out{dot:score[j+1], distance:score[j+3]},
                         Out{dot:score[j+2], distance:score[j+3]}
@@ -134,21 +139,21 @@ impl HitBasis2 {
     }
     fn draw_init_hone_palette(&self){
         self.gpu.gl.use_program(Some(&self.init_palette));
-        self.gpu.set_uniform_1i(&self.init_palette, "pair_tex",  1);
+        self.gpu.set_uniform_1i(&self.init_palette, "index_texture",  1);
         self.set_curve_uniforms(&self.init_palette);
         self.gpu.set_uniform_1i(&self.init_palette, "io_tex", 2);
         self.gpu.draw(&self.buffer.palette0);
     }
     fn draw_hone_palette(&self, buff: &Framebuffer, i: i32) {
         self.gpu.gl.use_program(Some(&self.hone_palette));
-        self.gpu.set_uniform_1i(&self.hone_palette, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.hone_palette, "index_texture", 1);
         self.set_curve_uniforms(&self.hone_palette);
         self.set_arrow_uniforms(&self.hone_palette, i);
         self.gpu.draw(buff);
     }
     fn draw_hit_miss(&self){
         self.gpu.gl.use_program(Some(&self.hit_miss_program));
-        self.gpu.set_uniform_1i(&self.hit_miss_program, "pair_tex", 1);
+        self.gpu.set_uniform_1i(&self.hit_miss_program, "index_texture", 1);
         self.set_curve_uniforms(&self.hit_miss_program);
         self.set_arrow_uniforms(&self.hit_miss_program, 4);
         self.gpu.draw(&self.buffer.io);

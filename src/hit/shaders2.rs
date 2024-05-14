@@ -25,11 +25,11 @@ void main() {"##,
         in_pos.x = in_pos.x - pair_size.x; 
     }
     if(in_pos.y < pair_size.y){
-        curve_index = texelFetch(pair_tex, in_pos, 0).r;
+        curve_index = texelFetch(index_texture, in_pos, 0).r;
         u = texelFetch(io_tex, in_pos, 0).r;
     }else{
         in_pos.y = in_pos.y - pair_size.y;
-        curve_index = texelFetch(pair_tex, in_pos, 0).g;
+        curve_index = texelFetch(index_texture, in_pos, 0).g;
         u = texelFetch(io_tex, in_pos, 0).g;
     }
     output_arrow(curve_index, u);
@@ -47,11 +47,11 @@ HEADER, GEOM_CORE, ARROW_HIT, MOVE_U, ARROW_IN, ARROW_OUT,
     vec3 pb = vec3(0., 0., 0.);
     vec3 pt = vec3(0., 0., 0.);
     if(out_pos.y < pair_size.y){
-        curve_index = texelFetch(pair_tex, in_pos0a, 0).r;
+        curve_index = texelFetch(index_texture, in_pos0a, 0).r;
         u = u0; du = d0u; 
         pa = p0; pb = p1;
     }else{
-        curve_index = texelFetch(pair_tex, in_pos0a, 0).g;
+        curve_index = texelFetch(index_texture, in_pos0a, 0).g;
         u = u1; du = d1u; 
         pa = p1; pb = p0;
     }

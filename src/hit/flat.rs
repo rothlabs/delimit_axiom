@@ -15,8 +15,8 @@ impl HitTest for Vec<Shape> {
     fn hit(&self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
         let gpu = GPU::new().unwrap();
         let (indices, mut shapes) = self.texels();
-        let mut spreads = spreads(self, &pairs, &indices);
         gpu.texture.make_r32f(0, &mut shapes).unwrap();
+        let mut spreads = spreads(self, &pairs, &indices);
 
         
         let (_, index_size) = gpu.texture.make_rg32i(1, &mut spreads[1][1].index).unwrap();

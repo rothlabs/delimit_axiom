@@ -1,7 +1,6 @@
-use crate::log;
 use crate::Shape;
 use crate::hit::{ClosetOut, Score};
-use crate::hit::groups::HitTest;
+use crate::hit::groups::HitTestGroups;
 use crate::actor::Trim;
 
 pub fn union_job2(jobs: Vec<[Vec<Shape>; 2]>) -> Vec<Vec<Shape>> { 

@@ -1,55 +1,49 @@
 use glam::*;
 use web_sys::WebGlProgram;
-use crate::log;
 use crate::gpu::framebuffer::Framebuffer;
-use crate::shape::*; //{rank0, Shape, Shapes};
+use crate::shape::*; 
 use crate::{gpu::GPU, Spatial3, DUP_0_TOL};
 use super::{Hit, HitPair, HoneBuffer, Out, OutPair, TestPair};
-use super::hone_basis::{hone_basis, HoneTexels};
+use super::spread::{spreads, Spread};
 use super::shaders2::{HIT_MISS_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 
-// pub trait HitTest2 {
-//     fn hit2(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<MissPair>);
-// }
+pub trait HitTest {
+    fn hit(&self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>);
+}
 
-// impl HitTest2 for Vec<Shape> {
-    pub fn hit2(shapes: Vec<Shape>, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
+impl HitTest for Vec<Shape> {
+    fn hit(&self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
         let gpu = GPU::new().unwrap();
-        let mut basis = hone_basis(&shapes, &pairs);
-        // let mut shape_texels = vec![];
-        // for shape in shapes {
-        //     indices.push(texels.shape.len());
-        //     texels.shape.extend(shape.texels());
-        // }
-        gpu.texture.make_r32f(0, &mut basis.shape).unwrap();
-        let (_, index_size) = gpu.texture.make_rg32i(1, &mut basis.spreads[1][1].index).unwrap();
+        let (indices, mut shapes) = self.texels();
+        let mut spreads = spreads(self, &pairs, &indices);
+        gpu.texture.make_r32f(0, &mut shapes).unwrap(); 
+        let (_, index_size) = gpu.texture.make_rg32i(1, &mut spreads[1][1].index).unwrap();
         let palette_size = ivec2(index_size.x*3, index_size.y*2);
         let buffer = HoneBuffer{
-            io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut basis.spreads[1][1].param, 2).unwrap(),
+            io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut spreads[1][1].param, 2).unwrap(),
             palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_size, 2).unwrap(),
             palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_size, 2).unwrap(),
         };
         //console_log!("shapes.max_knot_len() {}", shapes.max_knot_len());
         HitBasis2 {
-            //curves:self, 
             pairs: pairs.clone(), 
-            basis, 
+            spreads, 
             buffer, 
             init_palette:     gpu.get_quad_program_from_source(INIT_PALETTE_SOURCE).unwrap(),
             hone_palette:     gpu.get_quad_program_from_source(HONE_SOURCE).unwrap(),
             hit_miss_program: gpu.get_quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
-            max_knot_len:     shapes.max_knot_len() as i32,
+            max_knot_len:     self.max_knot_len() as i32,
             gpu,
             spatial: Spatial3::new(0.1), 
             points:  vec![],
         }.make() // .expect("HitBasis2 should work for Vec<CurveShape>.hit()")
     }
-//}
+}
 
 pub struct HitBasis2 {
     //curves: Vec<CurveShape>,
     pairs:  Vec<TestPair>,
-    basis:  HoneTexels,
+    spreads:  [Vec<Spread>; 3], // HoningTexels,
     buffer: HoneBuffer,
     init_palette: WebGlProgram,
     hone_palette: WebGlProgram,
@@ -69,7 +63,7 @@ impl HitBasis2 {
         let mut hits = vec![];
         let mut outs = vec![];
         //let mut to_prints: Vec<f32> = vec![];
-        for (i, k) in self.basis.spreads[1][1].pairs.iter().enumerate() {
+        for (i, k) in self.spreads[1][1].pairs.iter().enumerate() {
             let j = i * 4;
             if score[j] > -0.5 { // it's a hit
                 //to_prints.extend(&[999., hit_miss[j], hit_miss[j+1], hit_miss[j+2], hit_miss[j+3]]);
@@ -129,7 +123,7 @@ impl HitBasis2 {
         // console_log!("f32::DIGITS {}", f32::DIGITS);
         (hits, outs)
     }
-    fn hone(&self) {
+    fn hone(&self) { // TODO: add an index to call this for multiple buffers for different shape rank combos!
         self.draw_init_hone_palette();
         for _ in 0..8 {
             self.draw_hone_palette(&self.buffer.palette1, 4);

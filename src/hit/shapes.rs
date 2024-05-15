@@ -1,11 +1,12 @@
 use crate::shape::*;
-use super::{ToHit, TestPair, Score};
+use super::{TestPair, Score};
+use super::flat::HitTest;
 
-pub trait HitTest {
+pub trait HitTestShapes {
     fn hit(&self) -> Vec<Vec<Score>>;
 }
 
-impl HitTest for Vec<Vec<Shape>> {
+impl HitTestShapes for Vec<Vec<Shape>> {
     fn hit(&self) -> Vec<Vec<Score>> {
         let (indices, starts) = indices_and_starts(self);
         let index = Index{indices,  pairs:pairs(self, &starts)};

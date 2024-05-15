@@ -1,18 +1,19 @@
 use glam::*;
 use crate::log;
 use crate::Shape;
+use crate::Shapes;
 use super::TestPair;
 
-#[derive(Default, Debug)]
-pub struct HoneTexels{
-    pub shape: Vec<f32>,
-    pub spreads: [Vec<Spread>; 3],
-    // pub pairs: Vec<usize>,
-    // pub index: Vec<i32>,
-    // pub param: Vec<f32>,
-}
+// #[derive(Default, Debug)]
+// pub struct HoningTexels{
+//     pub shape: Vec<f32>,
+//     pub spreads: [Vec<Spread>; 3],
+//     // pub pairs: Vec<usize>,
+//     // pub index: Vec<i32>,
+//     // pub param: Vec<f32>,
+// }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct Spread{
     pub pairs: Vec<usize>,
     pub index: Vec<i32>,
@@ -27,30 +28,31 @@ impl Spread {
     }   
 }
 
-pub fn hone_basis(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> HoneTexels {
-    let mut texels = HoneTexels::default(); 
+pub fn spreads(shapes: &Vec<Shape>, pairs: &Vec<TestPair>, indices: &Vec<usize>) -> [Vec<Spread>; 3] { // { HoningTexels {
+    //let mut texels = HoningTexels::default(); 
     let mut spreads: [Vec<Spread>; 3] = [
         vec![Spread::default()], // not used
         (0..=2).map(|_| Spread::default()).collect(),
         (0..=2).map(|_| Spread::default()).collect()
     ];
-    let mut indices = vec![];
-    let mut knots = vec![];
-    for shape in shapes {
-        indices.push(texels.shape.len());
-        texels.shape.extend(shape.texels());
-        knots.push(shape.param_spread());
-    }
+    // let mut indices = vec![];
+    // let mut knots = vec![];
+    // for shape in shapes {
+    //     indices.push(texels.shape.len());
+    //     texels.shape.extend(shape.texels());
+    //     knots.push(shape.param_spread());
+    // }
+    let params = shapes.param_spread();
     for (pi, TestPair{i0, i1, ..}) in pairs.iter().enumerate() {
         let ti = [indices[*i0] as i32, indices[*i1] as i32];
         let rank = |r0, r1| {shapes[*i0].rank == r0 && shapes[*i1].rank == r1};
         if rank(1, 0) {
-            for u0 in &knots[*i0] {
+            for u0 in &params[*i0] {
                 spreads[1][0].add_1(pi, ti, [u0[0], 0., 0., 0.]);
             }  
         } else if rank(1, 1) { 
-            for u0 in &knots[*i0] {
-                for u1 in &knots[*i1] {
+            for u0 in &params[*i0] {
+                for u1 in &params[*i1] {
                     spreads[1][1].add_1(pi, ti, [u0[0], u1[0], 0., 0.]);
                 }  
             }  
@@ -67,8 +69,9 @@ pub fn hone_basis(shapes: &Vec<Shape>, pairs: &Vec<TestPair>) -> HoneTexels {
         //     // }  
         // }
     }
-    texels.spreads = spreads;
-    texels
+    spreads
+    //texels.spreads = spreads;
+    //texels
 }
 
 

@@ -1,5 +1,5 @@
 use crate::shape::*;
-use crate::hit::groups::HitTest;
+use crate::hit::groups::HitTestGroups;
 
 pub fn union_job3(jobs: Vec<Vec<Vec<Shape>>>) -> Vec<Vec<Shape>> {
     //let score = jobs.hit();

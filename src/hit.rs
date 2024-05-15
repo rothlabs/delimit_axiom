@@ -8,31 +8,31 @@ mod shader_parts2;
 mod shaders3;
 mod shader_parts3;
 mod traced;
-mod hit2;
+mod flat;
 mod hit3;
-mod hone_basis;
+mod spread;
 
 use std::f32::INFINITY;
 
 use glam::*;
 use crate::gpu::framebuffer::Framebuffer;
 use crate::Shape;
-use hit2::hit2;
+//use hit2::hit2;
 //use hit3::hit3;
 
-pub trait ToHit {
-    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>);
-}
+// pub trait ToHit {
+//     fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>);
+// }
 
-impl ToHit for Vec<Shape> {
-    fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
-        //if self.high_rank() < 2 {
-            hit2(self, pairs)
-        //} else {
-        //    hit3(self, pairs)
-        //}
-    }
-}
+// impl ToHit for Vec<Shape> {
+//     fn hit(self, pairs: &Vec<TestPair>) -> (Vec<HitPair>, Vec<OutPair>) {
+//         //if self.high_rank() < 2 {
+//             hit2(self, pairs)
+//         //} else {
+//         //    hit3(self, pairs)
+//         //}
+//     }
+// }
 
 
 #[derive(Clone, Debug)]

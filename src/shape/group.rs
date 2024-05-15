@@ -8,6 +8,8 @@ pub trait Shapes {
     fn reshaped(&self, mat4: Mat4) -> Vec<Shape>;
     fn reverse_direction(&mut self) -> &mut Self;
     fn max_knot_len(&self) -> usize;
+    fn texels(&self) -> (Vec<usize>, Vec<f32>);
+    fn param_spread(&self) -> Vec<Vec<Vec<f32>>>;
     //fn translate(&mut self) -> &mut Self;
 }
 
@@ -54,10 +56,33 @@ impl Shapes for Vec<Shape> {
         }
         max_knot_len
     }
+    fn texels(&self) -> (Vec<usize>, Vec<f32>) {
+        let mut indices = vec![];
+        let mut texels = vec![];
+        //let mut result = ShapeTexels::default();
+        for shape in self {
+            indices.push(texels.len());
+            texels.extend(shape.texels());
+        }
+        (indices, texels)
+    }
+    fn param_spread(&self) -> Vec<Vec<Vec<f32>>> {
+        let mut params = vec![];
+        for shape in self {
+            params.push(shape.param_spread());
+        }
+        params
+    }
     // fn translate(&mut self, pos: Vec2) -> &mut Self {
         
     // }
 }
+
+// #[derive(Default)]
+// pub struct ShapeTexels {
+//     pub indices: Vec<usize>,
+//     pub texels:  Vec<f32>,
+// }
 
 
 pub trait Groups {

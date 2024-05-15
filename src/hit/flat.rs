@@ -16,10 +16,12 @@ impl HitTest for Vec<Shape> {
         let gpu = GPU::new().unwrap();
         let (indices, mut shapes) = self.texels();
         let mut spreads = spreads(self, &pairs, &indices);
-        gpu.texture.make_r32f(0, &mut shapes).unwrap(); 
+        gpu.texture.make_r32f(0, &mut shapes).unwrap();
+
+        
         let (_, index_size) = gpu.texture.make_rg32i(1, &mut spreads[1][1].index).unwrap();
         let palette_size = ivec2(index_size.x*3, index_size.y*2);
-        let buffer = HoneBuffer{
+        let buffer = HoneBuffer {
             io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut spreads[1][1].param, 2).unwrap(),
             palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_size, 2).unwrap(),
             palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_size, 2).unwrap(),

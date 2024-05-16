@@ -1,8 +1,6 @@
 use glam::*;
-use crate::gpu::GPU;
 use crate::Shape;
 use crate::Shapes;
-use crate::hit::HoningBuffer;
 use crate::hit::TestPair;
 
 // #[derive(Default, Debug)]
@@ -71,17 +69,17 @@ impl ToSpread for Vec<Shape> {
     }
 }
 
-impl GPU {
-    pub fn honing_buffer(&self, spread: &mut Spread) -> HoningBuffer {
-        let (_, index_size) = self.texture.rg32i(1, &mut spread.index).unwrap();
-        let palette_size = ivec2(index_size.x*3, index_size.y*2);
-        HoningBuffer {
-            io:       self.framebuffer.make_rgba32f_with_empties(2, &mut spread.param, 2).unwrap(),
-            palette0: self.framebuffer.make_multi_empty_rgba32f(4, palette_size, 2).unwrap(),
-            palette1: self.framebuffer.make_multi_empty_rgba32f(6, palette_size, 2).unwrap(),
-        }
-    }
-}
+// impl GPU {
+//     pub fn honing_buffer(&self, spread: &mut Spread) -> HoningBuffer {
+//         let (_, index_size) = self.texture.rg32i(1, &mut spread.index).unwrap();
+//         let palette_size = ivec2(index_size.x*3, index_size.y*2);
+//         HoningBuffer {
+//             io:       self.framebuffer.make_rgba32f_with_empties(2, &mut spread.param, 2).unwrap(),
+//             palette0: self.framebuffer.make_multi_empty_rgba32f(4, palette_size, 2).unwrap(),
+//             palette1: self.framebuffer.make_multi_empty_rgba32f(6, palette_size, 2).unwrap(),
+//         }
+//     }
+// }
 
 // pub fn honing_buffers(gpu: &GPU, spreads: &mut [Vec<Spread>; 3]) -> Vec<HoneBuffer> {
 //     let mut buffers = vec![];

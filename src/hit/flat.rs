@@ -1,13 +1,9 @@
 use glam::*;
-use web_sys::WebGlProgram;
-use crate::gpu::framebuffer::Framebuffer;
 use crate::shape::*; 
-use crate::{gpu::GPU, Spatial3, DUP_0_TOL};
-use super::hone::program::Program;
+use crate::{Spatial3, DUP_0_TOL};
 use super::hone::Hone;
-use super::{curve_hit, HitPair, HoningBuffer, Out, OutPair, TestPair};
+use super::{curve_hit, HitPair, Out, OutPair, TestPair};
 use super::hone::spread::{ToSpread, Spread};
-use super::shaders2::{SCORE_SOURCE, HONE_SOURCE, INIT_PALETTE_SOURCE};
 use crate::{get_state, set_state};
 
 pub trait HitTest {
@@ -27,17 +23,6 @@ impl HitTest for Vec<Shape> {
         state.hit.hone.buffer(&mut spread);
         state.hit.hone.max_knot_len = self.max_knot_len() as i32;
         state.hit.hone.draw();
-        //let buffer = state.gpu.honing_buffer(&mut spread);
-        //let program = state.hone.program[1][1];
-        // let hone = Hone {
-        //     // initial_program: gpu.quad_program_from_source(INIT_PALETTE_SOURCE).unwrap(),
-        //     // palette_program: gpu.quad_program_from_source(HONE_SOURCE).unwrap(),
-        //     // score_program:   gpu.quad_program_from_source(SCORE_SOURCE).unwrap(),
-        //     program,//: state.hone.program[1][1],
-        //     max_knot_len:    self.max_knot_len() as i32, // TODO: max_knot_len should be unique for each honing op!!
-        //     buffer, 
-        //     gpu,
-        // }.now(); 
         let score = score(&state.hit.hone, &spread, &pairs);
         //state.gpu = hone.gpu;
         set_state(state);
@@ -93,7 +78,17 @@ pub fn score(hone: &Hone, spread: &Spread, pairs: &Vec<TestPair>) -> (Vec<HitPai
 }
 
 
-
+        //let buffer = state.gpu.honing_buffer(&mut spread);
+        //let program = state.hone.program[1][1];
+        // let hone = Hone {
+        //     // initial_program: gpu.quad_program_from_source(INIT_PALETTE_SOURCE).unwrap(),
+        //     // palette_program: gpu.quad_program_from_source(HONE_SOURCE).unwrap(),
+        //     // score_program:   gpu.quad_program_from_source(SCORE_SOURCE).unwrap(),
+        //     program,//: state.hone.program[1][1],
+        //     max_knot_len:    self.max_knot_len() as i32, // TODO: max_knot_len should be unique for each honing op!!
+        //     buffer, 
+        //     gpu,
+        // }.now(); 
 
 
 // pub struct Hone {

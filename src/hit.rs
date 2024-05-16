@@ -138,15 +138,6 @@ impl ClosetOut for Vec<Out> {
 }
 
 
-pub struct HoningBuffer {
-    io:       Framebuffer,
-    palette0: Framebuffer,
-    palette1: Framebuffer,
-}
-
-//impl HoningBuffer {}
-
-
 
 // #[derive(Clone, Default)]
 // pub struct HitMiss3 {

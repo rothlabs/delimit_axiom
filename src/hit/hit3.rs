@@ -23,14 +23,14 @@ use super::shaders3::{
             shapes: vec![],
             hone_basis: HoneBasis::default(),
             trace_count: 0,
-            init_hone_palette:  gpu.get_quad_program_from_source(INIT_HONE_PALETTE_SOURCE).unwrap(),
-            hone_palette:       gpu.get_quad_program_from_source(HONE_PALETTE_SOURCE).unwrap(),
-            hit_miss_program:   gpu.get_quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
-            init_trace_palette: gpu.get_quad_program_from_source(INIT_TRACE_PALETTE_SOURCE).unwrap(),
-            trace_segment:      gpu.get_quad_program_from_source(TRACE_SEGMENT_SOURCE).unwrap(),
-            trace_dual:         gpu.get_quad_program_from_source(TRACE_DUAL_SOURCE).unwrap(),
-            trace_palette:      gpu.get_quad_program_from_source(TRACE_PALETTE_SOURCE).unwrap(),
-            boxes_dual:         gpu.get_quad_program_from_source(BOXES_DUAL).unwrap(),
+            init_hone_palette:  gpu.quad_program_from_source(INIT_HONE_PALETTE_SOURCE).unwrap(),
+            hone_palette:       gpu.quad_program_from_source(HONE_PALETTE_SOURCE).unwrap(),
+            hit_miss_program:   gpu.quad_program_from_source(HIT_MISS_SOURCE).unwrap(),
+            init_trace_palette: gpu.quad_program_from_source(INIT_TRACE_PALETTE_SOURCE).unwrap(),
+            trace_segment:      gpu.quad_program_from_source(TRACE_SEGMENT_SOURCE).unwrap(),
+            trace_dual:         gpu.quad_program_from_source(TRACE_DUAL_SOURCE).unwrap(),
+            trace_palette:      gpu.quad_program_from_source(TRACE_PALETTE_SOURCE).unwrap(),
+            boxes_dual:         gpu.quad_program_from_source(BOXES_DUAL).unwrap(),
             hone_buffer: None,
             trace_buffer: None,
             gpu,
@@ -78,8 +78,8 @@ pub struct HitBasis3 {
 impl HitBasis3 { 
     pub fn make(&mut self) -> Result<(Vec<HitPair>, Vec<OutPair>), String> { 
         let mut hone_basis = HoneBasis::new(&self.facets, &self.pairs);
-        self.gpu.texture.make_r32f(0, &mut hone_basis.facet_texels)?;
-        let (_, pair_buf_size) = self.gpu.texture.make_rg32i(1, &mut hone_basis.pair_texels)?;
+        self.gpu.texture.r32f(0, &mut hone_basis.facet_texels)?;
+        let (_, pair_buf_size) = self.gpu.texture.rg32i(1, &mut hone_basis.pair_texels)?;
         let palette_buf_size = ivec2(pair_buf_size.x*3, pair_buf_size.y*2);
         self.hone_buffer = Some(HoneBuffer{
             uv:       self.gpu.framebuffer.make_rgba32f(2, &mut hone_basis.uv_texels)?,
@@ -112,7 +112,7 @@ impl HitBasis3 {
                 //     }
                 // }
         let mut trace_basis = TraceBasis::new(&self.hone_basis, hit_miss);
-        let (_, pair_buf_size) = self.gpu.texture.make_rg32i(1, &mut trace_basis.pair_texels)?;
+        let (_, pair_buf_size) = self.gpu.texture.rg32i(1, &mut trace_basis.pair_texels)?;
         let _ = self.gpu.texture.make_rgba32f(2, &mut trace_basis.uv_texels)?;
                // let _ = self.gpu.texture.make_rgba32f(3, &mut trace_basis.box_texels)?;
         let dual_buf_size    = ivec2(pair_buf_size.x,   pair_buf_size.y*2);

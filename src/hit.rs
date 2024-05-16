@@ -2,6 +2,7 @@ pub mod shapes;
 pub mod groups;
 
 mod basis3;
+pub mod hone;
 mod shader_parts;
 mod shaders2;
 mod shader_parts2;
@@ -10,13 +11,14 @@ mod shader_parts3;
 mod traced;
 mod flat;
 mod hit3;
-mod spread;
 
 use std::f32::INFINITY;
 
 use glam::*;
-use crate::gpu::framebuffer::Framebuffer;
+use crate::gpu::{framebuffer::Framebuffer, GPU};
 use crate::Shape;
+
+use self::hone::Hone;
 //use hit2::hit2;
 //use hit3::hit3;
 
@@ -33,6 +35,20 @@ use crate::Shape;
 //         //}
 //     }
 // }
+
+pub struct HitState {
+    pub hone: Hone
+}
+
+impl HitState {
+    pub fn new(gpu: &GPU) -> HitState {
+        HitState {
+            hone: Hone::new(gpu),
+        }
+    }
+}
+
+
 
 
 #[derive(Clone, Debug)]
@@ -53,6 +69,15 @@ pub struct HitPair {
     pub test: TestPair,
     pub shape: Shape,
     pub hits: (Hit, Hit),
+}
+
+pub fn curve_hit(u: f32, dot: f32) -> Hit {
+    Hit {
+        u,
+        dot,
+        shape: None,
+        twin:  vec![],
+    }
 }
 
 pub fn hit_shape(shape: Shape) -> Hit {
@@ -112,11 +137,14 @@ impl ClosetOut for Vec<Out> {
     }
 }
 
-struct HoneBuffer {
+
+pub struct HoningBuffer {
     io:       Framebuffer,
     palette0: Framebuffer,
     palette1: Framebuffer,
 }
+
+//impl HoningBuffer {}
 
 
 

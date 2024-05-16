@@ -8,6 +8,7 @@ pub struct Framebuffer {
     pub size: IVec2,
 }
 
+#[derive(Clone)]
 pub struct FramebufferContext {
     pub gl: GL,
     pub texture: TextureContext,

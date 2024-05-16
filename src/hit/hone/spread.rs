@@ -1,8 +1,9 @@
 use glam::*;
-use crate::log;
+use crate::gpu::GPU;
 use crate::Shape;
 use crate::Shapes;
-use super::TestPair;
+use crate::hit::HoningBuffer;
+use crate::hit::TestPair;
 
 // #[derive(Default, Debug)]
 // pub struct HoningTexels{
@@ -28,52 +29,73 @@ impl Spread {
     }   
 }
 
-pub fn spreads(shapes: &Vec<Shape>, pairs: &Vec<TestPair>, indices: &Vec<usize>) -> [Vec<Spread>; 3] { // { HoningTexels {
-    //let mut texels = HoningTexels::default(); 
-    let mut spreads: [Vec<Spread>; 3] = [
-        vec![Spread::default()], // not used
-        (0..=2).map(|_| Spread::default()).collect(),
-        (0..=2).map(|_| Spread::default()).collect()
-    ];
-    // let mut indices = vec![];
-    // let mut knots = vec![];
-    // for shape in shapes {
-    //     indices.push(texels.shape.len());
-    //     texels.shape.extend(shape.texels());
-    //     knots.push(shape.param_spread());
-    // }
-    let params = shapes.param_spread();
-    for (pi, TestPair{i0, i1, ..}) in pairs.iter().enumerate() {
-        let ti = [indices[*i0] as i32, indices[*i1] as i32];
-        let rank = |r0, r1| {shapes[*i0].rank == r0 && shapes[*i1].rank == r1};
-        if rank(1, 0) {
-            for u0 in &params[*i0] {
-                spreads[1][0].add_1(pi, ti, [u0[0], 0., 0., 0.]);
-            }  
-        } else if rank(1, 1) { 
-            for u0 in &params[*i0] {
-                for u1 in &params[*i1] {
-                    spreads[1][1].add_1(pi, ti, [u0[0], u1[0], 0., 0.]);
-                }  
-            }  
-        }
-        // } else if rank(1, 2) { 
-        //     for u0 in &knots[*i0] {
-        //         for u1 in &knots[*i1] {
-        //             spreads[1][2].add_1(pi, ti, [u0[0], u1[0], u1[1], 0.]);
-        //         }  
-        //     }  
-        // } else if rank(2, 0) { 
-        //     // for u0 in &knots[*i0] {
-        //     //     spreads[2][0].add_1(pi, ti, [u0[0], u1[1], 0., 0.]);
-        //     // }  
-        // }
-    }
-    spreads
-    //texels.spreads = spreads;
-    //texels
+pub trait ToSpread {
+    fn spreads(&self, pairs: &Vec<TestPair>, indices: &Vec<usize>) -> [Vec<Spread>; 3];
 }
 
+impl ToSpread for Vec<Shape> {
+    fn spreads(&self, pairs: &Vec<TestPair>, indices: &Vec<usize>) -> [Vec<Spread>; 3] { // { HoningTexels {
+        let mut spreads: [Vec<Spread>; 3] = [
+            vec![Spread::default()], // not used
+            (0..=2).map(|_| Spread::default()).collect(),
+            (0..=2).map(|_| Spread::default()).collect()
+        ];
+        let params = self.param_spread();
+        for (pi, TestPair{i0, i1, ..}) in pairs.iter().enumerate() {
+            let ti = [indices[*i0] as i32, indices[*i1] as i32];
+            let rank = |r0, r1| {self[*i0].rank == r0 && self[*i1].rank == r1};
+            if rank(1, 0) {
+                for u0 in &params[*i0] {
+                    spreads[1][0].add_1(pi, ti, [u0[0], 0., 0., 0.]);
+                }  
+            } else if rank(1, 1) { 
+                for u0 in &params[*i0] {
+                    for u1 in &params[*i1] {
+                        spreads[1][1].add_1(pi, ti, [u0[0], u1[0], 0., 0.]);
+                    }  
+                }  
+            }
+            // } else if rank(1, 2) { 
+            //     for u0 in &knots[*i0] {
+            //         for u1 in &knots[*i1] {
+            //             spreads[1][2].add_1(pi, ti, [u0[0], u1[0], u1[1], 0.]);
+            //         }  
+            //     }  
+            // } else if rank(2, 0) { 
+            //     // for u0 in &knots[*i0] {
+            //     //     spreads[2][0].add_1(pi, ti, [u0[0], u1[1], 0., 0.]);
+            //     // }  
+            // }
+        }
+        spreads
+    }
+}
+
+impl GPU {
+    pub fn honing_buffer(&self, spread: &mut Spread) -> HoningBuffer {
+        let (_, index_size) = self.texture.rg32i(1, &mut spread.index).unwrap();
+        let palette_size = ivec2(index_size.x*3, index_size.y*2);
+        HoningBuffer {
+            io:       self.framebuffer.make_rgba32f_with_empties(2, &mut spread.param, 2).unwrap(),
+            palette0: self.framebuffer.make_multi_empty_rgba32f(4, palette_size, 2).unwrap(),
+            palette1: self.framebuffer.make_multi_empty_rgba32f(6, palette_size, 2).unwrap(),
+        }
+    }
+}
+
+// pub fn honing_buffers(gpu: &GPU, spreads: &mut [Vec<Spread>; 3]) -> Vec<HoneBuffer> {
+//     let mut buffers = vec![];
+//     for spread in &mut spreads[1] {
+//         let (_, index_size) = gpu.texture.make_rg32i(1, &mut spread.index).unwrap();
+//         let palette_size = ivec2(index_size.x*3, index_size.y*2);
+//         buffers.push(HoneBuffer {
+//             io:       gpu.framebuffer.make_rgba32f_with_empties(2, &mut spread.param, 2).unwrap(),
+//             palette0: gpu.framebuffer.make_multi_empty_rgba32f(4, palette_size, 2).unwrap(),
+//             palette1: gpu.framebuffer.make_multi_empty_rgba32f(6, palette_size, 2).unwrap(),
+//         });
+//     }
+//     buffers
+// }
 
 
 

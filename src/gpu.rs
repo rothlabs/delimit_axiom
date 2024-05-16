@@ -4,10 +4,13 @@ pub mod framebuffer;
 use glam::*;
 use wasm_bindgen::prelude::*;
 use web_sys::{WebGl2RenderingContext as GL, WebGlProgram, WebGlShader};
+
 use self::framebuffer::{Framebuffer, FramebufferContext};
 use self::shader::{PASS_VERTEX_SOURCE, COPY_FRAGMENT_SOURCE};
 use self::texture::TextureContext;
 
+
+#[derive(Clone)]
 pub struct GPU {
     pub gl: GL,
     pub pass_vertex_shader: Option<WebGlShader>,
@@ -41,7 +44,7 @@ impl GPU {
             framebuffer: FramebufferContext{gl, texture},
         };
         gpu.pass_vertex_shader = Some(gpu.get_vertex_shader(PASS_VERTEX_SOURCE)?);
-        let program = gpu.get_quad_program_from_source(COPY_FRAGMENT_SOURCE)?;
+        let program = gpu.quad_program_from_source(COPY_FRAGMENT_SOURCE)?;
         let position_attribute_location = gpu.gl.get_attrib_location(&program, "position");
         let vao = gpu.gl.create_vertex_array().ok_or("Could not create vertex array object")?;
         gpu.gl.bind_vertex_array(Some(&vao));
@@ -106,7 +109,7 @@ impl GPU {
                 .unwrap_or_else(|| String::from("Unknown error creating shader")))
         }
     }
-    pub fn get_quad_program_from_source(&self, source: &str) -> Result<WebGlProgram, String> {
+    pub fn quad_program_from_source(&self, source: &str) -> Result<WebGlProgram, String> {
         let shader = self.get_shader(GL::FRAGMENT_SHADER, source)?;
         Ok(self.get_quad_program(&shader)?)
     }

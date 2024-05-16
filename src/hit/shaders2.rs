@@ -69,7 +69,7 @@ HEADER, GEOM_CORE, ARROW_HIT, MOVE_U, ARROW_IN, ARROW_OUT,
     }
 }"##);
 
-pub const HIT_MISS_SOURCE: &str = concatcp!(
+pub const SCORE_SOURCE: &str = concatcp!(
 HEADER, GEOM_CORE, ARROW_IN, r##"
 vec3 vec_z = vec3(0., 0., 1.);
 layout(location=0) out vec4 hit_miss;

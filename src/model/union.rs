@@ -17,7 +17,7 @@ pub struct Union {
 
 impl Union {
     pub fn shapes(&self) -> Vec<Shape> {
-        log("union");
+        // log("union");
         let mut shape_groups = self.parts.shape_groups();
         let neg_shape_groups = self.negated_parts.shape_groups().negated();
         shape_groups.extend(neg_shape_groups);

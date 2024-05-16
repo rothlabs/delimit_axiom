@@ -26,6 +26,8 @@ mod spatial;
 mod hit;
 mod arrow;
 
+use gpu::GPU;
+use hit::HitState;
 use utils::*;
 use tolerance::*;
 use shape::*;
@@ -58,6 +60,30 @@ impl Models for Vec<Model> {
         }
         result
     }
+}
+
+#[wasm_bindgen]
+pub struct State {
+    gpu: GPU,
+    hit: HitState, 
+}
+
+#[wasm_bindgen]
+pub fn initialize() -> State {
+    let gpu = GPU::new().unwrap();
+    State {
+        hit: HitState::new(&gpu),
+        gpu,
+    }
+}
+
+#[wasm_bindgen(module = "delimit/axiom")]
+extern "C" {
+    pub fn set_state(state: State);
+    pub fn get_state() -> State;
+    //pub fn get_facet_hit_points(idx_texture: Vec<usize>, int_texture: Vec<usize>, f32_texture: Vec<f32>);
+    //pub fn gpu(params: Vec<JsValue>) -> Vec<JsValue>; // , facets1: Vec<JsValue>, max_hits: usize
+    //pub fn set_gpu();
 }
 
 pub fn get_vector_hash(vecf32: &Vec<f32>) -> u64 {

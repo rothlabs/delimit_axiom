@@ -16,7 +16,7 @@ impl TextureContext {
         self.make_with_f32_and_size(tex_i, texels, size, 4, GL::RGBA32F, GL::RGBA, GL::FLOAT)
     }
 
-    pub fn make_rg32i(&self, tex_i: u32, texels: &mut Vec<i32>) -> Result<(WebGlTexture, IVec2), String> {
+    pub fn rg32i(&self, tex_i: u32, texels: &mut Vec<i32>) -> Result<(WebGlTexture, IVec2), String> {
         let size = get_size(texels.len(), 2);
         self.make_with_i32_and_size(tex_i, texels, size, 2, GL::RG32I, GL::RG_INTEGER, GL::INT)
     }
@@ -27,7 +27,7 @@ impl TextureContext {
         let size = get_size(texels.len(), 4);
         self.make_with_f32_and_size(tex_i, texels, size, 4, GL::RGBA32F, GL::RGBA, GL::FLOAT)
     }
-    pub fn make_r32f(&self, tex_i: u32, texels: &mut Vec<f32>) -> Result<(WebGlTexture, IVec2), String> {
+    pub fn r32f(&self, tex_i: u32, texels: &mut Vec<f32>) -> Result<(WebGlTexture, IVec2), String> {
         let size = get_size(texels.len(), 1);
         self.make_with_f32_and_size(tex_i, texels, size, 1, GL::R32F, GL::RED, GL::FLOAT)
     }
